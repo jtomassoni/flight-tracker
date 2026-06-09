@@ -1,0 +1,187 @@
+/* DEN terminal FIDS — dark blue panels, cyan data, airline logos */
+
+.den-fids {
+  font-family: var(--font-barlow-condensed), Arial, Helvetica, sans-serif;
+  background: var(--den-bg, #08111f);
+  color: #ffffff;
+}
+
+.den-fids__panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border-right: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.den-fids__panel:last-child {
+  border-right: none;
+}
+
+.den-fids__panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background: var(--den-header, #0a1628);
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.den-fids__panel-title {
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.den-fids__col-header {
+  display: grid;
+  grid-template-columns: 1.1fr 1.35fr 0.75fr 0.55fr 0.7fr 0.85fr;
+  gap: 0.25rem;
+  background: var(--den-header, #0a1628);
+  padding: 0.35rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #7eb8d4;
+}
+
+.den-fids__row {
+  display: grid;
+  grid-template-columns: 1.1fr 1.35fr 0.75fr 0.55fr 0.7fr 0.85fr;
+  gap: 0.25rem;
+  align-items: center;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.82rem;
+  line-height: 1.2;
+  min-height: 2.1rem;
+}
+
+.den-fids__row:nth-child(odd) {
+  background: var(--den-row-a, #0f2847);
+}
+
+.den-fids__row:nth-child(even) {
+  background: var(--den-row-b, #16365a);
+}
+
+.den-fids__dest {
+  font-weight: 700;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.den-fids__airline {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.den-fids__logo-wrap {
+  flex-shrink: 0;
+  width: 2.75rem;
+  height: 1.35rem;
+  background: #e8edf2;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.den-fids__airline-name {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.den-fids__cyan {
+  color: var(--den-cyan, #5ec8e8);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.den-fids__status--ontime {
+  color: var(--den-cyan, #5ec8e8);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.den-fids__status--active {
+  color: var(--den-lime, #b8e986);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.den-fids__status--alert {
+  color: var(--den-amber, #f5c842);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.den-fids__status--warn {
+  color: #f87171;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Tablet: hide airline name text, keep logo */
+@media (max-width: 1023px) {
+  .den-fids__airline-name {
+    display: none;
+  }
+
+  .den-fids__col-header,
+  .den-fids__row {
+    grid-template-columns: 0.9fr 1fr 0.85fr 0.55fr 0.65fr 0.8fr;
+    font-size: 0.75rem;
+  }
+
+  .den-fids__panel-title {
+    font-size: 1.1rem;
+  }
+}
+
+/* Phone: drop Gate column to save horizontal space */
+@media (max-width: 639px) {
+  .den-fids__col-header,
+  .den-fids__row {
+    grid-template-columns: 0.85fr 1.1fr 0.9fr 0.75fr 0.9fr;
+    font-size: 0.7rem;
+    padding-left: 0.35rem;
+    padding-right: 0.35rem;
+  }
+
+  .den-fids__col-header span:nth-child(4),
+  .den-fids__row > *:nth-child(4) {
+    display: none;
+  }
+
+  .den-fids__logo-wrap {
+    width: 2.25rem;
+    height: 1.1rem;
+  }
+
+  .den-fids__panel-header {
+    padding: 0.45rem 0.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .den-fids__col-header,
+  .den-fids__row {
+    font-size: 0.88rem;
+  }
+
+  .den-fids__panel-title {
+    font-size: 1.5rem;
+  }
+}
