@@ -12,8 +12,10 @@ import {
   formatVerticalRate,
   getVerticalTrend,
 } from '@/lib/aircraftUtils';
+import { useLayoutDensity } from '@/hooks/useLayoutDensity';
 import AdminLink from '../shared/AdminLink';
 import FlightListState from '../shared/FlightListState';
+import KioskScrollRegion from '../shared/KioskScrollRegion';
 
 export default function FirstClassHeroLayout({
   displayedAircraft,
@@ -22,6 +24,7 @@ export default function FirstClassHeroLayout({
   status,
   lastUpdated,
 }: DisplayLayoutProps) {
+  const { trafficCols: gridClass, viewport } = useLayoutDensity();
   const hero = featured;
   const rest = displayedAircraft.slice(1);
   const brand = hero ? getAirlineBrand(hero.callsign) : null;
@@ -69,13 +72,25 @@ export default function FirstClassHeroLayout({
                 </p>
                 <p className="truncate text-sm text-muted">{brand?.name ?? 'Unidentified'}</p>
               </div>
-              <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4 md:w-auto md:min-w-[28rem]">
-                {[
-                  ['Distance', formatDistance(hero.distanceMi)],
-                  ['Altitude', formatAltitude(hero.altitudeFt)],
-                  ['Speed', formatSpeed(hero.groundSpeedKt)],
-                  ['Trend', getVerticalTrend(hero.verticalRateFpm)],
-                ].map(([label, value]) => (
+              <div
+                className={`grid w-full gap-3 md:w-auto ${
+                  viewport === 'desk'
+                    ? 'grid-cols-2 md:min-w-[16rem]'
+                    : 'grid-cols-2 sm:grid-cols-4 md:min-w-[28rem]'
+                }`}
+              >
+                {(viewport === 'desk'
+                  ? [
+                      ['Distance', formatDistance(hero.distanceMi)],
+                      ['Altitude', formatAltitude(hero.altitudeFt)],
+                    ]
+                  : [
+                      ['Distance', formatDistance(hero.distanceMi)],
+                      ['Altitude', formatAltitude(hero.altitudeFt)],
+                      ['Speed', formatSpeed(hero.groundSpeedKt)],
+                      ['Trend', getVerticalTrend(hero.verticalRateFpm)],
+                    ]
+                ).map(([label, value]) => (
                   <div key={label} className="rounded-lg border border-border/60 bg-background/30 px-3 py-2">
                     <p className="text-[9px] uppercase tracking-widest text-muted">{label}</p>
                     <p className="mt-0.5 font-mono text-base capitalize text-foreground md:text-lg">{value}</p>
@@ -83,9 +98,11 @@ export default function FirstClassHeroLayout({
                 ))}
               </div>
             </div>
-            <p className="mt-3 font-mono text-[10px] text-muted">
-              Hdg {formatHeading(hero.headingDeg)} · {formatVerticalRate(hero.verticalRateFpm)}
-            </p>
+            {viewport !== 'desk' && (
+              <p className="mt-3 font-mono text-[10px] text-muted">
+                Hdg {formatHeading(hero.headingDeg)} · {formatVerticalRate(hero.verticalRateFpm)}
+              </p>
+            )}
           </div>
         </section>
       )}
@@ -97,7 +114,8 @@ export default function FirstClassHeroLayout({
         {rest.length === 0 && hero ? (
           <p className="text-sm text-muted">No additional aircraft in range.</p>
         ) : (
-          <div className="grid min-h-0 flex-1 grid-cols-2 gap-2 overflow-y-auto sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+          <KioskScrollRegion className="min-h-0 flex-1" durationSec={38}>
+            <div className={`grid gap-2 ${gridClass}`}>
             {rest.map((ac) => {
               const b = getAirlineBrand(ac.callsign);
               const trend = getVerticalTrend(ac.verticalRateFpm);
@@ -121,7 +139,8 @@ export default function FirstClassHeroLayout({
                 </div>
               );
             })}
-          </div>
+            </div>
+          </KioskScrollRegion>
         )}
       </section>
       <AdminLink />

@@ -12,7 +12,7 @@ import {
 } from '@/lib/aircraftUtils';
 import AdminLink from '../shared/AdminLink';
 import FlightListState from '../shared/FlightListState';
-import PixelAirlineLogo from '../shared/PixelAirlineLogo';
+import LedAirlineLogo from '../shared/LedAirlineLogo';
 import './flight-wall-mini.css';
 
 const ROTATE_MS = 10_000;
@@ -60,54 +60,61 @@ export default function FlightWallMiniLayout({
   const brand = aircraft ? getAirlineBrand(aircraft.callsign) : null;
 
   return (
-    <div className="flight-wall-mini flex h-screen items-center justify-center p-4 md:p-8">
-      <div className="flight-wall-mini__bezel w-full max-w-3xl rounded-2xl p-3 md:p-4">
-        <div className="flight-wall-mini__screen aspect-[4/3] rounded-lg p-4 md:p-6">
-          <div className="flight-wall-mini__scanline" aria-hidden />
-
-          {!aircraft ? (
-            <div className="flight-wall-mini__content flex h-full items-center justify-center">
-              <FlightListState status={status} count={0} />
-            </div>
-          ) : (
-            <div
-              key={aircraft.hex}
-              className="flight-wall-mini__content flight-wall-mini__fade flex h-full flex-col justify-between"
-            >
-              <div className="flex gap-4 md:gap-6">
-                <div className="shrink-0 pt-1">
-                  <PixelAirlineLogo brand={brand!} size={88} />
-                </div>
-                <div className="min-w-0 flex-1 space-y-1 md:space-y-2">
-                  <p className="flight-wall-mini__led-text flight-wall-mini__route-line font-bold">
-                    {brand!.name}
-                  </p>
-                  <p className="flight-wall-mini__led-text flight-wall-mini__route-line">
-                    {displayIdentifier(aircraft)}
-                  </p>
-                  <p className="flight-wall-mini__led-dim flight-wall-mini__route-line">
-                    {formatAircraftType(aircraft)}
-                  </p>
-                </div>
+    <div className="flight-wall-mini h-full w-full">
+      <div className="flight-wall-mini__bezel h-full w-full">
+        <div className="flight-wall-mini__screen h-full w-full">
+          <div className="flight-wall-mini__phosphor">
+            {!aircraft ? (
+              <div className="flex h-full items-center justify-center">
+                <FlightListState status={status} count={0} />
               </div>
+            ) : (
+              <div
+                key={aircraft.hex}
+                className="flight-wall-mini__fade flex h-full flex-col justify-between"
+              >
+                <div className="flex items-start gap-4 md:gap-6">
+                  <div className="flight-wall-mini__logo-slot shrink-0">
+                    <LedAirlineLogo brand={brand!} size={120} />
+                  </div>
+                  <div className="min-w-0 flex-1 space-y-1.5 md:space-y-2">
+                    <p className="flight-wall-mini__led-text flight-wall-mini__route-line font-bold">
+                      {brand!.name}
+                    </p>
+                    <p className="flight-wall-mini__led-text flight-wall-mini__route-line">
+                      {displayIdentifier(aircraft)}
+                    </p>
+                    <p className="flight-wall-mini__led-dim flight-wall-mini__route-line">
+                      {formatAircraftType(aircraft)}
+                    </p>
+                  </div>
+                </div>
 
-              <div className="space-y-2 md:space-y-3">
-                <p className="flight-wall-mini__led-text flight-wall-mini__airport-line font-bold">
-                  {formatOriginLine(settings.locationLabel)}
-                </p>
-                <p className="flight-wall-mini__led-text flight-wall-mini__airport-line">
-                  {formatDestinationLine(aircraft)}
-                </p>
+                <div className="space-y-2 md:space-y-2.5">
+                  <p className="flight-wall-mini__led-text flight-wall-mini__airport-line font-bold">
+                    {formatOriginLine(settings.locationLabel)}
+                  </p>
+                  <p className="flight-wall-mini__led-text flight-wall-mini__airport-line">
+                    {formatDestinationLine(aircraft)}
+                  </p>
+                </div>
+
+                {displayedAircraft.length > 1 && (
+                  <p className="flight-wall-mini__page pt-2 text-center uppercase">
+                    {index + 1} / {displayedAircraft.length}
+                  </p>
+                )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
+
+          <div className="flight-wall-mini__mesh" aria-hidden />
+          <div className="flight-wall-mini__mesh-hot" aria-hidden />
+          <div className="flight-wall-mini__scanlines" aria-hidden />
+          <div className="flight-wall-mini__refresh-band" aria-hidden />
+          <div className="flight-wall-mini__vignette" aria-hidden />
+          <div className="flight-wall-mini__glass" aria-hidden />
         </div>
-
-        {displayedAircraft.length > 1 && (
-          <p className="mt-2 text-center text-[10px] tracking-widest text-slate-600">
-            {index + 1} / {displayedAircraft.length}
-          </p>
-        )}
       </div>
 
       <AdminLink />

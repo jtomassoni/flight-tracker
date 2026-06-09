@@ -1,6 +1,13 @@
+'use client';
+
 import Link from 'next/link';
+import { useIsTouchDevice } from '@/hooks/useMediaQuery';
 
 export default function AdminLink() {
+  const isTouchKiosk = useIsTouchDevice();
+
+  if (isTouchKiosk) return null;
+
   return (
     <Link
       href="/admin"

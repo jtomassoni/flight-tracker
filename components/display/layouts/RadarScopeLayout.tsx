@@ -10,8 +10,10 @@ import {
   formatSpeed,
   getVerticalTrend,
 } from '@/lib/aircraftUtils';
+import { useLayoutDensity } from '@/hooks/useLayoutDensity';
 import AdminLink from '../shared/AdminLink';
 import FlightListState from '../shared/FlightListState';
+import KioskScrollRegion from '../shared/KioskScrollRegion';
 
 export default function RadarScopeLayout({
   displayedAircraft,
@@ -20,6 +22,7 @@ export default function RadarScopeLayout({
   lastUpdated,
   featured,
 }: DisplayLayoutProps) {
+  const { viewport, isDeskPortrait } = useLayoutDensity();
   const blips = toRadarBlips(
     displayedAircraft,
     settings.lat,
@@ -28,8 +31,16 @@ export default function RadarScopeLayout({
   );
 
   return (
-    <div className="flex h-full flex-col bg-background font-mono text-foreground md:flex-row">
-      <section className="relative flex min-h-0 flex-1 items-center justify-center border-b border-border p-3 safe-top md:border-b-0 md:border-r md:p-4">
+    <div
+      className={`flex h-full bg-background font-mono text-foreground ${viewport === 'compact' || isDeskPortrait ? 'flex-col' : 'flex-row'}`}
+    >
+      <section
+        className={`relative flex min-h-0 items-center justify-center p-3 safe-top md:p-4 ${
+          viewport === 'compact' || isDeskPortrait
+            ? 'flex-[1.1] border-b border-border'
+            : 'flex-1 border-r border-border'
+        }`}
+      >
         <div className="absolute left-3 top-3 max-w-[55%] truncate text-[10px] uppercase tracking-widest text-accent sm:left-4 sm:top-4 sm:max-w-none sm:text-xs">
           ATC RADAR // {settings.locationLabel.toUpperCase()}
         </div>
@@ -38,7 +49,16 @@ export default function RadarScopeLayout({
           <p>{lastUpdated?.toLocaleTimeString() ?? 'NO SYNC'}</p>
         </div>
 
-        <svg viewBox="0 0 100 100" className="h-[min(72vw,42dvh,70vh)] w-[min(72vw,42dvh,70vh)] max-w-xl md:h-[min(70vw,70vh)] md:w-[min(70vw,70vh)]">
+        <svg
+          viewBox="0 0 100 100"
+          className={
+            viewport === 'compact' || isDeskPortrait
+              ? 'h-[min(68vw,38dvh)] w-[min(68vw,38dvh)]'
+              : viewport === 'desk'
+                ? 'h-[min(52vw,58dvh)] w-[min(52vw,58dvh)] max-w-lg'
+                : 'h-[min(58vh,36vw)] w-[min(58vh,36vw)] max-w-2xl'
+          }
+        >
           <defs>
             <radialGradient id="radarGlow">
               <stop offset="0%" stopColor="rgba(57,255,106,0.08)" />
@@ -89,11 +109,17 @@ export default function RadarScopeLayout({
         </svg>
       </section>
 
-      <aside className="flex max-h-[42dvh] w-full flex-col md:max-h-none md:w-80 md:flex-1 lg:w-96">
+      <aside
+        className={`flex w-full flex-col ${
+          viewport === 'compact' || isDeskPortrait
+            ? 'max-h-[40dvh] flex-1'
+            : 'min-h-0 w-72 flex-1 lg:w-96'
+        }`}
+      >
         <div className="border-b border-border px-4 py-3 text-xs uppercase tracking-widest text-muted">
           Target List · {displayedAircraft.length}
         </div>
-        <div className="flex-1 overflow-y-auto">
+        <KioskScrollRegion className="min-h-0 flex-1" durationSec={34}>
           <FlightListState status={status} count={displayedAircraft.length} />
           {displayedAircraft.map((ac, i) => (
             <div
@@ -104,17 +130,19 @@ export default function RadarScopeLayout({
                 <span className="font-bold text-accent">{displayIdentifier(ac)}</span>
                 <span className="text-muted">{formatDistance(ac.distanceMi)}</span>
               </div>
-              <div className="mt-1 grid grid-cols-3 gap-1 text-[10px] text-muted">
+              <div
+                className={`mt-1 grid gap-1 text-[10px] text-muted ${viewport === 'desk' ? 'grid-cols-2' : 'grid-cols-3'}`}
+              >
                 <span>{formatAltitude(ac.altitudeFt)}</span>
                 <span>{formatSpeed(ac.groundSpeedKt)}</span>
-                <span>{formatHeading(ac.headingDeg)}</span>
+                {viewport !== 'desk' && <span>{formatHeading(ac.headingDeg)}</span>}
               </div>
               <p className="mt-1 text-[10px] capitalize text-accent/80">
                 {getVerticalTrend(ac.verticalRateFpm)}
               </p>
             </div>
           ))}
-        </div>
+        </KioskScrollRegion>
         <div className="border-t border-border px-4 py-2 text-[10px] text-muted">
           {status.toUpperCase()} · ZIP {settings.zipCode}
         </div>

@@ -2,28 +2,22 @@
 
 import Image from 'next/image';
 import { useMemo } from 'react';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
+import { useLayoutDensity } from '@/hooks/useLayoutDensity';
 import type { DisplayLayoutProps } from '@/types/display';
 import type { NormalizedAircraft } from '@/types/aircraft';
-import { getAirlineBrand } from '@/lib/airlines';
 import {
-  displayIdentifier,
-  formatAltitude,
-  formatDistance,
-  getVerticalTrend,
-  headingToCardinal,
-} from '@/lib/aircraftUtils';
+  fidsDepartureTime,
+  fidsDestination,
+  fidsFlightNumber,
+  fidsGate,
+  fidsStatus,
+} from '@/lib/denFids';
+import { airlineLogoUrl, getAirlineBrand } from '@/lib/airlines';
+import { getVerticalTrend } from '@/lib/aircraftUtils';
 import AdminLink from '../shared/AdminLink';
 import FlightListState from '../shared/FlightListState';
+import KioskScrollRegion from '../shared/KioskScrollRegion';
 import './den-fids.css';
-
-function usePanelCount(): number {
-  const isNarrow = useMediaQuery('(max-width: 639px)');
-  const isTablet = useMediaQuery('(max-width: 1279px)');
-  if (isNarrow) return 1;
-  if (isTablet) return 2;
-  return 4;
-}
 
 const COL_HEADERS = ['Departing To', 'Airline', 'Flight', 'Gate', 'Time', 'Status'] as const;
 
@@ -35,48 +29,45 @@ function splitIntoPanels(aircraft: NormalizedAircraft[], panels: number): Normal
   return result;
 }
 
-function statusDisplay(trend: ReturnType<typeof getVerticalTrend>): {
-  label: string;
-  className: string;
-} {
-  switch (trend) {
-    case 'climbing':
-      return { label: 'Climbing', className: 'den-fids__status--active' };
-    case 'descending':
-      return { label: 'Descending', className: 'den-fids__status--alert' };
-    default:
-      return { label: 'On Time', className: 'den-fids__status--ontime' };
-  }
-}
-
-function DenLogo() {
+function DenBrandMark() {
   return (
-    <svg width="28" height="28" viewBox="0 0 32 32" aria-hidden className="shrink-0">
-      <circle cx="16" cy="16" r="15" fill="none" stroke="#ffffff" strokeWidth="1.5" />
+    <svg width="36" height="36" viewBox="0 0 40 40" aria-hidden className="den-fids__mark shrink-0">
+      <circle cx="20" cy="20" r="18" fill="none" stroke="#ffffff" strokeWidth="1.5" />
       <path
-        d="M6 22 L16 8 L26 22 Z"
+        d="M8 28 L20 10 L32 28 Z"
         fill="none"
         stroke="#ffffff"
         strokeWidth="1.5"
         strokeLinejoin="round"
       />
-      <path d="M10 22 L16 14 L22 22" fill="none" stroke="#ffffff" strokeWidth="1" />
+      <path d="M12 28 L20 18 L28 28" fill="none" stroke="#ffffff" strokeWidth="1" />
     </svg>
   );
 }
 
-function FidsPanel({ flights, panelIndex }: { flights: NormalizedAircraft[]; panelIndex: number }) {
+function FidsPanel({
+  flights,
+  panelIndex,
+  lastUpdated,
+  globalOffset,
+}: {
+  flights: NormalizedAircraft[];
+  panelIndex: number;
+  lastUpdated: Date | null;
+  globalOffset: number;
+}) {
   return (
     <section className="den-fids__panel flex-1">
-      <div className="den-fids__panel-header">
-        <DenLogo />
-        <span className="den-fids__panel-title">Departures</span>
-        {panelIndex > 0 && (
-          <span className="ml-auto text-[10px] uppercase tracking-widest text-[#7eb8d4]">
-            {panelIndex + 1}
-          </span>
-        )}
-      </div>
+      <header className="den-fids__panel-header">
+        <div className="den-fids__brand">
+          <DenBrandMark />
+          <div className="den-fids__brand-text">
+            <p className="den-fids__airport-name">Denver International Airport</p>
+            <p className="den-fids__tagline">Together we soar.</p>
+          </div>
+        </div>
+        <h2 className="den-fids__panel-title">Departures</h2>
+      </header>
 
       <div className="den-fids__col-header">
         {COL_HEADERS.map((h) => (
@@ -84,39 +75,44 @@ function FidsPanel({ flights, panelIndex }: { flights: NormalizedAircraft[]; pan
         ))}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        {flights.map((ac) => {
+      <KioskScrollRegion className="den-fids__rows min-h-0 flex-1" durationSec={32}>
+        {flights.map((ac, rowIndex) => {
+          const rowNum = globalOffset + rowIndex;
           const brand = getAirlineBrand(ac.callsign);
-          const id = displayIdentifier(ac);
           const trend = getVerticalTrend(ac.verticalRateFpm);
-          const { label: statusLabel, className: statusClass } = statusDisplay(trend);
-          const gate = formatDistance(ac.distanceMi).replace(' mi', '');
-          const alt = formatAltitude(ac.altitudeFt).replace(' ft', '').replace(/,/g, '');
+          const status = fidsStatus(trend, rowNum, lastUpdated);
 
           return (
             <div key={ac.hex} className="den-fids__row">
-              <span className="den-fids__dest">{headingToCardinal(ac.headingDeg)}</span>
+              <span className="den-fids__dest">{fidsDestination(rowNum)}</span>
               <div className="den-fids__airline">
                 <div className="den-fids__logo-wrap">
                   <Image
-                    src={brand.logoUrl}
-                    alt=""
-                    width={40}
-                    height={18}
-                    className="h-full w-full object-contain p-0.5"
+                    src={airlineLogoUrl(brand, 128)}
+                    alt={brand.name}
+                    width={72}
+                    height={28}
+                    className="den-fids__logo-img"
                     unoptimized
                   />
                 </div>
-                <span className="den-fids__airline-name">{brand.name}</span>
               </div>
-              <span className="den-fids__cyan truncate">{id}</span>
-              <span className="den-fids__cyan">{gate}</span>
-              <span className="den-fids__cyan">{alt}</span>
-              <span className={statusClass}>{statusLabel}</span>
+              <span className="den-fids__data den-fids__flight">{fidsFlightNumber(ac)}</span>
+              <span className="den-fids__data">{fidsGate(rowNum, ac.hex)}</span>
+              <span className="den-fids__data">{fidsDepartureTime(rowNum, lastUpdated)}</span>
+              <span className={`den-fids__status den-fids__status--${status.tone}`}>
+                {status.label}
+              </span>
             </div>
           );
         })}
-      </div>
+      </KioskScrollRegion>
+
+      {panelIndex > 0 && (
+        <span className="den-fids__panel-index" aria-hidden>
+          {panelIndex + 1}
+        </span>
+      )}
     </section>
   );
 }
@@ -127,17 +123,18 @@ export default function DepartureTableLayout({
   status,
   lastUpdated,
   errorMessage,
-  onRefresh,
 }: DisplayLayoutProps) {
-  const panelCount = usePanelCount();
+  const { panelCount } = useLayoutDensity();
   const panels = useMemo(
     () => splitIntoPanels(displayedAircraft, panelCount),
     [displayedAircraft, panelCount]
   );
 
+  let rowOffset = 0;
+
   return (
     <div className="den-fids flex h-full flex-col overflow-hidden">
-      <main className="flex min-h-0 flex-1 flex-col md:flex-row">
+      <main className="den-fids__main flex min-h-0 flex-1 flex-col md:flex-row">
         {displayedAircraft.length === 0 ? (
           <div className="flex flex-1 items-center justify-center p-8">
             <FlightListState
@@ -148,24 +145,28 @@ export default function DepartureTableLayout({
             />
           </div>
         ) : (
-          panels.map((flights, i) => (
-            <FidsPanel key={i} flights={flights} panelIndex={i} />
-          ))
+          panels.map((flights, i) => {
+            const panel = (
+              <FidsPanel
+                key={i}
+                flights={flights}
+                panelIndex={i}
+                lastUpdated={lastUpdated}
+                globalOffset={rowOffset}
+              />
+            );
+            rowOffset += flights.length;
+            return panel;
+          })
         )}
       </main>
 
-      <footer className="safe-bottom flex shrink-0 flex-col gap-1 border-t border-white/10 bg-[#0a1628] px-4 py-2 text-[10px] uppercase tracking-wider text-[#7eb8d4] sm:flex-row sm:items-center sm:justify-between sm:py-1.5">
-        <span className="truncate">
-          Denver International Airport · {settings.locationLabel} · ZIP {settings.zipCode}
-        </span>
-        <span className="flex shrink-0 items-center gap-3 sm:gap-4">
+      {(lastUpdated || errorMessage) && (
+        <footer className="den-fids__footer safe-bottom shrink-0">
           {lastUpdated && <span>Updated {lastUpdated.toLocaleTimeString()}</span>}
-          <button type="button" onClick={onRefresh} className="font-bold text-[#5ec8e8] hover:underline">
-            Refresh
-          </button>
-          {errorMessage && <span className="text-red-400">{errorMessage}</span>}
-        </span>
-      </footer>
+          {errorMessage && <span className="den-fids__footer-error">{errorMessage}</span>}
+        </footer>
+      )}
       <AdminLink />
     </div>
   );

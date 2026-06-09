@@ -7,8 +7,10 @@ import {
   loadSettings,
   saveSettings,
   type DisplaySettings,
+  type SkyMapZoomSettings,
   type ThemeId,
 } from '@/lib/settings';
+import { normalizeSkyMapZoom } from '@/lib/skyMapZoom';
 import { getTheme, getThemeSwatches, THEME_LIST } from '@/lib/themes';
 import { THEME_ROTATION_SEC } from '@/lib/constants';
 
@@ -94,6 +96,45 @@ function ThemeCard({
   );
 }
 
+function ZoomSlider({
+  label,
+  hint,
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  label: string;
+  hint?: string;
+  value: number;
+  min: number;
+  max: number;
+  onChange: (v: number) => void;
+}) {
+  return (
+    <label className="block">
+      <div className="mb-2 flex items-baseline justify-between gap-2">
+        <span className="admin-label">{label}</span>
+        <span className="admin-mono text-sm font-semibold text-sky-300">{value}</span>
+      </div>
+      {hint && <p className="mb-2 text-xs text-slate-500">{hint}</p>}
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={1}
+        value={value}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="admin-range w-full"
+      />
+      <div className="mt-1 flex justify-between text-[10px] text-slate-600">
+        <span>{min}</span>
+        <span>{max}</span>
+      </div>
+    </label>
+  );
+}
+
 function Section({
   title,
   subtitle,
@@ -133,6 +174,14 @@ export default function AdminPanel() {
 
   const update = <K extends keyof DisplaySettings>(key: K, value: DisplaySettings[K]) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
+    setSaved(false);
+  };
+
+  const updateSkyMapZoom = (patch: Partial<SkyMapZoomSettings>) => {
+    setSettings((prev) => ({
+      ...prev,
+      skyMapZoom: normalizeSkyMapZoom({ ...prev.skyMapZoom, ...patch }),
+    }));
     setSaved(false);
   };
 
@@ -431,6 +480,64 @@ export default function AdminPanel() {
             <span className="text-sm text-slate-300">Hide unidentified aircraft</span>
           </label>
         </div>
+      </Section>
+
+      {/* Sky Map zoom */}
+      <Section
+        title="Sky Map Zoom"
+        subtitle="Tune Google Maps zoom per display size — lower is wider area, higher is closer"
+        className="mb-6"
+      >
+        <div className="mb-6 grid gap-6 sm:grid-cols-2">
+          <ZoomSlider
+            label="Minimum zoom"
+            hint="How far out users can zoom (smallest number = widest view)"
+            value={settings.skyMapZoom.minZoom}
+            min={5}
+            max={17}
+            onChange={(minZoom) => updateSkyMapZoom({ minZoom })}
+          />
+          <ZoomSlider
+            label="Maximum zoom"
+            hint="How far in the map can render (largest number = closest view)"
+            value={settings.skyMapZoom.maxZoom}
+            min={6}
+            max={18}
+            onChange={(maxZoom) => updateSkyMapZoom({ maxZoom })}
+          />
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-3">
+          <ZoomSlider
+            label="Wall monitor"
+            hint="Large HDMI / TV displays"
+            value={settings.skyMapZoom.zoomWall}
+            min={settings.skyMapZoom.minZoom}
+            max={settings.skyMapZoom.maxZoom}
+            onChange={(zoomWall) => updateSkyMapZoom({ zoomWall })}
+          />
+          <ZoomSlider
+            label="iPad / desk"
+            hint="Small desk screens & iPad kiosks"
+            value={settings.skyMapZoom.zoomDesk}
+            min={settings.skyMapZoom.minZoom}
+            max={settings.skyMapZoom.maxZoom}
+            onChange={(zoomDesk) => updateSkyMapZoom({ zoomDesk })}
+          />
+          <ZoomSlider
+            label="Compact"
+            hint="Very small or portrait layouts"
+            value={settings.skyMapZoom.zoomCompact}
+            min={settings.skyMapZoom.minZoom}
+            max={settings.skyMapZoom.maxZoom}
+            onChange={(zoomCompact) => updateSkyMapZoom({ zoomCompact })}
+          />
+        </div>
+
+        <p className="mt-5 text-xs text-slate-500">
+          Tip: match zoom to your search radius — 10 mi radius usually looks good around zoom 9–11 on
+          an iPad.
+        </p>
       </Section>
 
       {/* Actions */}

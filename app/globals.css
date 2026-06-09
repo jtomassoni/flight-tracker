@@ -73,11 +73,82 @@ body {
 }
 
 /* Kiosk: reduce accidental selection / callouts on touch displays */
-@media (hover: none) and (pointer: coarse) {
-  .kiosk-no-select {
-    -webkit-user-select: none;
-    user-select: none;
-    -webkit-touch-callout: none;
+.kiosk-no-select {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Pointerless auto-scroll regions (iPad / wall-mounted displays) */
+.kiosk-scroll-y {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow: hidden;
+}
+
+.kiosk-scroll-y__track {
+  animation: kiosk-scroll-y linear infinite;
+}
+
+@keyframes kiosk-scroll-y {
+  0% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(-50%);
+  }
+}
+
+.kiosk-ticker-x {
+  overflow: hidden;
+}
+
+.kiosk-ticker-x__static {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.kiosk-ticker-x__track {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+  width: max-content;
+  animation: kiosk-ticker-x linear infinite;
+}
+
+.kiosk-ticker-x__dup {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.5rem;
+}
+
+@keyframes kiosk-ticker-x {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* Desk / wall typography scale */
+@media (max-width: 639px) {
+  :root {
+    --kiosk-pad: 0.75rem;
+  }
+}
+
+@media (min-width: 640px) and (max-width: 1279px) {
+  :root {
+    --kiosk-pad: 1rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --kiosk-pad: 1.25rem;
   }
 }
 

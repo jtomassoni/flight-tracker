@@ -20,6 +20,10 @@
   --admin-glow: 0 0 40px rgba(56, 189, 248, 0.15);
 
   min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   color: var(--admin-text);
   font-family: var(--font-dm-sans), system-ui, sans-serif;
   background-color: var(--admin-bg);
@@ -152,4 +156,34 @@
   font-family: var(--font-jetbrains), ui-monospace, monospace;
   font-size: 0.7rem;
   color: var(--admin-muted);
+}
+
+.admin-range {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.2);
+  outline: none;
+}
+
+.admin-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(56, 189, 248, 0.6);
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+  cursor: pointer;
+}
+
+.admin-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid rgba(56, 189, 248, 0.6);
+  background: linear-gradient(135deg, #0ea5e9, #38bdf8);
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+  cursor: pointer;
 }

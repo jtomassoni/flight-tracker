@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { useIsTouchDevice } from '@/hooks/useMediaQuery';
+import type { IpadOrientation } from '@/lib/kiosk';
 import type { ThemeId } from '@/lib/settings';
 import { getTheme, THEME_IDS } from '@/lib/themes';
 
@@ -9,6 +10,10 @@ type ThemeDebugPanelProps = {
   activeThemeId: ThemeId;
   isManual: boolean;
   autoRotateEnabled: boolean;
+  ipadPreview: boolean;
+  ipadOrientation: IpadOrientation;
+  onToggleIpadPreview: () => void;
+  onRotateIpad: () => void;
   onPrev: () => void;
   onNext: () => void;
   onResumeAuto: () => void;
@@ -18,6 +23,10 @@ export default function ThemeDebugPanel({
   activeThemeId,
   isManual,
   autoRotateEnabled,
+  ipadPreview,
+  ipadOrientation,
+  onToggleIpadPreview,
+  onRotateIpad,
   onPrev,
   onNext,
   onResumeAuto,
@@ -56,7 +65,7 @@ export default function ThemeDebugPanel({
 
   return (
     <div
-      className="fixed z-[200] w-56 select-none rounded-xl border border-white/20 bg-black/75 text-white shadow-2xl backdrop-blur-md"
+      className="fixed z-[200] w-64 select-none rounded-xl border border-white/20 bg-black/80 text-white shadow-2xl backdrop-blur-md"
       style={{ left: pos.x, top: pos.y, touchAction: 'none' }}
     >
       <div
@@ -97,6 +106,36 @@ export default function ThemeDebugPanel({
         >
           Next →
         </button>
+      </div>
+
+      <div className="space-y-2 border-t border-white/10 px-3 py-2">
+        <button
+          type="button"
+          onClick={onToggleIpadPreview}
+          className={`w-full rounded-lg border py-2 text-xs font-semibold ${
+            ipadPreview
+              ? 'border-sky-400/50 bg-sky-500/20 text-sky-200'
+              : 'border-white/15 bg-white/10 text-white/80 hover:bg-white/15'
+          }`}
+        >
+          {ipadPreview ? 'iPad preview ON' : 'Preview on iPad'}
+        </button>
+
+        {ipadPreview && (
+          <button
+            type="button"
+            onClick={onRotateIpad}
+            className="w-full rounded-lg border border-white/15 bg-white/10 py-2 text-xs font-medium text-white/90 hover:bg-white/15"
+          >
+            Rotate ↻ {ipadOrientation === 'landscape' ? 'Landscape' : 'Portrait'}
+          </button>
+        )}
+
+        <p className="text-[10px] leading-relaxed text-white/35">
+          {ipadPreview
+            ? 'Themes render at iPad size with reduced detail — same as a desk kiosk.'
+            : 'Simulate a 10.9″ iPad in a device frame.'}
+        </p>
       </div>
 
       {autoRotateEnabled && (

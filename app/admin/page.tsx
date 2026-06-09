@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 
 export default function AdminPage() {
   return (
-    <div className="admin-shell relative overflow-hidden">
+    <div className="admin-shell relative">
       <div className="admin-horizon" aria-hidden />
       <AdminPanel />
     </div>

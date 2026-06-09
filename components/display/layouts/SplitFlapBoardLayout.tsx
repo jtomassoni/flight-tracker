@@ -1,17 +1,16 @@
 'use client';
 
 import SplitFlapText from '@/components/SplitFlapText';
-import { useMediaQuery } from '@/hooks/useMediaQuery';
 import type { DisplayLayoutProps } from '@/types/display';
 import { displayIdentifier } from '@/lib/aircraftUtils';
 import AdminLink from '../shared/AdminLink';
 import FlightListState from '../shared/FlightListState';
+import KioskScrollRegion from '../shared/KioskScrollRegion';
 import './split-flap-board.css';
 
-/** 4-digit row IDs like classic station boards (196, 1198, …) */
+/** 2-digit platform / row numbers like classic departure boards */
 function flapRowId(index: number): string {
-  const base = 196 + index * 102;
-  return String(base % 10000).padStart(4, '0');
+  return String(index + 1).padStart(2, '0');
 }
 
 /** 24h departure-style time derived from row index + last sync */
@@ -35,35 +34,37 @@ export default function SplitFlapBoardLayout({
   status,
   lastUpdated,
 }: DisplayLayoutProps) {
-  const isNarrow = useMediaQuery('(max-width: 639px)');
-  const destChars = isNarrow ? 8 : 14;
+  const locationLine = settings.locationLabel.replace(/,/g, '').trim().toUpperCase().slice(0, 14);
+  const countLine = `${displayedAircraft.length} FLIGHTS`;
 
   return (
     <div className="solari-board flex h-full flex-col overflow-hidden">
-      <main className="min-h-0 flex-1 overflow-y-auto py-2 md:py-4">
+      <KioskScrollRegion className="min-h-0 flex-1 py-2 md:py-4" durationSec={40}>
         <FlightListState status={status} count={displayedAircraft.length} />
-        {displayedAircraft.map((ac, i) => (
-          <div key={ac.hex} className="solari-board__row">
-            <div className="solari-board__col-id">
-              <SplitFlapText value={flapRowId(i)} minChars={4} />
+        {displayedAircraft.map((ac, i) => {
+          const dest = flapDestination(ac.callsign, ac.hex);
+          return (
+            <div key={ac.hex} className="solari-board__row">
+              <div className="solari-board__col-id">
+                <SplitFlapText value={flapRowId(i)} minChars={2} />
+              </div>
+              <div className="solari-board__col-dest">
+                <SplitFlapText value={dest} maxChars={12} />
+              </div>
+              <div className="solari-board__col-time">
+                <SplitFlapText value={flapDepartureTime(i, lastUpdated)} minChars={5} />
+              </div>
             </div>
-            <div className="solari-board__col-dest">
-              <SplitFlapText value={flapDestination(ac.callsign, ac.hex)} minChars={destChars} />
-            </div>
-            <div className="solari-board__col-time">
-              <SplitFlapText value={flapDepartureTime(i, lastUpdated)} minChars={5} />
-            </div>
-          </div>
-        ))}
-      </main>
+          );
+        })}
+      </KioskScrollRegion>
 
-      <footer className="safe-bottom shrink-0 border-t border-black bg-[#0a0a0a] px-4 py-2">
-        <SplitFlapText
-          value={`${settings.locationLabel.slice(0, 12).toUpperCase()} ${displayedAircraft.length}`}
-          minChars={18}
-          size="md"
-          className="opacity-80"
-        />
+      <footer className="solari-board__footer safe-bottom shrink-0 border-t border-black bg-[#0a0a0a] px-4 py-2">
+        <div className="solari-board__footer-grid">
+          <SplitFlapText value={locationLine} size="md" className="solari-board__footer-location" />
+          <SplitFlapText value={countLine} size="md" className="opacity-80" />
+        </div>
+        <p className="solari-board__footer-hint">Aircraft currently in range</p>
       </footer>
       <AdminLink />
     </div>

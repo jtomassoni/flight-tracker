@@ -1,8 +1,9 @@
 'use client';
 
 import Image from 'next/image';
+import { useLayoutDensity } from '@/hooks/useLayoutDensity';
 import type { DisplayLayoutProps } from '@/types/display';
-import { getAirlineBrand, getAirlineTileStyle } from '@/lib/airlines';
+import { airlineLogoUrl, getAirlineBrand, getAirlineTileStyle } from '@/lib/airlines';
 import {
   displayIdentifier,
   formatAltitude,
@@ -13,6 +14,7 @@ import {
 } from '@/lib/aircraftUtils';
 import AdminLink from '../shared/AdminLink';
 import FlightListState from '../shared/FlightListState';
+import KioskScrollRegion from '../shared/KioskScrollRegion';
 
 export default function AirlineGalleryLayout({
   displayedAircraft,
@@ -20,14 +22,17 @@ export default function AirlineGalleryLayout({
   status,
   lastUpdated,
   provider,
-  onRefresh,
 }: DisplayLayoutProps) {
+  const { galleryCols: gridClass, showGalleryStats, viewport } = useLayoutDensity();
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background font-display text-foreground">
       <header className="safe-top shrink-0 flex flex-wrap items-end justify-between gap-3 border-b border-border px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
         <div className="min-w-0">
           <p className="text-xs uppercase tracking-[0.2em] text-accent">Live Traffic</p>
-          <h1 className="text-2xl font-bold sm:text-3xl md:text-4xl">
+          <h1
+            className={`font-bold ${viewport === 'desk' ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl md:text-4xl'}`}
+          >
             Flights Over {settings.locationLabel}
           </h1>
         </div>
@@ -44,9 +49,9 @@ export default function AirlineGalleryLayout({
         </div>
       </header>
 
-      <main className="min-h-0 flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 [-webkit-overflow-scrolling:touch]">
+      <KioskScrollRegion className="min-h-0 flex-1 p-[var(--kiosk-pad)]" durationSec={44}>
         <FlightListState status={status} count={displayedAircraft.length} />
-        <div className="grid gap-3 sm:grid-cols-2 sm:gap-4 xl:grid-cols-3">
+        <div className={`grid gap-3 sm:gap-4 ${gridClass}`}>
           {displayedAircraft.map((ac) => {
             const brand = getAirlineBrand(ac.callsign);
             const tile = getAirlineTileStyle(brand);
@@ -56,41 +61,70 @@ export default function AirlineGalleryLayout({
             return (
               <article
                 key={ac.hex}
-                className="flex flex-col overflow-hidden rounded-2xl shadow-lg"
+                className="flex flex-col overflow-hidden rounded-2xl shadow-xl"
                 style={{
                   background: tile.cardBackground,
                   border: `2px solid ${tile.borderColor}`,
                   color: tile.textColor,
                 }}
               >
-                <div className="h-1.5 shrink-0" style={{ backgroundColor: tile.accentBarColor }} />
+                <div
+                  className="h-2 shrink-0"
+                  style={{ background: tile.accentBarColor }}
+                  aria-hidden
+                />
 
                 <div
                   className="flex items-center gap-3 px-4 py-3 sm:gap-4 sm:px-5 sm:py-4"
                   style={{ background: tile.headerBackground }}
                 >
                   <div
-                    className="relative h-12 w-12 shrink-0 overflow-hidden rounded-xl shadow-inner sm:h-16 sm:w-16"
-                    style={{ backgroundColor: tile.logoBackground }}
+                    className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg shadow-md sm:h-16 sm:w-16"
+                    style={{
+                      backgroundColor: tile.logoBackground,
+                      border: `1px solid ${tile.borderColor}44`,
+                    }}
                   >
-                    <Image src={brand.logoUrl} alt={brand.name} fill className="object-contain p-2" unoptimized />
+                    <Image
+                      src={airlineLogoUrl(brand, 128)}
+                      alt={brand.name}
+                      fill
+                      className="object-contain p-2"
+                      unoptimized
+                    />
                   </div>
-                  <div className="min-w-0" style={{ color: tile.badgeTextColor }}>
-                    <p className="truncate text-xl font-bold tracking-tight sm:text-2xl">{id}</p>
-                    <p className="text-sm opacity-90">{brand.name}</p>
-                    <p className="mt-0.5 font-mono text-[10px] uppercase tracking-widest opacity-75">
+                  <div className="min-w-0">
+                    <p
+                      className="truncate text-xl font-bold tracking-tight sm:text-2xl"
+                      style={{ color: tile.headerTextColor }}
+                    >
+                      {id}
+                    </p>
+                    <p className="text-sm font-semibold" style={{ color: tile.headerTextColor }}>
+                      {brand.name}
+                    </p>
+                    <p
+                      className="mt-0.5 font-mono text-[10px] uppercase tracking-widest"
+                      style={{ color: tile.headerMutedColor }}
+                    >
                       {brand.icao} · {brand.iata}
                     </p>
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-1.5 p-3">
-                  {[
-                    ['Distance', formatDistance(ac.distanceMi)],
-                    ['Altitude', formatAltitude(ac.altitudeFt)],
-                    ['Speed', formatSpeed(ac.groundSpeedKt)],
-                    ['Heading', formatHeading(ac.headingDeg)],
-                  ].map(([label, value], i) => (
+                  {(showGalleryStats
+                    ? [
+                        ['Distance', formatDistance(ac.distanceMi)],
+                        ['Altitude', formatAltitude(ac.altitudeFt)],
+                        ['Speed', formatSpeed(ac.groundSpeedKt)],
+                        ['Heading', formatHeading(ac.headingDeg)],
+                      ]
+                    : [
+                        ['Distance', formatDistance(ac.distanceMi)],
+                        ['Altitude', formatAltitude(ac.altitudeFt)],
+                      ]
+                  ).map(([label, value], i) => (
                     <div
                       key={label}
                       className="rounded-lg px-3 py-2.5"
@@ -111,7 +145,7 @@ export default function AirlineGalleryLayout({
 
                 <div
                   className="mt-auto flex items-center justify-between px-5 py-3"
-                  style={{ borderTop: `1px solid ${tile.borderColor}44` }}
+                  style={{ borderTop: `1px solid ${tile.borderColor}55` }}
                 >
                   <span
                     className="rounded-full px-3 py-1 text-xs font-semibold capitalize shadow-sm"
@@ -122,21 +156,22 @@ export default function AirlineGalleryLayout({
                   >
                     {trend}
                   </span>
-                  <span className="font-mono text-[10px]" style={{ color: tile.mutedTextColor }}>
-                    {provider}
-                  </span>
+                  {showGalleryStats && (
+                    <span className="font-mono text-[10px]" style={{ color: tile.mutedTextColor }}>
+                      {provider}
+                    </span>
+                  )}
                 </div>
               </article>
             );
           })}
         </div>
-      </main>
+      </KioskScrollRegion>
 
-      <footer className="safe-bottom shrink-0 flex items-center justify-between border-t border-border bg-panel/95 px-4 py-3 backdrop-blur sm:px-6">
-        <span className="text-sm text-muted">ZIP {settings.zipCode}</span>
-        <button onClick={onRefresh} className="text-sm text-accent hover:underline">
-          Refresh
-        </button>
+      <footer className="safe-bottom shrink-0 border-t border-border bg-panel/95 px-4 py-2 backdrop-blur sm:px-6">
+        <span className="text-xs text-muted sm:text-sm">
+          ZIP {settings.zipCode} · {settings.radiusMi} mi radius
+        </span>
       </footer>
       <AdminLink />
     </div>

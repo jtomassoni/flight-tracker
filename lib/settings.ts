@@ -5,6 +5,13 @@ import {
   DEFAULT_ZIP,
   SETTINGS_STORAGE_KEY,
 } from './constants';
+import {
+  DEFAULT_SKY_MAP_ZOOM,
+  normalizeSkyMapZoom,
+  type SkyMapZoomSettings,
+} from './skyMapZoom';
+
+export type { SkyMapZoomSettings };
 
 export type RefreshInterval = 30 | 60 | 90;
 export type RadiusMi = 5 | 10 | 25 | 50;
@@ -33,6 +40,7 @@ export interface DisplaySettings {
   mode: DisplayMode;
   theme: ThemeId;
   rotateThemes: boolean;
+  skyMapZoom: SkyMapZoomSettings;
 }
 
 export const DEFAULT_SETTINGS: DisplaySettings = {
@@ -48,6 +56,7 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   mode: 'nearby',
   theme: 'airport-led',
   rotateThemes: true,
+  skyMapZoom: DEFAULT_SKY_MAP_ZOOM,
 };
 
 function normalizeZip(zip: string | undefined): string {
@@ -95,6 +104,7 @@ export function loadSettings(): DisplaySettings {
         parsed.refreshIntervalSec ?? DEFAULT_SETTINGS.refreshIntervalSec
       ),
       rotateThemes: parsed.rotateThemes ?? DEFAULT_SETTINGS.rotateThemes,
+      skyMapZoom: normalizeSkyMapZoom(parsed.skyMapZoom),
     };
   } catch {
     return DEFAULT_SETTINGS;

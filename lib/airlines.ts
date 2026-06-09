@@ -4,6 +4,8 @@ export type AirlineBrand = {
   iata: string;
   primaryColor: string;
   accentColor: string;
+  /** Third brand color when applicable (e.g. Southwest red, Delta red) */
+  secondaryColor?: string;
   logoUrl: string;
 };
 
@@ -15,7 +17,8 @@ const AIRLINES: Record<string, AirlineBrand> = {
     iata: 'UA',
     primaryColor: '#0033A0',
     accentColor: '#FFFFFF',
-    logoUrl: 'https://images.kiwi.com/airlines/64/UA.png',
+    secondaryColor: '#0D8BD9',
+    logoUrl: 'https://images.kiwi.com/airlines/128/UA.png',
   },
   SWA: {
     name: 'Southwest',
@@ -23,7 +26,8 @@ const AIRLINES: Record<string, AirlineBrand> = {
     iata: 'WN',
     primaryColor: '#304CB2',
     accentColor: '#FFB612',
-    logoUrl: 'https://images.kiwi.com/airlines/64/WN.png',
+    secondaryColor: '#C8102E',
+    logoUrl: 'https://images.kiwi.com/airlines/128/WN.png',
   },
   DAL: {
     name: 'Delta',
@@ -31,7 +35,8 @@ const AIRLINES: Record<string, AirlineBrand> = {
     iata: 'DL',
     primaryColor: '#003366',
     accentColor: '#C8102E',
-    logoUrl: 'https://images.kiwi.com/airlines/64/DL.png',
+    secondaryColor: '#FFFFFF',
+    logoUrl: 'https://images.kiwi.com/airlines/128/DL.png',
   },
   AAL: {
     name: 'American',
@@ -39,7 +44,8 @@ const AIRLINES: Record<string, AirlineBrand> = {
     iata: 'AA',
     primaryColor: '#0078D2',
     accentColor: '#C8102E',
-    logoUrl: 'https://images.kiwi.com/airlines/64/AA.png',
+    secondaryColor: '#FFFFFF',
+    logoUrl: 'https://images.kiwi.com/airlines/128/AA.png',
   },
   FFT: {
     name: 'Frontier',
@@ -47,7 +53,8 @@ const AIRLINES: Record<string, AirlineBrand> = {
     iata: 'F9',
     primaryColor: '#006747',
     accentColor: '#8CD600',
-    logoUrl: 'https://images.kiwi.com/airlines/64/F9.png',
+    secondaryColor: '#FFFFFF',
+    logoUrl: 'https://images.kiwi.com/airlines/128/F9.png',
   },
   JBU: {
     name: 'JetBlue',
@@ -55,7 +62,8 @@ const AIRLINES: Record<string, AirlineBrand> = {
     iata: 'B6',
     primaryColor: '#003087',
     accentColor: '#FFFFFF',
-    logoUrl: 'https://images.kiwi.com/airlines/64/B6.png',
+    secondaryColor: '#6699CC',
+    logoUrl: 'https://images.kiwi.com/airlines/128/B6.png',
   },
   ASA: {
     name: 'Alaska',
@@ -63,7 +71,8 @@ const AIRLINES: Record<string, AirlineBrand> = {
     iata: 'AS',
     primaryColor: '#01426A',
     accentColor: '#48BFE5',
-    logoUrl: 'https://images.kiwi.com/airlines/64/AS.png',
+    secondaryColor: '#95C93D',
+    logoUrl: 'https://images.kiwi.com/airlines/128/AS.png',
   },
   SKW: {
     name: 'SkyWest',
@@ -71,7 +80,8 @@ const AIRLINES: Record<string, AirlineBrand> = {
     iata: 'OO',
     primaryColor: '#1B365D',
     accentColor: '#C4D600',
-    logoUrl: 'https://images.kiwi.com/airlines/64/OO.png',
+    secondaryColor: '#0072CE',
+    logoUrl: 'https://images.kiwi.com/airlines/128/OO.png',
   },
   ENY: {
     name: 'Envoy',
@@ -79,7 +89,8 @@ const AIRLINES: Record<string, AirlineBrand> = {
     iata: 'MQ',
     primaryColor: '#003366',
     accentColor: '#C8102E',
-    logoUrl: 'https://images.kiwi.com/airlines/64/MQ.png',
+    secondaryColor: '#FFFFFF',
+    logoUrl: 'https://images.kiwi.com/airlines/128/MQ.png',
   },
   RPA: {
     name: 'Republic',
@@ -87,7 +98,17 @@ const AIRLINES: Record<string, AirlineBrand> = {
     iata: 'YX',
     primaryColor: '#1F3A5F',
     accentColor: '#E8B923',
-    logoUrl: 'https://images.kiwi.com/airlines/64/YX.png',
+    secondaryColor: '#FFFFFF',
+    logoUrl: 'https://images.kiwi.com/airlines/128/YX.png',
+  },
+  NKS: {
+    name: 'Spirit',
+    icao: 'NKS',
+    iata: 'NK',
+    primaryColor: '#FFD100',
+    accentColor: '#000000',
+    secondaryColor: '#FFFFFF',
+    logoUrl: 'https://images.kiwi.com/airlines/128/NK.png',
   },
 };
 
@@ -113,6 +134,8 @@ export function getAirlineBrand(callsign?: string): AirlineBrand {
 export type AirlineTileStyle = {
   cardBackground: string;
   headerBackground: string;
+  headerTextColor: string;
+  headerMutedColor: string;
   statBackground: string;
   statAltBackground: string;
   logoBackground: string;
@@ -122,6 +145,7 @@ export type AirlineTileStyle = {
   badgeBackground: string;
   badgeTextColor: string;
   borderColor: string;
+  /** Top stripe — often tricolor or dual brand bands */
   accentBarColor: string;
 };
 
@@ -153,29 +177,205 @@ function contrastingText(hex: string): string {
   return luminance(hex) > 0.55 ? '#0f172a' : '#f8fafc';
 }
 
-/** Per-tile livery styling for the Elegant & Modern gallery layout */
-export function getAirlineTileStyle(brand: AirlineBrand): AirlineTileStyle {
+export type AirlineLedWallStyle = {
+  logoBackground: string;
+  logoBorder: string;
+  accentStripe: string;
+};
+
+/** Logo tile styling for the Flight Wall Mini LED theme */
+export function getAirlineLedWallStyle(brand: AirlineBrand): AirlineLedWallStyle {
+  const onDarkLogo = ['UAL', 'DAL', 'AAL', 'FFT', 'JBU', 'ASA', 'SKW'].includes(brand.icao);
+  return {
+    logoBackground: onDarkLogo ? brand.primaryColor : '#e8edf2',
+    logoBorder: mixHex(brand.primaryColor, '#000000', 0.25),
+    accentStripe: brand.accentColor,
+  };
+}
+
+export function airlineLogoUrl(brand: AirlineBrand, size: 64 | 128 | 256 = 128): string {
+  return `https://images.kiwi.com/airlines/${size}/${brand.iata}.png`;
+}
+
+/** Authentic per-carrier gallery tiles for Elegant & Modern */
+const GALLERY_LIVERY: Record<string, AirlineTileStyle> = {
+  UAL: {
+    cardBackground: 'linear-gradient(165deg, #0033A0 0%, #001f5c 55%, #000d2e 100%)',
+    headerBackground: '#ffffff',
+    headerTextColor: '#0033A0',
+    headerMutedColor: 'rgba(0, 51, 160, 0.72)',
+    accentBarColor: 'linear-gradient(90deg, #0033A0 0%, #0D8BD9 100%)',
+    logoBackground: '#ffffff',
+    borderColor: '#0D8BD9',
+    textColor: '#f8fafc',
+    mutedTextColor: 'rgba(248, 250, 252, 0.72)',
+    labelColor: '#7eb8ff',
+    statBackground: 'rgba(255, 255, 255, 0.1)',
+    statAltBackground: 'rgba(0, 0, 0, 0.22)',
+    badgeBackground: '#0D8BD9',
+    badgeTextColor: '#ffffff',
+  },
+  SWA: {
+    cardBackground: 'linear-gradient(165deg, #304CB2 0%, #1e3078 55%, #121f4a 100%)',
+    headerBackground: 'linear-gradient(90deg, #FFB612 0%, #ffc94d 100%)',
+    headerTextColor: '#1e3078',
+    headerMutedColor: 'rgba(30, 48, 120, 0.75)',
+    accentBarColor: 'linear-gradient(90deg, #304CB2 0%, #FFB612 50%, #C8102E 100%)',
+    logoBackground: '#ffffff',
+    borderColor: '#FFB612',
+    textColor: '#f8fafc',
+    mutedTextColor: 'rgba(248, 250, 252, 0.75)',
+    labelColor: '#FFB612',
+    statBackground: 'rgba(255, 182, 18, 0.14)',
+    statAltBackground: 'rgba(0, 0, 0, 0.2)',
+    badgeBackground: '#FFB612',
+    badgeTextColor: '#1e3078',
+  },
+  DAL: {
+    cardBackground: 'linear-gradient(165deg, #003366 0%, #001f3d 55%, #000f1f 100%)',
+    headerBackground: '#ffffff',
+    headerTextColor: '#003366',
+    headerMutedColor: 'rgba(0, 51, 102, 0.72)',
+    accentBarColor: '#C8102E',
+    logoBackground: '#ffffff',
+    borderColor: '#C8102E',
+    textColor: '#f8fafc',
+    mutedTextColor: 'rgba(248, 250, 252, 0.72)',
+    labelColor: '#C8102E',
+    statBackground: 'rgba(200, 16, 46, 0.15)',
+    statAltBackground: 'rgba(0, 0, 0, 0.22)',
+    badgeBackground: '#C8102E',
+    badgeTextColor: '#ffffff',
+  },
+  AAL: {
+    cardBackground: 'linear-gradient(165deg, #0078D2 0%, #004a82 50%, #002849 100%)',
+    headerBackground: '#ffffff',
+    headerTextColor: '#0078D2',
+    headerMutedColor: 'rgba(0, 120, 210, 0.72)',
+    accentBarColor: 'linear-gradient(90deg, #0078D2 0%, #ffffff 42%, #C8102E 100%)',
+    logoBackground: '#ffffff',
+    borderColor: '#C8102E',
+    textColor: '#f8fafc',
+    mutedTextColor: 'rgba(248, 250, 252, 0.75)',
+    labelColor: '#7ec8f8',
+    statBackground: 'rgba(255, 255, 255, 0.1)',
+    statAltBackground: 'rgba(0, 0, 0, 0.2)',
+    badgeBackground: '#C8102E',
+    badgeTextColor: '#ffffff',
+  },
+  FFT: {
+    cardBackground: 'linear-gradient(165deg, #006747 0%, #004530 55%, #002818 100%)',
+    headerBackground: 'linear-gradient(90deg, #8CD600 0%, #a8e838 100%)',
+    headerTextColor: '#004530',
+    headerMutedColor: 'rgba(0, 69, 48, 0.75)',
+    accentBarColor: '#8CD600',
+    logoBackground: '#ffffff',
+    borderColor: '#8CD600',
+    textColor: '#f0fff4',
+    mutedTextColor: 'rgba(240, 255, 244, 0.75)',
+    labelColor: '#8CD600',
+    statBackground: 'rgba(140, 214, 0, 0.14)',
+    statAltBackground: 'rgba(0, 0, 0, 0.22)',
+    badgeBackground: '#8CD600',
+    badgeTextColor: '#004530',
+  },
+  JBU: {
+    cardBackground: 'linear-gradient(165deg, #003087 0%, #001d52 55%, #000c22 100%)',
+    headerBackground: '#ffffff',
+    headerTextColor: '#003087',
+    headerMutedColor: 'rgba(0, 48, 135, 0.72)',
+    accentBarColor: '#6699CC',
+    logoBackground: '#ffffff',
+    borderColor: '#6699CC',
+    textColor: '#f8fafc',
+    mutedTextColor: 'rgba(248, 250, 252, 0.72)',
+    labelColor: '#6699CC',
+    statBackground: 'rgba(102, 153, 204, 0.16)',
+    statAltBackground: 'rgba(0, 0, 0, 0.22)',
+    badgeBackground: '#6699CC',
+    badgeTextColor: '#003087',
+  },
+  ASA: {
+    cardBackground: 'linear-gradient(165deg, #01426A 0%, #002a45 55%, #001525 100%)',
+    headerBackground: 'linear-gradient(90deg, #48BFE5 0%, #7ed4f7 100%)',
+    headerTextColor: '#01426A',
+    headerMutedColor: 'rgba(1, 66, 106, 0.75)',
+    accentBarColor: 'linear-gradient(90deg, #48BFE5 0%, #95C93D 100%)',
+    logoBackground: '#ffffff',
+    borderColor: '#48BFE5',
+    textColor: '#f8fafc',
+    mutedTextColor: 'rgba(248, 250, 252, 0.75)',
+    labelColor: '#48BFE5',
+    statBackground: 'rgba(72, 191, 229, 0.14)',
+    statAltBackground: 'rgba(0, 0, 0, 0.2)',
+    badgeBackground: '#95C93D',
+    badgeTextColor: '#01426A',
+  },
+  SKW: {
+    cardBackground: 'linear-gradient(165deg, #1B365D 0%, #0f2038 55%, #060f1c 100%)',
+    headerBackground: '#C4D600',
+    headerTextColor: '#1B365D',
+    headerMutedColor: 'rgba(27, 54, 93, 0.75)',
+    accentBarColor: 'linear-gradient(90deg, #0072CE 0%, #C4D600 100%)',
+    logoBackground: '#ffffff',
+    borderColor: '#C4D600',
+    textColor: '#f8fafc',
+    mutedTextColor: 'rgba(248, 250, 252, 0.72)',
+    labelColor: '#C4D600',
+    statBackground: 'rgba(196, 214, 0, 0.12)',
+    statAltBackground: 'rgba(0, 0, 0, 0.22)',
+    badgeBackground: '#C4D600',
+    badgeTextColor: '#1B365D',
+  },
+  NKS: {
+    cardBackground: 'linear-gradient(165deg, #111111 0%, #000000 100%)',
+    headerBackground: '#FFD100',
+    headerTextColor: '#000000',
+    headerMutedColor: 'rgba(0, 0, 0, 0.65)',
+    accentBarColor: '#FFD100',
+    logoBackground: '#FFD100',
+    borderColor: '#FFD100',
+    textColor: '#FFD100',
+    mutedTextColor: 'rgba(255, 209, 0, 0.72)',
+    labelColor: '#FFD100',
+    statBackground: 'rgba(255, 209, 0, 0.12)',
+    statAltBackground: 'rgba(255, 255, 255, 0.06)',
+    badgeBackground: '#FFD100',
+    badgeTextColor: '#000000',
+  },
+};
+
+function genericGalleryLivery(brand: AirlineBrand): AirlineTileStyle {
   const primary = brand.primaryColor;
   const accent = brand.accentColor;
   const darkPrimary = mixHex(primary, '#000000', 0.35);
   const deepPrimary = mixHex(primary, '#000000', 0.55);
   const textOnPrimary = contrastingText(primary);
   const textOnAccent = contrastingText(accent);
-  const mutedOnPrimary =
-    luminance(primary) > 0.55 ? 'rgba(15, 23, 42, 0.65)' : 'rgba(248, 250, 252, 0.7)';
+  const headerIsLight = luminance(accent) > 0.55;
 
   return {
-    cardBackground: `linear-gradient(160deg, ${primary} 0%, ${darkPrimary} 55%, ${deepPrimary} 100%)`,
-    headerBackground: `linear-gradient(90deg, ${accent} 0%, ${mixHex(accent, primary, 0.35)} 100%)`,
+    cardBackground: `linear-gradient(165deg, ${primary} 0%, ${darkPrimary} 55%, ${deepPrimary} 100%)`,
+    headerBackground: headerIsLight ? accent : '#ffffff',
+    headerTextColor: headerIsLight ? primary : primary,
+    headerMutedColor: headerIsLight ? 'rgba(15, 23, 42, 0.65)' : 'rgba(0, 0, 0, 0.55)',
+    accentBarColor: brand.secondaryColor
+      ? `linear-gradient(90deg, ${accent} 0%, ${brand.secondaryColor} 100%)`
+      : accent,
     statBackground: mixHex(primary, '#ffffff', luminance(primary) > 0.5 ? 0.12 : 0.08),
     statAltBackground: mixHex(primary, '#000000', 0.2),
-    logoBackground: mixHex(accent, '#ffffff', 0.85),
+    logoBackground: headerIsLight ? '#ffffff' : mixHex(accent, '#ffffff', 0.9),
     textColor: textOnPrimary,
-    mutedTextColor: mutedOnPrimary,
-    labelColor: luminance(accent) > 0.55 ? mixHex(accent, '#000000', 0.5) : accent,
+    mutedTextColor:
+      luminance(primary) > 0.55 ? 'rgba(15, 23, 42, 0.65)' : 'rgba(248, 250, 252, 0.72)',
+    labelColor: luminance(accent) > 0.55 ? mixHex(accent, '#000000', 0.45) : accent,
     badgeBackground: accent,
     badgeTextColor: textOnAccent,
-    borderColor: mixHex(accent, primary, 0.5),
-    accentBarColor: accent,
+    borderColor: mixHex(accent, primary, 0.45),
   };
+}
+
+/** Per-tile livery styling for the Elegant & Modern gallery layout */
+export function getAirlineTileStyle(brand: AirlineBrand): AirlineTileStyle {
+  return GALLERY_LIVERY[brand.icao] ?? genericGalleryLivery(brand);
 }

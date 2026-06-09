@@ -5,7 +5,10 @@ import { useEffect, useState } from 'react';
 type SplitFlapTextProps = {
   value: string;
   className?: string;
+  /** Pad with blank flaps to this width */
   minChars?: number;
+  /** Truncate before padding */
+  maxChars?: number;
   size?: 'md' | 'lg';
 };
 
@@ -31,11 +34,14 @@ export default function SplitFlapText({
   value,
   className = '',
   minChars = 0,
+  maxChars,
   size = 'lg',
 }: SplitFlapTextProps) {
   const [prev, setPrev] = useState(value);
   const normalized = value.toUpperCase();
-  const padded = normalized.padEnd(minChars, ' ').slice(0, Math.max(minChars, normalized.length));
+  const trimmed = maxChars ? normalized.slice(0, maxChars) : normalized;
+  const padded =
+    minChars > 0 ? trimmed.padEnd(minChars, ' ').slice(0, Math.max(minChars, trimmed.length)) : trimmed;
 
   useEffect(() => {
     const t = setTimeout(() => setPrev(normalized), 400);
@@ -48,7 +54,7 @@ export default function SplitFlapText({
       aria-label={normalized}
     >
       {padded.split('').map((char, i) => (
-        <SplitFlapChar key={`${i}-${padded.length}`} char={char} prevChar={(prev[i] ?? ' ').toUpperCase()} />
+        <SplitFlapChar key={i} char={char} prevChar={(prev[i] ?? ' ').toUpperCase()} />
       ))}
     </span>
   );
