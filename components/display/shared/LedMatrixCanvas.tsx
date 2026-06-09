@@ -70,6 +70,7 @@ export default function LedMatrixCanvas({
       paintLedDots(displayCtx, imageData, width, height, logoRect, {
         fitFrame: ipadPreview,
         logoBackground: content.logoBackground,
+        logoPalette: content.logoPalette,
       });
     };
 

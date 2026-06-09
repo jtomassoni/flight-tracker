@@ -1,6 +1,5 @@
 import type { IpadOrientation } from '@/lib/kiosk';
 import {
-  drawLedTelemetryPair,
   drawLedText,
   drawLedTextCompact,
   drawLedTextScaled,
@@ -8,12 +7,15 @@ import {
   ledCharCellH,
   ledCompactCellH,
   ledScaledTextMetrics,
+  measureLedText,
   measureLedTextCompact,
   pickFlightIdScale,
+  truncateLedText,
+  truncateLedTextCompact,
   truncateLedTextScaled,
 } from '@/lib/ledFont';
 import { drawLedAirlineMark } from '@/lib/ledAirlineMarks';
-import { formatLedRouteHeroSpread, type LedTelemetryField } from '@/lib/ledFlightWall';
+import type { LedTelemetryField } from '@/lib/ledFlightWall';
 
 /** Classic FlightWall desk panel — 128 cols; rows expand on wall displays to fill height. */
 export const LED_GRID = {
@@ -50,9 +52,11 @@ export type LedFlightContent = {
   logoBackground: string;
   logoBorder: string;
   accentStripe: string;
+  logoPalette?: readonly string[];
+  logoTileBorder?: boolean;
 };
 
-const LED_TELEMETRY_COUNT = 3;
+const LED_TELEMETRY_COUNT = 2;
 
 export function ledGridForOrientation(orientation: IpadOrientation) {
   return LED_GRID[orientation];
@@ -83,7 +87,6 @@ type LayoutRegion = {
   mainW: number;
   telX: number;
   telW: number;
-  telLabelW: number;
   flightX: number;
   flightBandH: number;
   flightW: number;
@@ -95,14 +98,29 @@ type LayoutRegion = {
 
 const COMPACT_SAFE = 5;
 
-/** Black panel margin around the logo tile (LED pixels). */
-const LOGO_INSET = 1;
+/** Black panel margin left of the logo tile (LED pixels). */
+const LOGO_LEFT_INSET = 2;
+/** Margin right of the logo tile within the logo column. */
+const LOGO_RIGHT_INSET = 1;
+/** Margin above the logo tile (below the flight-ID band). */
+const LOGO_TOP_INSET = 1;
+/** Black panel rows between the logo and the bottom edge. */
+const LOGO_BOTTOM_GAP = 2;
+
+/** Gap between logo tile and right-column flight info (LED pixels). */
+const RIGHT_COL_GAP = 3;
+/** Horizontal inset inside the right column text band. */
+const RIGHT_COL_PAD = 2;
+/** Vertical gap between route hero and telemetry block. */
+const ROUTE_TEL_GAP = 4;
+/** Vertical gap between telemetry rows. */
+const TEL_ROW_GAP = 3;
 
 /** Logo column width — ~48% of grid (50% larger than the prior 32% band). */
 const LOGO_WIDTH_FRACTION = 0.48;
 
 /** Logo tile size relative to the max square that fits the column. */
-const LOGO_SIZE_SCALE = 0.94 * 1.15;
+const LOGO_SIZE_SCALE = 0.94 * 1.15 * 1.1;
 
 function computeLogoColumnWidth(cols: number): number {
   return Math.max(12, Math.floor(cols * LOGO_WIDTH_FRACTION));
@@ -111,33 +129,38 @@ function computeLogoColumnWidth(cols: number): number {
 /** Left column: flight ID band on top, logo square anchored bottom-left. */
 function computeLogoColumn(cols: number, rows: number) {
   const columnW = computeLogoColumnWidth(cols);
-  const inset = LOGO_INSET;
   const maxFlightH = 2 * LED_FONT.glyphH + LED_FONT.gapY;
   const flightBandMin = maxFlightH + 2;
-  const logoTopMin = flightBandMin + inset;
-  const sizeScale = Math.min(1, LOGO_SIZE_SCALE);
+  const logoTopMin = flightBandMin + LOGO_TOP_INSET;
+  const logoBandW = columnW - LOGO_LEFT_INSET - LOGO_RIGHT_INSET;
+  const sizeScale = Math.min(1.1, LOGO_SIZE_SCALE);
 
-  const maxSide = Math.min(columnW - inset * 2, rows - inset * 2);
+  const maxSide = Math.min(
+    logoBandW,
+    rows - LOGO_TOP_INSET - LOGO_BOTTOM_GAP
+  );
   let logoW = Math.max(12, Math.floor(maxSide * sizeScale));
+  logoW = Math.min(logoW, logoBandW);
   let logoH = logoW;
-  let logoY = rows - logoH - inset;
+  let logoY = rows - logoH - LOGO_BOTTOM_GAP;
 
   if (logoY < logoTopMin) {
-    const fitSide = rows - logoTopMin - inset;
-    logoH = Math.max(12, Math.floor(fitSide * sizeScale));
-    logoW = logoH;
-    logoY = rows - logoH - inset;
+    const fitSide = rows - logoTopMin - LOGO_BOTTOM_GAP;
+    logoH = Math.max(12, Math.min(Math.floor(fitSide * sizeScale), fitSide));
+    logoW = Math.min(logoH, logoBandW);
+    logoH = logoW;
+    logoY = rows - logoH - LOGO_BOTTOM_GAP;
   }
 
   return {
     columnW,
     logoW,
     logoH,
-    logoX: inset,
+    logoX: LOGO_LEFT_INSET,
     logoY,
-    flightX: 0,
+    flightX: LOGO_LEFT_INSET,
     flightBandH: logoY,
-    flightW: columnW,
+    flightW: logoW,
   };
 }
 
@@ -152,7 +175,19 @@ function centerLedTextXScaled(
   return bandX + Math.max(0, Math.floor((bandW - width) / 2));
 }
 
-/** Route and telemetry stacked in the right panel, centered beside the logo. */
+function centerLedTextX(text: string, bandX: number, bandW: number): number {
+  const display = truncateLedText(text, bandW);
+  const width = measureLedText(display);
+  return bandX + Math.max(0, Math.floor((bandW - width) / 2));
+}
+
+function centerLedTextCompactX(text: string, bandX: number, bandW: number): number {
+  const display = truncateLedTextCompact(text, bandW);
+  const width = measureLedTextCompact(display);
+  return bandX + Math.max(0, Math.floor((bandW - width) / 2));
+}
+
+/** Route and telemetry stacked in the right panel, spread within the logo band. */
 function buildRightContentLayout(
   rows: number,
   heroH: number,
@@ -160,21 +195,22 @@ function buildRightContentLayout(
   logoY: number,
   logoH: number
 ): { routeY: number; telRows: number[] } {
-  const telGap = 1;
-  const routeGap = 2;
   const telBlockH =
-    LED_TELEMETRY_COUNT * compactH + (LED_TELEMETRY_COUNT - 1) * telGap;
-  const stackH = heroH + routeGap + telBlockH;
-  const logoMidY = logoY + logoH / 2;
-  const stackTop = Math.max(
-    1,
-    Math.min(Math.round(logoMidY - stackH / 2), rows - stackH - 1)
-  );
+    LED_TELEMETRY_COUNT * compactH + (LED_TELEMETRY_COUNT - 1) * TEL_ROW_GAP;
+  const stackH = heroH + ROUTE_TEL_GAP + telBlockH;
+  const bandInset = 2;
+  const bandTop = logoY + bandInset;
+  const bandBottom = Math.min(rows - 1, logoY + logoH - bandInset);
+  const bandH = Math.max(compactH, bandBottom - bandTop);
+  const stackTop =
+    stackH >= bandH
+      ? Math.max(1, bandTop)
+      : bandTop + Math.floor((bandH - stackH) / 2);
   const routeY = stackTop;
-  const telStart = stackTop + heroH + routeGap;
+  const telStart = stackTop + heroH + ROUTE_TEL_GAP;
   const telRows = Array.from(
     { length: LED_TELEMETRY_COUNT },
-    (_, i) => telStart + i * (compactH + telGap)
+    (_, i) => telStart + i * (compactH + TEL_ROW_GAP)
   );
   return { routeY, telRows };
 }
@@ -185,8 +221,8 @@ function buildLandscapeLayout(cols: number, rows: number): LayoutRegion {
   const compactH = ledCompactCellH();
   const heroH = ledCharCellH();
 
-  const mainX = logo.columnW + 1;
-  const mainW = cols - mainX - pad;
+  const mainX = logo.columnW + RIGHT_COL_GAP + RIGHT_COL_PAD;
+  const mainW = cols - mainX - pad - RIGHT_COL_PAD;
   const { routeY, telRows } = buildRightContentLayout(
     rows,
     heroH,
@@ -205,7 +241,6 @@ function buildLandscapeLayout(cols: number, rows: number): LayoutRegion {
     mainW,
     telX: mainX,
     telW: mainW,
-    telLabelW: measureLedTextCompact('TYPE') + 1,
     flightX: logo.flightX,
     flightBandH: logo.flightBandH,
     flightW: logo.flightW,
@@ -256,6 +291,53 @@ function quantizeRgb(r: number, g: number, b: number): { r: number; g: number; b
   };
 }
 
+function colorLuminance(c: { r: number; g: number; b: number }): number {
+  return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
+}
+
+/** Snap a logo pixel to the nearest brand fill — kills CDN gradient fringe. */
+function snapLogoColor(
+  r: number,
+  g: number,
+  b: number,
+  bg: { r: number; g: number; b: number },
+  bgHex: string,
+  palette?: readonly string[]
+): string {
+  const sample = { r, g, b };
+  if (rgbDistance(sample, bg) < 42) {
+    return bgHex;
+  }
+
+  if (palette && palette.length === 2) {
+    const a = parseHexColor(palette[0]!);
+    const bColor = parseHexColor(palette[1]!);
+    const lumA = colorLuminance(a);
+    const lumB = colorLuminance(bColor);
+    const lightHex = lumA >= lumB ? palette[0]! : palette[1]!;
+    const darkHex = lumA >= lumB ? palette[1]! : palette[0]!;
+    const mid = (lumA + lumB) / 2;
+    return colorLuminance(sample) >= mid ? lightHex : darkHex;
+  }
+
+  if (palette && palette.length > 0) {
+    let best = palette[0]!;
+    let bestDist = Infinity;
+    for (const hex of palette) {
+      const c = parseHexColor(hex);
+      const d = rgbDistance(sample, c);
+      if (d < bestDist) {
+        bestDist = d;
+        best = hex;
+      }
+    }
+    return best;
+  }
+
+  const q = quantizeRgb(r, g, b);
+  return rgbDistance(q, bg) < 42 ? bgHex : rgbToHex(q.r, q.g, q.b);
+}
+
 function rgbDistance(
   a: { r: number; g: number; b: number },
   b: { r: number; g: number; b: number }
@@ -298,7 +380,9 @@ function rasterizeLogoToTile(
   y: number,
   w: number,
   h: number,
-  background: string
+  background: string,
+  palette?: readonly string[],
+  tileBorder = true
 ): void {
   const bg = parseHexColor(background);
   const bgHex = rgbToHex(bg.r, bg.g, bg.b);
@@ -316,7 +400,9 @@ function rasterizeLogoToTile(
     for (let lx = 0; lx < w; lx += 1) {
       const px = x + lx;
       const py = y + ly;
-      const onTileEdge = lx === 0 || lx === w - 1 || ly === 0 || ly === h - 1;
+      const onTileEdge =
+        tileBorder &&
+        (lx === 0 || lx === w - 1 || ly === 0 || ly === h - 1);
       const inMark =
         px >= ox && px < ox + drawW && py >= oy && py < oy + drawH;
 
@@ -345,10 +431,14 @@ function rasterizeLogoToTile(
       }
 
       const blended = blendOnBackground(sr, sg, sb, sa, bg);
-      const q = quantizeRgb(blended.r, blended.g, blended.b);
-      const fill =
-        rgbDistance(q, bg) < 42 ? bgHex : rgbToHex(q.r, q.g, q.b);
-      ctx.fillStyle = fill;
+      ctx.fillStyle = snapLogoColor(
+        blended.r,
+        blended.g,
+        blended.b,
+        bg,
+        bgHex,
+        palette
+      );
       ctx.fillRect(px, py, 1, 1);
     }
   }
@@ -360,7 +450,13 @@ function renderLogoMark(
   logo: HTMLImageElement | null,
   content: Pick<
     LedFlightContent,
-    'logoIcao' | 'logoFallback' | 'logoBackground' | 'logoBorder' | 'accentStripe'
+    | 'logoIcao'
+    | 'logoFallback'
+    | 'logoBackground'
+    | 'logoBorder'
+    | 'accentStripe'
+    | 'logoPalette'
+    | 'logoTileBorder'
   >
 ): { x: number; y: number; w: number; h: number } | null {
   if (!logo && !content.logoFallback) return null;
@@ -378,7 +474,17 @@ function renderLogoMark(
   if (drawLedAirlineMark(ctx, content.logoIcao, logoX, logoY, logoW, logoH)) {
     // native pixel mark
   } else if (logo) {
-    rasterizeLogoToTile(ctx, logo, logoX, logoY, logoW, logoH, content.logoBackground);
+    rasterizeLogoToTile(
+      ctx,
+      logo,
+      logoX,
+      logoY,
+      logoW,
+      logoH,
+      content.logoBackground,
+      content.logoPalette,
+      content.logoTileBorder !== false
+    );
   } else {
     drawLogoFallback(ctx, content.logoFallback, layout);
   }
@@ -391,22 +497,19 @@ function drawTelemetryColumn(
   layout: LayoutRegion,
   telemetry: LedTelemetryField[]
 ): void {
-  const { telX, telW, telLabelW, telRows } = layout;
+  const { telX, telW, telRows } = layout;
 
   for (let i = 0; i < telemetry.length; i += 1) {
     const row = telRows[i];
     const field = telemetry[i];
     if (row == null || field == null) continue;
-    drawLedTelemetryPair(
+    drawLedTextCompact(
       ctx,
-      field.label,
       field.value,
-      telX,
+      centerLedTextCompactX(field.value, telX, telW),
       row,
-      telLabelW,
-      telW,
-      LED_COLORS.muted,
-      LED_COLORS.telemetry
+      LED_COLORS.telemetry,
+      telW
     );
   }
 }
@@ -466,11 +569,10 @@ function drawLandscapeFlightPanel(
     true
   );
 
-  const routeLine = formatLedRouteHeroSpread(content.routeHero, layout.mainW);
   drawLedText(
     ctx,
-    routeLine,
-    layout.mainX,
+    content.routeHero,
+    centerLedTextX(content.routeHero, layout.mainX, layout.mainW),
     layout.routeY,
     LED_COLORS.phosphor,
     layout.mainW,
@@ -554,15 +656,13 @@ function sampleLogoLedColor(
   r: number,
   g: number,
   b: number,
-  logoBackground?: string
+  logoBackground?: string,
+  palette?: readonly string[]
 ): string {
   if (logoBackground) {
     const bg = parseHexColor(logoBackground);
-    const q = quantizeRgb(r, g, b);
-    if (rgbDistance(q, bg) < 42) {
-      return rgbToHex(bg.r, bg.g, bg.b);
-    }
-    return rgbToHex(q.r, q.g, q.b);
+    const bgHex = rgbToHex(bg.r, bg.g, bg.b);
+    return snapLogoColor(r, g, b, bg, bgHex, palette);
   }
   const q = quantizeRgb(r, g, b);
   return rgbToHex(q.r, q.g, q.b);
@@ -645,6 +745,8 @@ export type PaintLedDotsOptions = {
   fitFrame?: boolean;
   /** Tile fill behind the logo — used to snap fringe pixels to solid phosphor. */
   logoBackground?: string;
+  /** Brand fills for logo LEDs — collapses CDN gradients to 2–3 colors. */
+  logoPalette?: readonly string[];
 };
 
 type LedPaintViewport = {
@@ -719,6 +821,7 @@ export function paintLedDots(
   const radius = Math.min(cellW, cellH) * 0.4;
   const data = buffer.data;
   const logoBg = options.logoBackground;
+  const logoPalette = options.logoPalette;
 
   type LitCell = { cx: number; cy: number; color: string; strength: number };
   const litCells: LitCell[] = [];
@@ -747,17 +850,16 @@ export function paintLedDots(
         y >= logoRect.y &&
         y < logoRect.y + logoRect.h;
 
+      if (inLogo) {
+        const color = sampleLogoLedColor(r, g, b, logoBg, logoPalette);
+        litCells.push({ cx, cy, color, strength: 1 });
+        continue;
+      }
+
       const textColor = snapTextColor(r, g, b);
       if (textColor) {
         const strength = ledCellBrightness(x, y) * 0.98;
         litCells.push({ cx, cy, color: textColor, strength });
-        continue;
-      }
-
-      if (inLogo) {
-        const color = sampleLogoLedColor(r, g, b, logoBg);
-        const strength = ledCellBrightness(x, y) * 0.96;
-        litCells.push({ cx, cy, color, strength });
       }
     }
   }

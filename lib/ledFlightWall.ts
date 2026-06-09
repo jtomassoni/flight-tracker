@@ -1,5 +1,4 @@
 import type { AirlineBrand } from '@/lib/airlines';
-import { ledCharCellW } from '@/lib/ledFont';
 import type { NormalizedAircraft } from '@/types/aircraft';
 
 /** Common route pairs for LED display when live route data is unavailable */
@@ -29,29 +28,7 @@ export function ledRouteLabel(ac: NormalizedAircraft): string {
 
 export function formatLedRouteHero(route: string): string {
   const [origin, dest] = route.split('-');
-  return `${origin ?? '???'}->${dest ?? '???'}`;
-}
-
-/** Pad origin/arrow/dest so the route line spans the LED column (departure-board style). */
-export function formatLedRouteHeroSpread(routeHero: string, maxDots: number): string {
-  const [origin, dest] = routeHero.split('->');
-  const o = (origin ?? '???').trim().toUpperCase();
-  const d = (dest ?? '???').trim().toUpperCase();
-  const arrow = '->';
-  const minChars = o.length + arrow.length + d.length;
-  const cell = ledCharCellW();
-  const maxChars = Math.max(minChars, Math.floor((maxDots + 1) / cell));
-  const gap = maxChars - minChars;
-  const gapLeft = Math.floor(gap / 2);
-  const gapRight = gap - gapLeft;
-  return `${o}${' '.repeat(gapLeft)}${arrow}${' '.repeat(gapRight)}${d}`;
-}
-
-/** Stable in-flight progress when live route data is unavailable. */
-export function formatLedRouteProgress(ac: NormalizedAircraft): string {
-  const seed = ac.hex.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
-  const pct = 12 + (seed % 78);
-  return `${pct}%`;
+  return `${origin ?? '???'} -> ${dest ?? '???'}`;
 }
 
 export function formatLedFlightId(ac: NormalizedAircraft, brand: AirlineBrand): string {
@@ -68,19 +45,18 @@ export function formatLedAircraftType(ac: NormalizedAircraft): string {
 }
 
 export function formatLedSpeedMph(groundSpeedKt?: number): string {
-  if (groundSpeedKt == null) return '--- MPH';
-  return `${Math.round(groundSpeedKt * 1.15078)} MPH`;
+  if (groundSpeedKt == null) return '--- mph';
+  const mph = Math.round(groundSpeedKt * 1.15078);
+  return `${mph} mph`;
 }
 
 export type LedTelemetryField = {
-  label: string;
   value: string;
 };
 
 export function ledTelemetryFields(ac: NormalizedAircraft): LedTelemetryField[] {
   return [
-    { label: 'TRIP', value: formatLedRouteProgress(ac) },
-    { label: 'SPD', value: formatLedSpeedMph(ac.groundSpeedKt) },
-    { label: 'TYPE', value: formatLedAircraftType(ac) },
+    { value: formatLedAircraftType(ac) },
+    { value: formatLedSpeedMph(ac.groundSpeedKt) },
   ];
 }

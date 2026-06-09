@@ -181,27 +181,73 @@ export type AirlineLedWallStyle = {
   logoBackground: string;
   logoBorder: string;
   accentStripe: string;
+  /** Mark colors only — tile background excluded; 2–3 flat fills per logo. */
+  logoPalette: readonly string[];
+  /** 1px tile-edge ring around rasterized logos — off for edge-to-edge marks. */
+  logoTileBorder: boolean;
 };
 
+/** Flat two-color LED marks — accent livery colors cause CDN fringe to read as gradients. */
+const LED_LOGO_PALETTE: Partial<Record<string, readonly string[]>> = {
+  FFT: ['#FFFFFF', '#006747'],
+  UAL: ['#FFFFFF', '#0033A0'],
+  DAL: ['#C8102E', '#003366'],
+  JBU: ['#FFFFFF', '#003087'],
+  ASA: ['#FFFFFF', '#01426A'],
+  SKW: ['#FFFFFF', '#C4D600'],
+  NKS: ['#000000', '#FFFFFF'],
+};
+
+const LED_LOGO_NO_TILE_BORDER = new Set(['JBU', 'SWA']);
+
+function airlineLedLogoPalette(
+  brand: AirlineBrand,
+  logoBackground: string
+): readonly string[] {
+  const override = LED_LOGO_PALETTE[brand.icao];
+  if (override) return override;
+
+  const bg = logoBackground.toLowerCase();
+  const seen = new Set<string>();
+  const palette: string[] = [];
+  for (const hex of [brand.accentColor, brand.secondaryColor, brand.primaryColor]) {
+    if (!hex) continue;
+    const key = hex.toLowerCase();
+    if (key === bg || seen.has(key)) continue;
+    seen.add(key);
+    palette.push(hex);
+  }
+  if (luminance(logoBackground) < 0.35 && !seen.has('#ffffff')) {
+    palette.unshift('#ffffff');
+  }
+  return palette;
+}
+
 /** Carriers whose Kiwi logos are full-color marks on a white tile. */
-const COLOR_LOGO_TILE = new Set(['AAL', 'SWA', 'FFT', 'ASA']);
+const COLOR_LOGO_TILE = new Set(['AAL', 'FFT', 'ASA']);
 
 /** Logo tile styling for the FlightWall LED theme */
 export function getAirlineLedWallStyle(brand: AirlineBrand): AirlineLedWallStyle {
   if (COLOR_LOGO_TILE.has(brand.icao)) {
+    const logoBackground = '#ffffff';
     return {
-      logoBackground: '#ffffff',
+      logoBackground,
       logoBorder: mixHex(brand.primaryColor, '#000000', 0.25),
       accentStripe: brand.accentColor,
+      logoPalette: airlineLedLogoPalette(brand, logoBackground),
+      logoTileBorder: !LED_LOGO_NO_TILE_BORDER.has(brand.icao),
     };
   }
 
   /** Navy tile — logo PNGs are marks on transparent (not a white CDN matte). */
-  const onDarkLogo = ['UAL', 'DAL', 'SKW', 'JBU'].includes(brand.icao);
+  const onDarkLogo = ['UAL', 'DAL', 'SKW', 'JBU', 'SWA'].includes(brand.icao);
+  const logoBackground = onDarkLogo ? brand.primaryColor : '#e8edf2';
   return {
-    logoBackground: onDarkLogo ? brand.primaryColor : '#e8edf2',
+    logoBackground,
     logoBorder: mixHex(brand.primaryColor, '#000000', 0.25),
     accentStripe: brand.accentColor,
+    logoPalette: airlineLedLogoPalette(brand, logoBackground),
+    logoTileBorder: !LED_LOGO_NO_TILE_BORDER.has(brand.icao),
   };
 }
 
@@ -215,7 +261,7 @@ export function airlineLogoCanvasUrl(brand: AirlineBrand, size: 64 | 128 | 256 =
 }
 
 /** FlightWall LED — prefer local pixel art; skip CDN marks that collapse at matrix scale. */
-const LED_NATIVE_MARK_ICAO = new Set(['SWA', 'SKW']);
+const LED_NATIVE_MARK_ICAO = new Set(['AAL', 'SWA', 'DAL', 'SKW']);
 
 export function airlineLedLogoUrl(brand: AirlineBrand, size: 64 | 128 | 256 = 128): string | undefined {
   if (LED_NATIVE_MARK_ICAO.has(brand.icao)) return undefined;

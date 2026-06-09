@@ -53,6 +53,8 @@ export default function FlightWallMiniLayout({
       logoBackground: wallStyle.logoBackground,
       logoBorder: wallStyle.logoBorder,
       accentStripe: wallStyle.accentStripe,
+      logoPalette: wallStyle.logoPalette,
+      logoTileBorder: wallStyle.logoTileBorder,
     };
   }, [aircraft, displayedAircraft.length, index]);
 
