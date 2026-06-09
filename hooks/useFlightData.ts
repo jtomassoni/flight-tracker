@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { FlightsApiResponse } from '@/types/aircraft';
-import { MIN_POLL_INTERVAL_SEC, SETTINGS_STORAGE_KEY } from '@/lib/constants';
+import {
+  LIVE_LAYOUT_POLL_INTERVAL_SEC,
+  SETTINGS_CHANGED_EVENT,
+  SETTINGS_STORAGE_KEY,
+} from '@/lib/constants';
 import { applyClientFilters } from '@/lib/filters';
 import { limitAircraft, sortByInterestingness } from '@/lib/sorting';
 import {
@@ -11,6 +15,14 @@ import {
   loadSettings,
   type DisplaySettings,
 } from '@/lib/settings';
+import type { LayoutId } from '@/lib/themes';
+
+const LIVE_LAYOUTS = new Set<LayoutId>(['radar-scope', 'google-map', 'led-matrix']);
+
+function resolvePollIntervalSec(refreshIntervalSec: number, layout?: LayoutId): number {
+  if (layout && LIVE_LAYOUTS.has(layout)) return LIVE_LAYOUT_POLL_INTERVAL_SEC;
+  return clampRefreshInterval(refreshIntervalSec);
+}
 
 export type FlightDataState = {
   aircraft: FlightsApiResponse['aircraft'];
@@ -24,7 +36,7 @@ export type FlightDataState = {
   settings: DisplaySettings;
 };
 
-export function useFlightData() {
+export function useFlightData(pollLayout?: LayoutId) {
   const [settings, setSettings] = useState<DisplaySettings>(DEFAULT_SETTINGS);
   const [state, setState] = useState<Omit<FlightDataState, 'settings'>>({
     aircraft: [],
@@ -40,9 +52,15 @@ export function useFlightData() {
   const settingsRef = useRef(settings);
   settingsRef.current = settings;
 
+  const pollLayoutRef = useRef(pollLayout);
+  pollLayoutRef.current = pollLayout;
+
   const refresh = useCallback(async () => {
     const current = settingsRef.current;
-    const intervalSec = clampRefreshInterval(current.refreshIntervalSec);
+    const intervalSec = resolvePollIntervalSec(
+      current.refreshIntervalSec,
+      pollLayoutRef.current
+    );
 
     setState((prev) => ({
       ...prev,
@@ -87,15 +105,18 @@ export function useFlightData() {
   }, []);
 
   useEffect(() => {
-    setSettings(loadSettings());
+    const reloadSettings = () => setSettings(loadSettings());
+    reloadSettings();
 
     const onStorage = (e: StorageEvent) => {
-      if (e.key === SETTINGS_STORAGE_KEY) {
-        setSettings(loadSettings());
-      }
+      if (e.key === SETTINGS_STORAGE_KEY) reloadSettings();
     };
     window.addEventListener('storage', onStorage);
-    return () => window.removeEventListener('storage', onStorage);
+    window.addEventListener(SETTINGS_CHANGED_EVENT, reloadSettings);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener(SETTINGS_CHANGED_EVENT, reloadSettings);
+    };
   }, []);
 
   useEffect(() => {
@@ -105,8 +126,7 @@ export function useFlightData() {
     const poll = async () => {
       const intervalSec = await refresh();
       if (!cancelled) {
-        const ms = Math.max(MIN_POLL_INTERVAL_SEC, intervalSec) * 1000;
-        timer = setTimeout(poll, ms);
+        timer = setTimeout(poll, intervalSec * 1000);
       }
     };
 
@@ -127,6 +147,7 @@ export function useFlightData() {
     };
   }, [
     refresh,
+    pollLayout,
     settings.refreshIntervalSec,
     settings.radiusMi,
     settings.maxAircraft,

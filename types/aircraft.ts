@@ -19,7 +19,8 @@ export type VerticalTrend = 'descending' | 'climbing' | 'level';
 
 export type FlightsApiResponse = {
   aircraft: NormalizedAircraft[];
-  source: 'live' | 'mock';
+  source: 'live' | 'mock' | 'cached';
   fetchedAt: string;
   provider: string;
+  stale?: boolean;
 };

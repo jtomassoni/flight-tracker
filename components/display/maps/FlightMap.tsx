@@ -8,7 +8,7 @@ import {
   buildCenterMarkerIcon,
   SKY_MAP_STYLES,
 } from '@/lib/mapMarkers';
-import { skyMapZoomForViewport, type SkyMapZoomSettings } from '@/lib/skyMapZoom';
+import { skyMapZoomForViewport, skyMapZoomLimits, type SkyMapZoomMode } from '@/lib/skyMapZoom';
 import { Circle, GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import type { NormalizedAircraft } from '@/types/aircraft';
 
@@ -26,7 +26,7 @@ type FlightMapProps = {
   radiusMi: number;
   aircraft: NormalizedAircraft[];
   locationLabel: string;
-  skyMapZoom: SkyMapZoomSettings;
+  skyMapZoom: SkyMapZoomMode;
 };
 
 function milesToMeters(mi: number): number {
@@ -43,6 +43,7 @@ export default function FlightMap({
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
   const viewport = useKioskViewport();
   const mapZoom = skyMapZoomForViewport(skyMapZoom, viewport);
+  const { minZoom, maxZoom } = skyMapZoomLimits();
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'flight-tracker-google-map',
@@ -75,11 +76,11 @@ export default function FlightMap({
       mapTypeControl: false,
       streetViewControl: false,
       fullscreenControl: false,
-      minZoom: skyMapZoom.minZoom,
-      maxZoom: skyMapZoom.maxZoom,
+      minZoom,
+      maxZoom,
       clickableIcons: false,
     }),
-    [skyMapZoom.minZoom, skyMapZoom.maxZoom]
+    [minZoom, maxZoom]
   );
 
   if (!apiKey) {

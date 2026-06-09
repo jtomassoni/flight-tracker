@@ -72,7 +72,7 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = {
       '--font-display': 'var(--font-dm-sans), system-ui, sans-serif',
       '--font-mono': 'var(--font-jetbrains), ui-monospace, monospace',
       '--font-serif': 'var(--font-dm-sans), system-ui, sans-serif',
-      '--glow': 'none',
+      '--glow': '0 0 24px rgba(56, 189, 248, 0.18)',
     },
   },
   'midnight-luxe': {
@@ -129,22 +129,23 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = {
       '--glow': 'none',
     },
   },
-  'flight-wall-mini': {
-    id: 'flight-wall-mini',
-    name: 'Flight Wall Mini',
-    description: 'Physical LED matrix display — pixel logo, airline, route, and airport lines.',
+  flightwall: {
+    id: 'flightwall',
+    name: 'FlightWall',
+    description:
+      'TheFlightWall-style LED panel — airline logo, route, aircraft type, and cyan telemetry.',
     layout: 'led-matrix',
     cssVars: {
       '--background': '#000000',
       '--foreground': '#f2f2f2',
-      '--accent': '#ffffff',
+      '--accent': '#5ec8e8',
       '--muted': '#8a8a8a',
       '--panel': '#0a0a0a',
       '--border': '#1a1a1a',
       '--font-display': 'var(--font-barlow-condensed), Arial, Helvetica, sans-serif',
       '--font-mono': 'var(--font-barlow-condensed), Arial, Helvetica, sans-serif',
       '--font-serif': 'var(--font-barlow-condensed), Arial, Helvetica, sans-serif',
-      '--glow': '0 0 6px rgba(255, 255, 255, 0.55)',
+      '--glow': '0 0 6px rgba(94, 200, 232, 0.45)',
     },
   },
 };

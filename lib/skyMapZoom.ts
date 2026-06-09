@@ -1,59 +1,26 @@
 import type { KioskViewport } from '@/hooks/useKioskViewport';
 
-export type SkyMapZoomSettings = {
-  /** Wall-mounted / large monitor */
-  zoomWall: number;
-  /** iPad / desk-sized display */
-  zoomDesk: number;
-  /** Phone / very small */
-  zoomCompact: number;
-  minZoom: number;
-  maxZoom: number;
+export type SkyMapZoomMode = 'normal' | 'close';
+
+export const DEFAULT_SKY_MAP_ZOOM: SkyMapZoomMode = 'normal';
+
+const ZOOM_BY_MODE: Record<SkyMapZoomMode, Record<KioskViewport, number>> = {
+  normal: { wall: 10, desk: 11, compact: 8 },
+  close: { wall: 12, desk: 12, compact: 10 },
 };
 
-export const DEFAULT_SKY_MAP_ZOOM: SkyMapZoomSettings = {
-  zoomWall: 10,
-  zoomDesk: 9,
-  zoomCompact: 8,
-  minZoom: 7,
-  maxZoom: 15,
-};
+const MAP_MIN_ZOOM = 7;
+const MAP_MAX_ZOOM = 15;
 
-const ABS_MIN = 5;
-const ABS_MAX = 18;
-
-function clampInt(value: unknown, fallback: number): number {
-  const n = typeof value === 'number' ? Math.round(value) : fallback;
-  return Math.min(ABS_MAX, Math.max(ABS_MIN, n));
+export function normalizeSkyMapZoom(input?: unknown): SkyMapZoomMode {
+  if (input === 'close' || input === 'normal') return input;
+  return DEFAULT_SKY_MAP_ZOOM;
 }
 
-export function normalizeSkyMapZoom(input?: Partial<SkyMapZoomSettings>): SkyMapZoomSettings {
-  const base = { ...DEFAULT_SKY_MAP_ZOOM, ...input };
-  let minZoom = clampInt(base.minZoom, DEFAULT_SKY_MAP_ZOOM.minZoom);
-  let maxZoom = clampInt(base.maxZoom, DEFAULT_SKY_MAP_ZOOM.maxZoom);
-
-  if (minZoom >= maxZoom) {
-    minZoom = DEFAULT_SKY_MAP_ZOOM.minZoom;
-    maxZoom = DEFAULT_SKY_MAP_ZOOM.maxZoom;
-  }
-
-  const clampZoom = (value: unknown, fallback: number) =>
-    Math.min(maxZoom, Math.max(minZoom, clampInt(value, fallback)));
-
-  return {
-    minZoom,
-    maxZoom,
-    zoomWall: clampZoom(base.zoomWall, DEFAULT_SKY_MAP_ZOOM.zoomWall),
-    zoomDesk: clampZoom(base.zoomDesk, DEFAULT_SKY_MAP_ZOOM.zoomDesk),
-    zoomCompact: clampZoom(base.zoomCompact, DEFAULT_SKY_MAP_ZOOM.zoomCompact),
-  };
+export function skyMapZoomForViewport(mode: SkyMapZoomMode, viewport: KioskViewport): number {
+  return ZOOM_BY_MODE[mode][viewport];
 }
 
-export function skyMapZoomForViewport(
-  zoom: SkyMapZoomSettings,
-  viewport: KioskViewport
-): number {
-  if (viewport === 'wall') return zoom.zoomWall;
-  if (viewport === 'desk') return zoom.zoomDesk;
-  return zoom.zoomCompact;
+export function skyMapZoomLimits(): { minZoom: number; maxZoom: number } {
+  return { minZoom: MAP_MIN_ZOOM, maxZoom: MAP_MAX_ZOOM };
 }

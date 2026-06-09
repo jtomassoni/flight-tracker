@@ -3,15 +3,16 @@ import {
   DEFAULT_LON,
   DEFAULT_LOCATION_LABEL,
   DEFAULT_ZIP,
+  SETTINGS_CHANGED_EVENT,
   SETTINGS_STORAGE_KEY,
 } from './constants';
 import {
   DEFAULT_SKY_MAP_ZOOM,
   normalizeSkyMapZoom,
-  type SkyMapZoomSettings,
+  type SkyMapZoomMode,
 } from './skyMapZoom';
 
-export type { SkyMapZoomSettings };
+export type { SkyMapZoomMode };
 
 export type RefreshInterval = 30 | 60 | 90;
 export type RadiusMi = 5 | 10 | 25 | 50;
@@ -25,7 +26,7 @@ export type ThemeId =
   | 'midnight-luxe'
   | 'radar-ops'
   | 'sky-map'
-  | 'flight-wall-mini';
+  | 'flightwall';
 
 export interface DisplaySettings {
   zipCode: string;
@@ -40,7 +41,7 @@ export interface DisplaySettings {
   mode: DisplayMode;
   theme: ThemeId;
   rotateThemes: boolean;
-  skyMapZoom: SkyMapZoomSettings;
+  skyMapZoom: SkyMapZoomMode;
 }
 
 export const DEFAULT_SETTINGS: DisplaySettings = {
@@ -72,6 +73,7 @@ export function clampRefreshInterval(value: number): RefreshInterval {
 
 function normalizeThemeId(theme?: string): ThemeId {
   if (theme === 'aurora-flight') return 'sky-map';
+  if (theme === 'flight-wall-mini') return 'flightwall';
   const valid: ThemeId[] = [
     'airport-led',
     'british-bus',
@@ -79,7 +81,7 @@ function normalizeThemeId(theme?: string): ThemeId {
     'midnight-luxe',
     'radar-ops',
     'sky-map',
-    'flight-wall-mini',
+    'flightwall',
   ];
   if (theme && valid.includes(theme as ThemeId)) return theme as ThemeId;
   return DEFAULT_SETTINGS.theme;
@@ -114,4 +116,5 @@ export function loadSettings(): DisplaySettings {
 export function saveSettings(settings: DisplaySettings): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT));
 }

@@ -14,7 +14,6 @@ import {
 } from '@/lib/denFids';
 import { airlineLogoUrl, getAirlineBrand } from '@/lib/airlines';
 import { getVerticalTrend } from '@/lib/aircraftUtils';
-import AdminLink from '../shared/AdminLink';
 import FlightListState from '../shared/FlightListState';
 import KioskScrollRegion from '../shared/KioskScrollRegion';
 import './den-fids.css';
@@ -167,7 +166,6 @@ export default function DepartureTableLayout({
           {errorMessage && <span className="den-fids__footer-error">{errorMessage}</span>}
         </footer>
       )}
-      <AdminLink />
     </div>
   );
 }

@@ -1,242 +1,57 @@
-/* Flight Wall Mini — physical LED matrix panel */
+/* Flight Wall Mini — canvas LED dot matrix (Flighty desk display) */
 
 .flight-wall-mini {
-  --led-phosphor: #f4f4f4;
-  --led-dim: #9a9a9a;
-  --led-panel: #000000;
-  background: var(--led-panel);
-  font-family: var(--font-barlow-condensed), 'Arial Narrow', Arial, sans-serif;
+  background: #000000;
   overflow: hidden;
-}
-
-.flight-wall-mini__bezel {
-  background: var(--led-panel);
 }
 
 .flight-wall-mini__screen {
-  /* Fixed panel resolution — dots scale up, count stays constant */
-  --led-cols: 48;
-  --led-rows: 36;
-  container-type: size;
   position: relative;
-  background: var(--led-panel);
+  background: #000000;
   overflow: hidden;
-  box-shadow: inset 0 0 32px rgba(0, 0, 0, 0.9);
 }
 
-/* Content → blurred phosphor, then mesh snaps it into discrete bulbs */
-.flight-wall-mini__phosphor {
-  position: relative;
-  z-index: 1;
+.flight-wall-mini__canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
   height: 100%;
-  padding:
-    calc(100cqh / var(--led-rows) * 1.5)
-    calc(100cqw / var(--led-cols) * 1.5)
-    calc(100cqh / var(--led-rows) * 1.5)
-    calc(100cqw / var(--led-cols) * 1.5);
-  color: var(--led-phosphor);
-  filter: blur(calc(100cqh / var(--led-rows) * 0.12)) contrast(1.9) brightness(1.18);
-  transform: translateZ(0);
+  image-rendering: pixelated;
 }
 
-.flight-wall-mini__led-text {
-  color: var(--led-phosphor);
-  font-weight: 700;
-  text-shadow:
-    0 0 calc(100cqh / var(--led-rows) * 0.35) rgba(255, 255, 255, 0.95),
-    0 0 calc(100cqh / var(--led-rows) * 1.1) rgba(255, 255, 255, 0.5);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  -webkit-font-smoothing: antialiased;
+.flight-wall-mini__empty {
+  color: #787878;
+  font-family: var(--font-barlow-condensed), 'Arial Narrow', Arial, sans-serif;
 }
 
-.flight-wall-mini__led-dim {
-  color: var(--led-dim);
-  font-weight: 600;
-  text-shadow:
-    0 0 calc(100cqh / var(--led-rows) * 0.5) rgba(255, 255, 255, 0.35),
-    0 0 calc(100cqh / var(--led-rows) * 1) rgba(255, 255, 255, 0.15);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.flight-wall-mini__route-line {
-  font-size: calc(100cqh / var(--led-rows) * 4.25);
-  line-height: calc(100cqh / var(--led-rows) * 4.75);
-}
-
-.flight-wall-mini__route-line--dim {
-  font-size: calc(100cqh / var(--led-rows) * 3.5);
-  line-height: calc(100cqh / var(--led-rows) * 4);
-}
-
-.flight-wall-mini__airport-line {
-  font-size: calc(100cqh / var(--led-rows) * 6.25);
-  line-height: calc(100cqh / var(--led-rows) * 6.75);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.flight-wall-mini__page {
-  color: #4a4a4a;
-  text-shadow: none;
-  font-size: calc(100cqh / var(--led-rows) * 2.25);
-  line-height: calc(100cqh / var(--led-rows) * 2.75);
-  letter-spacing: 0.2em;
-}
-
-.flight-wall-mini__logo-slot {
-  width: calc(100cqw / var(--led-cols) * 11);
-  height: calc(100cqh / var(--led-rows) * 11);
-}
-
-.flight-wall-mini__content {
-  gap: calc(100cqh / var(--led-rows) * 1.25);
-}
-
-.flight-wall-mini__header {
-  gap: calc(100cqw / var(--led-cols) * 1.25);
-}
-
-.flight-wall-mini__footer {
-  gap: calc(100cqh / var(--led-rows) * 0.75);
-}
-
-.flight-wall-mini__logo-slot > div {
-  width: 100% !important;
-  height: 100% !important;
-}
-
-/* LED bulb mesh — dark gaps between round diodes */
-.flight-wall-mini__mesh {
+.flight-wall-mini__overlay {
   position: absolute;
   inset: 0;
-  z-index: 4;
   pointer-events: none;
-  opacity: 0.78;
-  background-image: radial-gradient(
-    circle at 50% 40%,
-    rgba(0, 0, 0, 0) 0 36%,
-    rgba(0, 0, 0, 0.97) 42%
-  );
-  background-size: calc(100% / var(--led-cols)) calc(100% / var(--led-rows));
-  mix-blend-mode: multiply;
 }
 
-/* Hot-spot highlight on each bulb face */
-.flight-wall-mini__mesh-hot {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  pointer-events: none;
-  opacity: 0.35;
-  background-image: radial-gradient(
-    circle at 48% 32%,
-    rgba(255, 255, 255, 0.22) 0 20%,
-    transparent 44%
-  );
-  background-size: calc(100% / var(--led-cols)) calc(100% / var(--led-rows));
-  mix-blend-mode: screen;
-}
-
-/* Fine scanlines + row refresh band */
 .flight-wall-mini__scanlines {
   position: absolute;
   inset: 0;
-  z-index: 6;
-  pointer-events: none;
+  opacity: 0.03;
   background: repeating-linear-gradient(
     0deg,
     transparent,
-    transparent calc(100% / var(--led-rows) - 1px),
-    rgba(0, 0, 0, 0.18) calc(100% / var(--led-rows) - 1px),
-    rgba(0, 0, 0, 0.18) calc(100% / var(--led-rows))
+    transparent 3px,
+    rgba(0, 0, 0, 0.35) 3px,
+    rgba(0, 0, 0, 0.35) 4px
   );
-  opacity: 0.35;
 }
 
-.flight-wall-mini__refresh-band {
-  position: absolute;
-  left: 0;
-  right: 0;
-  z-index: 7;
-  height: 3px;
-  pointer-events: none;
-  background: linear-gradient(
-    180deg,
-    transparent,
-    rgba(255, 255, 255, 0.04) 50%,
-    transparent
-  );
-  animation: led-refresh-sweep 4.5s linear infinite;
-}
-
-@keyframes led-refresh-sweep {
-  0% {
-    top: -4%;
-    opacity: 0;
-  }
-  8% {
-    opacity: 0.7;
-  }
-  92% {
-    opacity: 0.7;
-  }
-  100% {
-    top: 104%;
-    opacity: 0;
-  }
-}
-
-/* Panel vignette + subtle glass */
 .flight-wall-mini__vignette {
   position: absolute;
   inset: 0;
-  z-index: 8;
-  pointer-events: none;
   background: radial-gradient(
-    ellipse 88% 82% at 50% 48%,
-    transparent 42%,
-    rgba(0, 0, 0, 0.55) 100%
-  );
-}
-
-.flight-wall-mini__glass {
-  position: absolute;
-  inset: 0;
-  z-index: 9;
-  pointer-events: none;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.04) 0%,
-    transparent 28%,
+    ellipse 98% 94% at 50% 50%,
     transparent 72%,
-    rgba(255, 255, 255, 0.02) 100%
+    rgba(0, 0, 0, 0.12) 100%
   );
-}
-
-/* Very subtle panel hum */
-.flight-wall-mini__screen::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  pointer-events: none;
-  background: transparent;
-  animation: led-panel-hum 6s ease-in-out infinite;
-}
-
-@keyframes led-panel-hum {
-  0%,
-  100% {
-    opacity: 0;
-    box-shadow: inset 0 0 0 transparent;
-  }
-  50% {
-    opacity: 1;
-    box-shadow: inset 0 0 120px rgba(255, 255, 255, 0.015);
-  }
 }
 
 .flight-wall-mini__fade {
@@ -252,31 +67,8 @@
   }
 }
 
-/* Airline logo tile — full-color livery, LED mesh applied on top */
-.flight-wall-mini__logo-tile {
-  border: 1px solid;
-  box-shadow:
-    0 0 12px rgba(255, 255, 255, 0.08),
-    inset 0 0 20px rgba(0, 0, 0, 0.25);
-}
-
-@media (orientation: portrait) {
-  .flight-wall-mini__screen {
-    --led-cols: 40;
-    --led-rows: 56;
-  }
-}
-
-@media (orientation: landscape) {
-  .flight-wall-mini__screen {
-    --led-cols: 64;
-    --led-rows: 36;
-  }
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .flight-wall-mini__refresh-band,
-  .flight-wall-mini__screen::after {
+  .flight-wall-mini__fade {
     animation: none;
   }
 }

@@ -21,6 +21,7 @@ export async function GET(request: NextRequest) {
     aircraft: result.aircraft,
     source: result.source,
     provider: result.provider,
-    fetchedAt: new Date().toISOString(),
+    fetchedAt: result.fetchedAt,
+    stale: result.stale ?? false,
   });
 }

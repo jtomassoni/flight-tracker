@@ -10,7 +10,7 @@ export type DisplayLayoutProps = {
   settings: DisplaySettings;
   status: 'loading' | 'ready' | 'error' | 'offline';
   lastUpdated: Date | null;
-  source: 'live' | 'mock' | null;
+  source: 'live' | 'mock' | 'cached' | null;
   provider: string | null;
   errorMessage: string | null;
   onRefresh: () => void;

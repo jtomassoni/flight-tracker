@@ -19,7 +19,7 @@ A personal FlightWall-style dashboard showing aircraft near Denver (ZIP 80219). 
 | Midnight First Class | Cinematic hero + horizontal filmstrip |
 | Radar Operations | Live radar scope with blips + target sidebar |
 | Sky Map | Google Maps hybrid overlay with live aircraft markers |
-| Flight Wall Mini | Physical LED matrix — pixel airline logo, callsign, aircraft type |
+| FlightWall | TheFlightWall-style LED panel — logo, route, aircraft type, cyan telemetry (routes are synthetic placeholders) |
 
 Themes auto-rotate every 30 seconds on `/display` by default (toggle in admin).
 
@@ -33,35 +33,29 @@ npm run dev
 
 Open [http://localhost:3000/display](http://localhost:3000/display) for the board, or [http://localhost:3000/admin](http://localhost:3000/admin) to configure.
 
+Dev uses **mock flight data** automatically — no adsb.fi calls while you iterate. Production uses live data from `lib/flightProvider.ts`.
+
 Dev server binds to `0.0.0.0` (same pattern as other local Next apps) so you can open it from another device on your LAN.
 
 ## Environment variables
 
-Copy `.env.example` → `.env.local` (already created for you). **For V1 you likely need zero API keys.**
+Copy `.env.example` → `.env.local` only if you use the **Sky Map** theme — that's the one key you need.
 
 ### Which keys to get
 
 | What | Key needed? | Where to get it |
 | --- | --- | --- |
-| **Flight data (adsb.fi)** | **No** — default, free | Just works. Community ADS-B feed. |
-| **Flight data (airplanes.live)** | Maybe | [airplanes.live](https://airplanes.live) — request API access if your endpoint requires `api-auth` |
-| **ZIP → lat/lon (US)** | **No** — default, free | Uses Zippopotam.us server-side |
-| **ZIP → lat/lon (Google)** | Optional | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → enable Geocoding API → `GOOGLE_GEOCODING_API_KEY` |
-| **ADS-B Exchange (paid)** | Only if you upgrade later | [adsbexchange.com](https://www.adsbexchange.com/products/enterprise-excel/) — not needed for V1 |
+| **Flight data (adsb.fi)** | **No** | Hardcoded in `lib/flightProvider.ts`. Mock data in dev; live in prod. |
+| **ZIP → lat/lon (US)** | **No** | Uses Zippopotam.us server-side |
 | **Sky Map theme** | **Yes** (for that theme only) | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → enable Maps JavaScript API → `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` |
 
 ### Variables
 
-| Variable | Default | Description |
-| --- | --- | --- |
-| `FLIGHT_PROVIDER` | `adsb.fi` | `adsb.fi`, `airplanes.live`, or `mock` |
-| `USE_MOCK_FLIGHTS` | `false` | Force mock data (`true` / `false`) |
-| `FLIGHT_API_KEY` | — | Only for `airplanes.live` if auth is required |
-| `GEOCODING_PROVIDER` | `zippopotam` | Set to `google` to use Google Geocoding |
-| `GOOGLE_GEOCODING_API_KEY` | — | Optional, for non-US or higher geocoding limits |
-| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | — | Required for Sky Map theme (Maps JavaScript API) |
+| Variable | Description |
+| --- | --- |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | Required for Sky Map theme (Maps JavaScript API) |
 
-Set these in `.env.local` for development and in the Vercel project dashboard for production.
+Set in `.env.local` for development and in the Vercel project dashboard for production.
 
 ## Deploy to Vercel
 
@@ -90,16 +84,16 @@ Configure theme and filters at `/admin` first — settings persist in localStora
 
 ### adsb.fi (default)
 
-- Free, no API key
+- Free, no API key — configured in `lib/flightProvider.ts`
 - Endpoint: `https://opendata.adsb.fi/api/v3/lat/{lat}/lon/{lon}/dist/{nm}`
 - ADSBexchange-compatible response format
-- Rate-limit friendly: client polling is capped at 30s minimum
+- Server-side caching to stay within rate limits
 - Coverage depends on community receivers near Denver
 
 ### airplanes.live
 
-- Set `FLIGHT_PROVIDER=airplanes.live`
-- Similar lat/lon/dist endpoint; optional `FLIGHT_API_KEY` via `api-auth` header
+- Alternative provider — switch by changing `PRODUCTION_FLIGHT_PROVIDER` in `lib/flightProvider.ts`
+- Optional `FLIGHT_API_KEY` env var via `api-auth` header if your endpoint requires auth
 
 ### Limitations
 
@@ -114,12 +108,16 @@ Configure theme and filters at `/admin` first — settings persist in localStora
 app/
   display/          # Kiosk dashboard
   admin/            # Settings UI
-  api/flights/      # Server-side data proxy
+  api/
+    flights/        # Server-side data proxy
+    airline-logo/   # Logo proxy for LED canvas
 components/
-  display/          # Theme-aware display components
+  display/          # Theme layouts + dev theme tester (dev only)
   admin/            # Admin panel
 lib/
-  flightProvider.ts # Swappable ADS-B providers
+  flightProvider.ts # adsb.fi in prod, mock in dev
+  ledMatrix.ts      # FlightWall LED renderer
+  ledFlightWall.ts  # Route/telemetry formatters
   themes.ts         # Preset theme definitions
   settings.ts       # localStorage settings schema
 ```

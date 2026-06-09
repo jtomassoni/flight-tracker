@@ -34,6 +34,13 @@ export function useLayoutDensity() {
     flapDestChars:
       viewport === 'compact' || isDeskPortrait ? 8 : viewport === 'desk' ? 10 : 14,
     showGalleryStats: viewport !== 'desk',
+    /** Max gallery cards that fit without scrolling (cols × rows for viewport) */
+    galleryMaxCards:
+      viewport === 'compact' || isDeskPortrait
+        ? 4
+        : viewport === 'desk'
+          ? 6
+          : 8,
     showRadarSidebar: viewport !== 'compact',
   };
 }

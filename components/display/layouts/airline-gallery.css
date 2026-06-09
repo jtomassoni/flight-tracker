@@ -1,0 +1,178 @@
+.gallery-shell {
+  position: relative;
+  isolation: isolate;
+  background:
+    radial-gradient(ellipse 120% 80% at 10% -20%, color-mix(in srgb, var(--accent) 18%, transparent), transparent 55%),
+    radial-gradient(ellipse 90% 60% at 95% 110%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 50%),
+    linear-gradient(180deg, color-mix(in srgb, var(--background) 92%, #000) 0%, var(--background) 45%, #020617 100%);
+}
+
+.gallery-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.035) 1px, transparent 0);
+  background-size: 28px 28px;
+  pointer-events: none;
+  opacity: 0.45;
+  z-index: 0;
+}
+
+.gallery-shell > * {
+  position: relative;
+  z-index: 1;
+}
+
+.gallery-header {
+  border-bottom: 1px solid transparent;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, transparent 100%),
+    linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 35%, transparent), transparent);
+  background-size: 100% 100%, 100% 1px;
+  background-repeat: no-repeat;
+  background-position: top, bottom;
+}
+
+.gallery-kicker {
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 55%, #fff));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.gallery-title {
+  text-shadow: 0 1px 24px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.gallery-pill {
+  border: 1px solid color-mix(in srgb, var(--border) 70%, var(--accent) 30%);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--panel) 88%, var(--accent) 12%) 0%,
+    color-mix(in srgb, var(--panel) 96%, transparent) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 4px 16px rgba(0, 0, 0, 0.18);
+  backdrop-filter: blur(8px);
+}
+
+.gallery-card {
+  position: relative;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--tile-border, #38bdf8) 35%, transparent),
+    0 18px 40px -12px rgba(0, 0, 0, 0.55),
+    0 0 32px -8px color-mix(in srgb, var(--tile-glow, #38bdf8) 45%, transparent);
+  transition:
+    transform 0.35s ease,
+    box-shadow 0.35s ease;
+}
+
+.gallery-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(
+    145deg,
+    rgba(255, 255, 255, 0.12) 0%,
+    transparent 28%,
+    transparent 72%,
+    rgba(0, 0, 0, 0.18) 100%
+  );
+}
+
+.gallery-card__accent-bar {
+  position: relative;
+  overflow: hidden;
+}
+
+.gallery-card__accent-bar::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.45) 45%,
+    transparent 70%
+  );
+  transform: translateX(-120%);
+  animation: gallery-shimmer 4.5s ease-in-out infinite;
+}
+
+@keyframes gallery-shimmer {
+  0%,
+  72%,
+  100% {
+    transform: translateX(-120%);
+  }
+  86% {
+    transform: translateX(120%);
+  }
+}
+
+.gallery-card__header {
+  position: relative;
+  overflow: hidden;
+}
+
+.gallery-card__header::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.18) 0%, transparent 42%);
+  pointer-events: none;
+}
+
+.gallery-card__logo {
+  box-shadow:
+    0 8px 20px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.gallery-stat {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(6px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.gallery-stat::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--tile-stat-bg, rgba(255, 255, 255, 0.1));
+  pointer-events: none;
+}
+
+.gallery-stat--alt::before {
+  background: var(--tile-stat-alt-bg, rgba(0, 0, 0, 0.22));
+}
+
+.gallery-stat__value {
+  text-shadow: 0 0 18px color-mix(in srgb, var(--tile-glow, #38bdf8) 30%, transparent);
+}
+
+.gallery-footer {
+  background: linear-gradient(180deg, transparent 0%, color-mix(in srgb, var(--panel) 92%, #000) 100%);
+  backdrop-filter: blur(10px);
+}
+
+.gallery-badge {
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--tile-badge, #38bdf8) 92%, #fff) 0%,
+    var(--tile-badge, #38bdf8) 100%
+  );
+  box-shadow:
+    0 0 18px color-mix(in srgb, var(--tile-badge, #38bdf8) 45%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.gallery-stats-grid {
+  background: linear-gradient(180deg, transparent 0%, rgba(0, 0, 0, 0.08) 100%);
+}

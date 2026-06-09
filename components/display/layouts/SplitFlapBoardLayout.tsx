@@ -3,7 +3,6 @@
 import SplitFlapText from '@/components/SplitFlapText';
 import type { DisplayLayoutProps } from '@/types/display';
 import { displayIdentifier } from '@/lib/aircraftUtils';
-import AdminLink from '../shared/AdminLink';
 import FlightListState from '../shared/FlightListState';
 import KioskScrollRegion from '../shared/KioskScrollRegion';
 import './split-flap-board.css';
@@ -66,7 +65,6 @@ export default function SplitFlapBoardLayout({
         </div>
         <p className="solari-board__footer-hint">Aircraft currently in range</p>
       </footer>
-      <AdminLink />
     </div>
   );
 }

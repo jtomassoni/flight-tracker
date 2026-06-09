@@ -12,9 +12,8 @@ import {
   formatSpeed,
   getVerticalTrend,
 } from '@/lib/aircraftUtils';
-import AdminLink from '../shared/AdminLink';
 import FlightListState from '../shared/FlightListState';
-import KioskScrollRegion from '../shared/KioskScrollRegion';
+import './airline-gallery.css';
 
 export default function AirlineGalleryLayout({
   displayedAircraft,
@@ -23,36 +22,38 @@ export default function AirlineGalleryLayout({
   lastUpdated,
   provider,
 }: DisplayLayoutProps) {
-  const { galleryCols: gridClass, showGalleryStats, viewport } = useLayoutDensity();
+  const { galleryCols: gridClass, galleryMaxCards, showGalleryStats, viewport } =
+    useLayoutDensity();
+  const visibleAircraft = displayedAircraft.slice(0, galleryMaxCards);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-background font-display text-foreground">
-      <header className="safe-top shrink-0 flex flex-wrap items-end justify-between gap-3 border-b border-border px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
+    <div className="gallery-shell flex h-full flex-col overflow-hidden font-display text-foreground">
+      <header className="gallery-header safe-top shrink-0 flex flex-wrap items-end justify-between gap-3 px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
         <div className="min-w-0">
-          <p className="text-xs uppercase tracking-[0.2em] text-accent">Live Traffic</p>
+          <p className="gallery-kicker text-xs font-semibold uppercase tracking-[0.2em]">Live Traffic</p>
           <h1
-            className={`font-bold ${viewport === 'desk' ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl md:text-4xl'}`}
+            className={`gallery-title font-bold ${viewport === 'desk' ? 'text-xl sm:text-2xl' : 'text-2xl sm:text-3xl md:text-4xl'}`}
           >
             Flights Over {settings.locationLabel}
           </h1>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className="rounded-full border border-border bg-panel px-3 py-1 text-xs text-muted">
+          <span className="gallery-pill rounded-full px-3 py-1 text-xs text-muted">
             {displayedAircraft.length} aircraft
           </span>
-          <span className="rounded-full border border-border bg-panel px-3 py-1 text-xs text-muted">
+          <span className="gallery-pill rounded-full px-3 py-1 text-xs text-muted">
             {settings.radiusMi} mi
           </span>
-          <span className="rounded-full border border-border bg-panel px-3 py-1 text-xs text-muted">
+          <span className="gallery-pill rounded-full px-3 py-1 text-xs text-muted">
             {lastUpdated?.toLocaleTimeString() ?? '—'}
           </span>
         </div>
       </header>
 
-      <KioskScrollRegion className="min-h-0 flex-1 p-[var(--kiosk-pad)]" durationSec={44}>
+      <div className="gallery-body min-h-0 flex-1 overflow-hidden p-[var(--kiosk-pad)]">
         <FlightListState status={status} count={displayedAircraft.length} />
         <div className={`grid gap-3 sm:gap-4 ${gridClass}`}>
-          {displayedAircraft.map((ac) => {
+          {visibleAircraft.map((ac) => {
             const brand = getAirlineBrand(ac.callsign);
             const tile = getAirlineTileStyle(brand);
             const id = displayIdentifier(ac);
@@ -61,25 +62,30 @@ export default function AirlineGalleryLayout({
             return (
               <article
                 key={ac.hex}
-                className="flex flex-col overflow-hidden rounded-2xl shadow-xl"
+                className="gallery-card flex flex-col overflow-hidden rounded-2xl"
                 style={{
                   background: tile.cardBackground,
                   border: `2px solid ${tile.borderColor}`,
                   color: tile.textColor,
+                  ['--tile-border' as string]: tile.borderColor,
+                  ['--tile-glow' as string]: tile.borderColor,
+                  ['--tile-badge' as string]: tile.badgeBackground,
+                  ['--tile-stat-bg' as string]: tile.statBackground,
+                  ['--tile-stat-alt-bg' as string]: tile.statAltBackground,
                 }}
               >
                 <div
-                  className="h-2 shrink-0"
+                  className="gallery-card__accent-bar h-2 shrink-0"
                   style={{ background: tile.accentBarColor }}
                   aria-hidden
                 />
 
                 <div
-                  className="flex items-center gap-3 px-4 py-3 sm:gap-4 sm:px-5 sm:py-4"
+                  className="gallery-card__header flex items-center gap-3 px-4 py-3 sm:gap-4 sm:px-5 sm:py-4"
                   style={{ background: tile.headerBackground }}
                 >
                   <div
-                    className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg shadow-md sm:h-16 sm:w-16"
+                    className="gallery-card__logo relative h-14 w-14 shrink-0 overflow-hidden rounded-lg sm:h-16 sm:w-16"
                     style={{
                       backgroundColor: tile.logoBackground,
                       border: `1px solid ${tile.borderColor}44`,
@@ -93,7 +99,7 @@ export default function AirlineGalleryLayout({
                       unoptimized
                     />
                   </div>
-                  <div className="min-w-0">
+                  <div className="relative min-w-0">
                     <p
                       className="truncate text-xl font-bold tracking-tight sm:text-2xl"
                       style={{ color: tile.headerTextColor }}
@@ -112,7 +118,7 @@ export default function AirlineGalleryLayout({
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-1.5 p-3">
+                <div className="gallery-stats-grid grid grid-cols-2 gap-1.5 p-3">
                   {(showGalleryStats
                     ? [
                         ['Distance', formatDistance(ac.distanceMi)],
@@ -127,18 +133,17 @@ export default function AirlineGalleryLayout({
                   ).map(([label, value], i) => (
                     <div
                       key={label}
-                      className="rounded-lg px-3 py-2.5"
-                      style={{
-                        backgroundColor: i % 2 === 0 ? tile.statBackground : tile.statAltBackground,
-                      }}
+                      className={`gallery-stat rounded-lg px-3 py-2.5 ${i % 2 === 1 ? 'gallery-stat--alt' : ''}`}
                     >
                       <p
-                        className="text-[10px] font-semibold uppercase tracking-wider"
+                        className="relative text-[10px] font-semibold uppercase tracking-wider"
                         style={{ color: tile.labelColor }}
                       >
                         {label}
                       </p>
-                      <p className="mt-0.5 font-mono text-lg font-semibold">{value}</p>
+                      <p className="gallery-stat__value relative mt-0.5 font-mono text-lg font-semibold">
+                        {value}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -148,11 +153,8 @@ export default function AirlineGalleryLayout({
                   style={{ borderTop: `1px solid ${tile.borderColor}55` }}
                 >
                   <span
-                    className="rounded-full px-3 py-1 text-xs font-semibold capitalize shadow-sm"
-                    style={{
-                      backgroundColor: tile.badgeBackground,
-                      color: tile.badgeTextColor,
-                    }}
+                    className="gallery-badge rounded-full px-3 py-1 text-xs font-semibold capitalize"
+                    style={{ color: tile.badgeTextColor }}
                   >
                     {trend}
                   </span>
@@ -166,14 +168,13 @@ export default function AirlineGalleryLayout({
             );
           })}
         </div>
-      </KioskScrollRegion>
+      </div>
 
-      <footer className="safe-bottom shrink-0 border-t border-border bg-panel/95 px-4 py-2 backdrop-blur sm:px-6">
+      <footer className="gallery-footer safe-bottom shrink-0 border-t border-border/60 px-4 py-2 sm:px-6">
         <span className="text-xs text-muted sm:text-sm">
           ZIP {settings.zipCode} · {settings.radiusMi} mi radius
         </span>
       </footer>
-      <AdminLink />
     </div>
   );
 }

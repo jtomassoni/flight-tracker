@@ -7,10 +7,9 @@ import {
   loadSettings,
   saveSettings,
   type DisplaySettings,
-  type SkyMapZoomSettings,
   type ThemeId,
 } from '@/lib/settings';
-import { normalizeSkyMapZoom } from '@/lib/skyMapZoom';
+import FlightMap from '@/components/display/maps/FlightMap';
 import { getTheme, getThemeSwatches, THEME_LIST } from '@/lib/themes';
 import { THEME_ROTATION_SEC } from '@/lib/constants';
 
@@ -21,15 +20,17 @@ function SelectField<T extends string | number>({
   value,
   options,
   onChange,
+  compact = false,
 }: {
   label: string;
   value: T;
   options: Option<T>[];
   onChange: (v: T) => void;
+  compact?: boolean;
 }) {
   return (
-    <label className="block">
-      <span className="admin-label mb-2 block">{label}</span>
+    <label className="block min-w-0">
+      <span className={`admin-label block ${compact ? 'mb-1' : 'mb-2'}`}>{label}</span>
       <select
         value={String(value)}
         onChange={(e) => {
@@ -37,7 +38,7 @@ function SelectField<T extends string | number>({
           const match = options.find((o) => String(o.value) === raw);
           if (match) onChange(match.value);
         }}
-        className="admin-select"
+        className={`admin-select ${compact ? 'admin-select--compact' : ''}`}
       >
         {options.map((o) => (
           <option key={String(o.value)} value={String(o.value)}>
@@ -49,111 +50,93 @@ function SelectField<T extends string | number>({
   );
 }
 
-function ThemeCard({
+function ThemeChip({
   id,
   name,
-  description,
   selected,
   rotating,
   onSelect,
 }: {
   id: ThemeId;
   name: string;
-  description: string;
   selected: boolean;
   rotating: boolean;
   onSelect: () => void;
 }) {
-  const swatches = getThemeSwatches(getTheme(id));
+  const theme = getTheme(id);
+  const swatches = getThemeSwatches(theme);
 
   return (
     <button
       type="button"
       onClick={onSelect}
       data-selected={selected}
-      className="admin-theme-card group rounded-2xl p-4 text-left"
+      title={name}
+      className="admin-theme-chip"
     >
-      <div className="mb-3 flex gap-1.5">
-        {swatches.map((color) => (
-          <span
-            key={color}
-            className="h-8 flex-1 rounded-md border border-white/10 shadow-inner"
-            style={{ backgroundColor: color }}
-          />
+      <div className="admin-theme-chip__swatches">
+        {swatches.map((color, index) => (
+          <span key={index} style={{ backgroundColor: color }} />
         ))}
       </div>
-      <p className="admin-heading text-base font-semibold tracking-tight text-slate-100">
-        {name}
-      </p>
-      <p className="mt-1.5 text-sm leading-relaxed text-slate-400">{description}</p>
+      <span className="admin-theme-chip__label">{name}</span>
+      <span className="admin-theme-chip__desc">{theme.description}</span>
       {selected && (
-        <span className="mt-3 inline-flex items-center gap-1.5 text-xs font-medium text-sky-300">
-          <span className="h-1.5 w-1.5 rounded-full bg-sky-400 shadow-[0_0_8px_#38bdf8]" />
-          {rotating ? 'Rotation start' : 'Active'}
+        <span className="admin-theme-chip__dot" aria-hidden>
+          {rotating ? '↻' : '●'}
         </span>
       )}
     </button>
   );
 }
 
-function ZoomSlider({
+function Toggle({
+  checked,
+  onChange,
   label,
   hint,
-  value,
-  min,
-  max,
-  onChange,
+  compact = false,
 }: {
+  checked: boolean;
+  onChange: (v: boolean) => void;
   label: string;
   hint?: string;
-  value: number;
-  min: number;
-  max: number;
-  onChange: (v: number) => void;
+  compact?: boolean;
 }) {
   return (
-    <label className="block">
-      <div className="mb-2 flex items-baseline justify-between gap-2">
-        <span className="admin-label">{label}</span>
-        <span className="admin-mono text-sm font-semibold text-sky-300">{value}</span>
-      </div>
-      {hint && <p className="mb-2 text-xs text-slate-500">{hint}</p>}
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={1}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
-        className="admin-range w-full"
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      onClick={() => onChange(!checked)}
+      className={`admin-toggle flex w-full cursor-pointer items-center gap-3 rounded-lg border border-white/5 bg-black/20 text-left ${
+        compact ? 'min-h-[36px] px-3 py-2' : 'min-h-[44px] px-4 py-3'
+      }`}
+    >
+      <span
+        data-checked={checked ? 'true' : 'false'}
+        className="admin-toggle__track relative h-5 w-9 shrink-0 rounded-full border border-white/10 bg-slate-800 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-slate-300 after:transition-transform"
       />
-      <div className="mt-1 flex justify-between text-[10px] text-slate-600">
-        <span>{min}</span>
-        <span>{max}</span>
+      <div className="min-w-0">
+        <span className={`block text-slate-200 ${compact ? 'text-xs' : 'text-sm'}`}>{label}</span>
+        {hint && !compact && <p className="text-[10px] text-slate-500">{hint}</p>}
       </div>
-    </label>
+    </button>
   );
 }
 
-function Section({
+function Panel({
   title,
-  subtitle,
   children,
   className = '',
 }: {
   title: string;
-  subtitle?: string;
   children: React.ReactNode;
   className?: string;
 }) {
   return (
-    <section className={`admin-card rounded-2xl p-6 md:p-7 ${className}`}>
-      <div className="mb-5">
-        <h2 className="admin-heading text-lg font-semibold tracking-tight text-white">
-          {title}
-        </h2>
-        {subtitle && <p className="mt-1 text-sm text-slate-400">{subtitle}</p>}
-      </div>
+    <section className={`admin-panel-card ${className}`}>
+      <h2 className="admin-panel-card__title">{title}</h2>
       {children}
     </section>
   );
@@ -177,12 +160,14 @@ export default function AdminPanel() {
     setSaved(false);
   };
 
-  const updateSkyMapZoom = (patch: Partial<SkyMapZoomSettings>) => {
-    setSettings((prev) => ({
-      ...prev,
-      skyMapZoom: normalizeSkyMapZoom({ ...prev.skyMapZoom, ...patch }),
-    }));
-    setSaved(false);
+  const updateAndSave = <K extends keyof DisplaySettings>(key: K, value: DisplaySettings[K]) => {
+    setSettings((prev) => {
+      const next = { ...prev, [key]: value };
+      saveSettings(next);
+      return next;
+    });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2500);
   };
 
   const lookupZip = async (zip: string) => {
@@ -260,318 +245,234 @@ export default function AdminPanel() {
   };
 
   return (
-    <div
-      className="relative z-10 mx-auto max-w-5xl px-4 py-8 md:px-8 md:py-14"
-      style={{
-        paddingBottom: 'max(2rem, env(safe-area-inset-bottom))',
-        paddingTop: 'max(2rem, env(safe-area-inset-top))',
-      }}
-    >
-      {/* Header */}
-      <header className="mb-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="admin-label mb-3 flex items-center gap-2">
-            <span className="inline-block h-px w-8 bg-gradient-to-r from-sky-400/80 to-transparent" />
-            Flight Command
-          </p>
-          <h1 className="admin-heading text-3xl font-bold tracking-tight text-white md:text-4xl">
+    <div className="admin-panel">
+      <header className="admin-panel__header">
+        <div className="min-w-0">
+          <p className="admin-label mb-1">Flight Command</p>
+          <h1 className="admin-heading text-xl font-bold tracking-tight text-white sm:text-2xl">
             Control Center
           </h1>
-          <p className="mt-2 max-w-md text-sm leading-relaxed text-slate-400">
-            Configure your personal flight wall. Settings sync to the display via localStorage.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <span className="admin-stat-pill rounded-full px-3 py-1">
-              ZIP {settings.zipCode}
-            </span>
-            <span className="admin-stat-pill rounded-full px-3 py-1">
-              {settings.locationLabel}
-            </span>
-            <span className="admin-stat-pill rounded-full px-3 py-1">
-              {settings.refreshIntervalSec}s refresh
-            </span>
-          </div>
         </div>
 
-        <Link
-          href="/display"
-          className="admin-btn-primary inline-flex items-center justify-center gap-2 rounded-xl px-6 py-3 text-sm"
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden>
-            <path
-              d="M5 12h14M13 6l6 6-6 6"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-          Launch Display
-        </Link>
-      </header>
-
-      {/* Themes */}
-      <Section
-        title="Visual Identity"
-        subtitle={`Choose a theme — or auto-rotate all ${THEME_LIST.length} every ${THEME_ROTATION_SEC} seconds`}
-        className="mb-6"
-      >
-        <label className="admin-toggle mb-5 flex min-h-[44px] cursor-pointer items-center gap-4 rounded-xl border border-white/5 bg-black/20 px-4 py-3">
-          <input
-            type="checkbox"
-            checked={settings.rotateThemes}
-            onChange={(e) => update('rotateThemes', e.target.checked)}
-            className="peer sr-only"
-          />
-          <span className="relative h-6 w-11 shrink-0 rounded-full border border-white/10 bg-slate-800 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-slate-300 after:transition-transform" />
-          <div>
-            <span className="text-sm font-medium text-slate-200">Auto-rotate themes</span>
-            <p className="text-xs text-slate-500">
-              Cycles through every theme on the display every {THEME_ROTATION_SEC}s
-            </p>
-          </div>
-        </label>
-
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {THEME_LIST.map((t) => (
-            <ThemeCard
-              key={t.id}
-              id={t.id}
-              name={t.name}
-              description={t.description}
-              selected={settings.theme === t.id}
-              rotating={settings.rotateThemes}
-              onSelect={() => update('theme', t.id)}
-            />
-          ))}
-        </div>
-      </Section>
-
-      {/* Location */}
-      <Section
-        title="Flight Corridor"
-        subtitle="Set the geographic center for aircraft tracking"
-        className="mb-6"
-      >
-        <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
-          <label className="block">
-            <span className="admin-label mb-2 block">ZIP Code</span>
-            <input
-              type="text"
-              inputMode="numeric"
-              maxLength={5}
-              value={zipInput}
-              onChange={(e) => {
-                setZipInput(e.target.value.replace(/\D/g, '').slice(0, 5));
-                setSaved(false);
-                setZipError(null);
-              }}
-              placeholder="80219"
-              className="admin-input admin-mono text-lg tracking-widest"
-            />
-          </label>
+        <div className="admin-panel__header-actions">
+          {saved && (
+            <span className="admin-panel__saved">
+              <span className="admin-panel__saved-dot" aria-hidden />
+              Saved
+            </span>
+          )}
           <button
             type="button"
-            onClick={handleZipLookup}
-            disabled={zipLoading || zipInput.length !== 5}
-            className="admin-btn-ghost self-end rounded-xl px-5 py-2.5 text-sm font-medium disabled:opacity-40"
+            onClick={handleReset}
+            className="admin-btn-ghost admin-btn--compact rounded-lg px-3 py-1.5 text-xs font-medium"
           >
-            {zipLoading ? 'Resolving…' : 'Resolve'}
+            Reset
           </button>
-        </div>
-
-        {zipError && (
-          <p className="mt-3 text-sm text-rose-400">{zipError}</p>
-        )}
-
-        <div className="mt-5 flex flex-wrap items-center gap-3 rounded-xl border border-white/5 bg-black/20 px-4 py-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-full border border-sky-500/30 bg-sky-500/10">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" className="text-sky-400">
-              <circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="1.5" />
+          <button
+            type="button"
+            onClick={handleSave}
+            disabled={zipLoading}
+            className="admin-btn-primary admin-btn--compact rounded-lg px-4 py-1.5 text-xs disabled:opacity-50"
+          >
+            Save
+          </button>
+          <Link
+            href="/display"
+            className="admin-btn-primary admin-btn--compact inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-xs"
+          >
+            Launch Display
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden>
               <path
-                d="M12 13v8M8 21h8"
+                d="M5 12h14M13 6l6 6-6 6"
                 stroke="currentColor"
-                strokeWidth="1.5"
+                strokeWidth="2"
                 strokeLinecap="round"
+                strokeLinejoin="round"
               />
             </svg>
+          </Link>
+        </div>
+      </header>
+
+      <div className="admin-panel__grid">
+        <Panel title="Visual Identity">
+          <Toggle
+            compact
+            checked={settings.rotateThemes}
+            onChange={(v) => updateAndSave('rotateThemes', v)}
+            label={`Auto-rotate (${THEME_ROTATION_SEC}s)`}
+          />
+          <div className="admin-theme-grid">
+            {THEME_LIST.map((t) => (
+              <ThemeChip
+                key={t.id}
+                id={t.id}
+                name={t.name}
+                selected={settings.theme === t.id}
+                rotating={settings.rotateThemes}
+                onSelect={() => update('theme', t.id)}
+              />
+            ))}
           </div>
-          <div>
-            <p className="text-sm font-medium text-slate-200">{settings.locationLabel}</p>
-            <p className="admin-mono text-xs text-slate-500">
-              {settings.lat.toFixed(4)}° N · {Math.abs(settings.lon).toFixed(4)}° W
+        </Panel>
+
+        <Panel title="Flight Corridor">
+          <div className="admin-zip-row">
+            <label className="min-w-0 flex-1">
+              <span className="admin-label mb-1 block">ZIP Code</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                maxLength={5}
+                value={zipInput}
+                onChange={(e) => {
+                  setZipInput(e.target.value.replace(/\D/g, '').slice(0, 5));
+                  setSaved(false);
+                  setZipError(null);
+                }}
+                placeholder="80219"
+                className="admin-input admin-input--compact admin-mono tracking-widest"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={handleZipLookup}
+              disabled={zipLoading || zipInput.length !== 5}
+              className="admin-btn-ghost admin-btn--compact mt-5 rounded-lg px-3 py-1.5 text-xs font-medium disabled:opacity-40"
+            >
+              {zipLoading ? '…' : 'Resolve'}
+            </button>
+          </div>
+
+          {zipError && <p className="admin-panel__error">{zipError}</p>}
+
+          <div className="admin-corridor-preview">
+            <FlightMap
+              centerLat={settings.lat}
+              centerLon={settings.lon}
+              radiusMi={settings.radiusMi}
+              aircraft={[]}
+              locationLabel={settings.locationLabel}
+              skyMapZoom={settings.skyMapZoom}
+            />
+          </div>
+
+          <div className="admin-location-summary">
+            <p className="truncate text-sm font-medium text-slate-200">{settings.locationLabel}</p>
+            <p className="admin-mono truncate text-[10px] text-slate-500">
+              {settings.lat.toFixed(4)}°N · {Math.abs(settings.lon).toFixed(4)}°W ·{' '}
+              {settings.radiusMi} mi · {settings.refreshIntervalSec}s
             </p>
           </div>
-        </div>
-      </Section>
+        </Panel>
 
-      {/* Flight params */}
-      <Section
-        title="Radar Parameters"
-        subtitle="Fine-tune what appears on your display"
-      >
-        <div className="grid gap-6 sm:grid-cols-2">
-          <SelectField
-            label="Refresh Interval"
-            value={settings.refreshIntervalSec}
-            options={[
-              { value: 30, label: '30 seconds' },
-              { value: 60, label: '60 seconds' },
-              { value: 90, label: '90 seconds' },
-            ]}
-            onChange={(v) => update('refreshIntervalSec', v)}
-          />
-
-          <SelectField
-            label="Search Radius"
-            value={settings.radiusMi}
-            options={[
-              { value: 5, label: '5 miles' },
-              { value: 10, label: '10 miles' },
-              { value: 25, label: '25 miles' },
-              { value: 50, label: '50 miles' },
-            ]}
-            onChange={(v) => update('radiusMi', v)}
-          />
-
-          <SelectField
-            label="Aircraft Limit"
-            value={settings.maxAircraft}
-            options={[
-              { value: 8, label: '8 aircraft' },
-              { value: 12, label: '12 aircraft' },
-              { value: 20, label: '20 aircraft' },
-            ]}
-            onChange={(v) => update('maxAircraft', v)}
-          />
-
-          <SelectField
-            label="Altitude Band"
-            value={settings.altitudeFilter}
-            options={[
-              { value: 'all', label: 'All altitudes' },
-              { value: 'below10k', label: 'Below 10,000 ft' },
-              { value: '10k-25k', label: '10,000 – 25,000 ft' },
-              { value: 'above25k', label: 'Above 25,000 ft' },
-            ]}
-            onChange={(v) => update('altitudeFilter', v)}
-          />
-
-          <SelectField
-            label="Traffic Mode"
-            value={settings.mode}
-            options={[
-              { value: 'nearby', label: 'All traffic in radius' },
-              { value: 'den-arrivals', label: 'Arrivals-ish (toward center)' },
-              { value: 'den-departures', label: 'Departures-ish (away from center)' },
-              { value: 'overflights', label: 'High-altitude overflights' },
-            ]}
-            onChange={(v) => update('mode', v)}
-          />
-
-          <label className="admin-toggle flex min-h-[44px] cursor-pointer items-center gap-4 self-end rounded-xl border border-white/5 bg-black/20 px-4 py-3">
-            <input
-              type="checkbox"
-              checked={settings.hideNoCallsign}
-              onChange={(e) => update('hideNoCallsign', e.target.checked)}
-              className="peer sr-only"
+        <Panel title="Radar & Map">
+          <div className="admin-field-grid">
+            <SelectField
+              compact
+              label="Refresh"
+              value={settings.refreshIntervalSec}
+              options={[
+                { value: 30, label: '30s' },
+                { value: 60, label: '60s' },
+                { value: 90, label: '90s' },
+              ]}
+              onChange={(v) => update('refreshIntervalSec', v)}
             />
-            <span className="relative h-6 w-11 shrink-0 rounded-full border border-white/10 bg-slate-800 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-5 after:w-5 after:rounded-full after:bg-slate-300 after:transition-transform" />
-            <span className="text-sm text-slate-300">Hide unidentified aircraft</span>
-          </label>
-        </div>
-      </Section>
+            <SelectField
+              compact
+              label="Radius"
+              value={settings.radiusMi}
+              options={[
+                { value: 5, label: '5 mi' },
+                { value: 10, label: '10 mi' },
+                { value: 25, label: '25 mi' },
+                { value: 50, label: '50 mi' },
+              ]}
+              onChange={(v) => update('radiusMi', v)}
+            />
+            <SelectField
+              compact
+              label="Aircraft"
+              value={settings.maxAircraft}
+              options={[
+                { value: 8, label: '8 max' },
+                { value: 12, label: '12 max' },
+                { value: 20, label: '20 max' },
+              ]}
+              onChange={(v) => update('maxAircraft', v)}
+            />
+            <SelectField
+              compact
+              label="Altitude"
+              value={settings.altitudeFilter}
+              options={[
+                { value: 'all', label: 'All' },
+                { value: 'below10k', label: 'Below 10k' },
+                { value: '10k-25k', label: '10k–25k' },
+                { value: 'above25k', label: 'Above 25k' },
+              ]}
+              onChange={(v) => update('altitudeFilter', v)}
+            />
+            <SelectField
+              compact
+              label="Traffic"
+              value={settings.mode}
+              options={[
+                { value: 'nearby', label: 'All nearby' },
+                { value: 'den-arrivals', label: 'Arrivals' },
+                { value: 'den-departures', label: 'Departures' },
+                { value: 'overflights', label: 'Overflights' },
+              ]}
+              onChange={(v) => update('mode', v)}
+            />
+            <SelectField
+              compact
+              label="Map zoom"
+              value={settings.skyMapZoom}
+              options={[
+                { value: 'normal', label: 'Normal' },
+                { value: 'close', label: 'Close' },
+              ]}
+              onChange={(v) => update('skyMapZoom', v)}
+            />
+          </div>
 
-      {/* Sky Map zoom */}
-      <Section
-        title="Sky Map Zoom"
-        subtitle="Tune Google Maps zoom per display size — lower is wider area, higher is closer"
-        className="mb-6"
-      >
-        <div className="mb-6 grid gap-6 sm:grid-cols-2">
-          <ZoomSlider
-            label="Minimum zoom"
-            hint="How far out users can zoom (smallest number = widest view)"
-            value={settings.skyMapZoom.minZoom}
-            min={5}
-            max={17}
-            onChange={(minZoom) => updateSkyMapZoom({ minZoom })}
+          <Toggle
+            compact
+            checked={settings.hideNoCallsign}
+            onChange={(v) => updateAndSave('hideNoCallsign', v)}
+            label="Hide unidentified aircraft"
           />
-          <ZoomSlider
-            label="Maximum zoom"
-            hint="How far in the map can render (largest number = closest view)"
-            value={settings.skyMapZoom.maxZoom}
-            min={6}
-            max={18}
-            onChange={(maxZoom) => updateSkyMapZoom({ maxZoom })}
-          />
-        </div>
 
-        <div className="grid gap-6 sm:grid-cols-3">
-          <ZoomSlider
-            label="Wall monitor"
-            hint="Large HDMI / TV displays"
-            value={settings.skyMapZoom.zoomWall}
-            min={settings.skyMapZoom.minZoom}
-            max={settings.skyMapZoom.maxZoom}
-            onChange={(zoomWall) => updateSkyMapZoom({ zoomWall })}
-          />
-          <ZoomSlider
-            label="iPad / desk"
-            hint="Small desk screens & iPad kiosks"
-            value={settings.skyMapZoom.zoomDesk}
-            min={settings.skyMapZoom.minZoom}
-            max={settings.skyMapZoom.maxZoom}
-            onChange={(zoomDesk) => updateSkyMapZoom({ zoomDesk })}
-          />
-          <ZoomSlider
-            label="Compact"
-            hint="Very small or portrait layouts"
-            value={settings.skyMapZoom.zoomCompact}
-            min={settings.skyMapZoom.minZoom}
-            max={settings.skyMapZoom.maxZoom}
-            onChange={(zoomCompact) => updateSkyMapZoom({ zoomCompact })}
-          />
-        </div>
-
-        <p className="mt-5 text-xs text-slate-500">
-          Tip: match zoom to your search radius — 10 mi radius usually looks good around zoom 9–11 on
-          an iPad.
-        </p>
-      </Section>
-
-      {/* Actions */}
-      <div className="mt-8 flex flex-wrap items-center gap-4">
-        <button
-          onClick={handleSave}
-          disabled={zipLoading}
-          className="admin-btn-primary rounded-xl px-7 py-3 text-sm disabled:opacity-50"
-        >
-          Commit Configuration
-        </button>
-        <button
-          onClick={handleReset}
-          className="admin-btn-ghost rounded-xl px-6 py-3 text-sm font-medium"
-        >
-          Restore Defaults
-        </button>
-        {saved && (
-          <span className="flex items-center gap-2 text-sm text-emerald-400">
-            <span className="h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_#34d399]" />
-            Configuration saved
-          </span>
-        )}
+          <div className="admin-config-summary">
+            <span className="admin-stat-pill rounded-md px-2 py-1">{settings.refreshIntervalSec}s refresh</span>
+            <span className="admin-stat-pill rounded-md px-2 py-1">{settings.radiusMi} mi radius</span>
+            <span className="admin-stat-pill rounded-md px-2 py-1">{settings.maxAircraft} aircraft</span>
+            <span className="admin-stat-pill rounded-md px-2 py-1">
+              {settings.altitudeFilter === 'all'
+                ? 'All altitudes'
+                : settings.altitudeFilter === 'below10k'
+                  ? 'Below 10k'
+                  : settings.altitudeFilter === '10k-25k'
+                    ? '10k–25k'
+                    : 'Above 25k'}
+            </span>
+            <span className="admin-stat-pill rounded-md px-2 py-1">
+              {settings.mode === 'nearby'
+                ? 'All nearby'
+                : settings.mode === 'den-arrivals'
+                  ? 'Arrivals'
+                  : settings.mode === 'den-departures'
+                    ? 'Departures'
+                    : 'Overflights'}
+            </span>
+            <span className="admin-stat-pill rounded-md px-2 py-1">
+              {settings.skyMapZoom === 'close' ? 'Close zoom' : 'Normal zoom'}
+            </span>
+          </div>
+        </Panel>
       </div>
-
-      <footer className="mt-12 border-t border-white/5 pt-6">
-        <p className="text-xs leading-relaxed text-slate-500">
-          Kiosk mode: open{' '}
-          <code className="admin-mono rounded bg-white/5 px-1.5 py-0.5 text-sky-300/80">
-            /display
-          </code>{' '}
-          in fullscreen. Minimum poll interval is 30 seconds.
-        </p>
-      </footer>
     </div>
   );
 }

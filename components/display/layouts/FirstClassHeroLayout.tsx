@@ -13,7 +13,6 @@ import {
   getVerticalTrend,
 } from '@/lib/aircraftUtils';
 import { useLayoutDensity } from '@/hooks/useLayoutDensity';
-import AdminLink from '../shared/AdminLink';
 import FlightListState from '../shared/FlightListState';
 import KioskScrollRegion from '../shared/KioskScrollRegion';
 
@@ -143,7 +142,6 @@ export default function FirstClassHeroLayout({
           </KioskScrollRegion>
         )}
       </section>
-      <AdminLink />
     </div>
   );
 }

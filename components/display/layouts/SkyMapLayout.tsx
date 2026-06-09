@@ -10,7 +10,6 @@ import {
   getVerticalTrend,
 } from '@/lib/aircraftUtils';
 import { useLayoutDensity } from '@/hooks/useLayoutDensity';
-import AdminLink from '../shared/AdminLink';
 import KioskTicker from '../shared/KioskTicker';
 
 const FlightMap = dynamic(() => import('../maps/FlightMap'), { ssr: false });
@@ -101,7 +100,6 @@ export default function SkyMapLayout({
         </footer>
       )}
 
-      <AdminLink />
     </div>
   );
 }

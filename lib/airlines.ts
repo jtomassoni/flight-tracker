@@ -183,9 +183,21 @@ export type AirlineLedWallStyle = {
   accentStripe: string;
 };
 
-/** Logo tile styling for the Flight Wall Mini LED theme */
+/** Carriers whose Kiwi logos are full-color marks on a white tile. */
+const COLOR_LOGO_TILE = new Set(['AAL', 'SWA', 'FFT', 'ASA']);
+
+/** Logo tile styling for the FlightWall LED theme */
 export function getAirlineLedWallStyle(brand: AirlineBrand): AirlineLedWallStyle {
-  const onDarkLogo = ['UAL', 'DAL', 'AAL', 'FFT', 'JBU', 'ASA', 'SKW'].includes(brand.icao);
+  if (COLOR_LOGO_TILE.has(brand.icao)) {
+    return {
+      logoBackground: '#ffffff',
+      logoBorder: mixHex(brand.primaryColor, '#000000', 0.25),
+      accentStripe: brand.accentColor,
+    };
+  }
+
+  /** Navy tile — logo PNGs are marks on transparent (not a white CDN matte). */
+  const onDarkLogo = ['UAL', 'DAL', 'SKW', 'JBU'].includes(brand.icao);
   return {
     logoBackground: onDarkLogo ? brand.primaryColor : '#e8edf2',
     logoBorder: mixHex(brand.primaryColor, '#000000', 0.25),
@@ -197,11 +209,24 @@ export function airlineLogoUrl(brand: AirlineBrand, size: 64 | 128 | 256 = 128):
   return `https://images.kiwi.com/airlines/${size}/${brand.iata}.png`;
 }
 
+/** Same-origin logo URL for canvas sampling (Kiwi CDN blocks CORS). */
+export function airlineLogoCanvasUrl(brand: AirlineBrand, size: 64 | 128 | 256 = 128): string {
+  return `/api/airline-logo?iata=${encodeURIComponent(brand.iata)}&size=${size}`;
+}
+
+/** FlightWall LED — prefer local pixel art; skip CDN marks that collapse at matrix scale. */
+const LED_NATIVE_MARK_ICAO = new Set(['SWA', 'SKW']);
+
+export function airlineLedLogoUrl(brand: AirlineBrand, size: 64 | 128 | 256 = 128): string | undefined {
+  if (LED_NATIVE_MARK_ICAO.has(brand.icao)) return undefined;
+  return airlineLogoCanvasUrl(brand, size);
+}
+
 /** Authentic per-carrier gallery tiles for Elegant & Modern */
 const GALLERY_LIVERY: Record<string, AirlineTileStyle> = {
   UAL: {
     cardBackground: 'linear-gradient(165deg, #0033A0 0%, #001f5c 55%, #000d2e 100%)',
-    headerBackground: '#ffffff',
+    headerBackground: 'linear-gradient(180deg, #ffffff 0%, #f0f4fa 100%)',
     headerTextColor: '#0033A0',
     headerMutedColor: 'rgba(0, 51, 160, 0.72)',
     accentBarColor: 'linear-gradient(90deg, #0033A0 0%, #0D8BD9 100%)',
@@ -210,8 +235,10 @@ const GALLERY_LIVERY: Record<string, AirlineTileStyle> = {
     textColor: '#f8fafc',
     mutedTextColor: 'rgba(248, 250, 252, 0.72)',
     labelColor: '#7eb8ff',
-    statBackground: 'rgba(255, 255, 255, 0.1)',
-    statAltBackground: 'rgba(0, 0, 0, 0.22)',
+    statBackground:
+      'linear-gradient(145deg, rgba(255, 255, 255, 0.16) 0%, rgba(13, 139, 217, 0.12) 100%)',
+    statAltBackground:
+      'linear-gradient(145deg, rgba(0, 0, 0, 0.35) 0%, rgba(0, 51, 160, 0.18) 100%)',
     badgeBackground: '#0D8BD9',
     badgeTextColor: '#ffffff',
   },
@@ -226,14 +253,16 @@ const GALLERY_LIVERY: Record<string, AirlineTileStyle> = {
     textColor: '#f8fafc',
     mutedTextColor: 'rgba(248, 250, 252, 0.75)',
     labelColor: '#FFB612',
-    statBackground: 'rgba(255, 182, 18, 0.14)',
-    statAltBackground: 'rgba(0, 0, 0, 0.2)',
+    statBackground:
+      'linear-gradient(145deg, rgba(255, 182, 18, 0.2) 0%, rgba(255, 255, 255, 0.08) 100%)',
+    statAltBackground:
+      'linear-gradient(145deg, rgba(0, 0, 0, 0.32) 0%, rgba(48, 76, 178, 0.2) 100%)',
     badgeBackground: '#FFB612',
     badgeTextColor: '#1e3078',
   },
   DAL: {
     cardBackground: 'linear-gradient(165deg, #003366 0%, #001f3d 55%, #000f1f 100%)',
-    headerBackground: '#ffffff',
+    headerBackground: 'linear-gradient(180deg, #ffffff 0%, #f0f4fa 100%)',
     headerTextColor: '#003366',
     headerMutedColor: 'rgba(0, 51, 102, 0.72)',
     accentBarColor: '#C8102E',
@@ -242,14 +271,16 @@ const GALLERY_LIVERY: Record<string, AirlineTileStyle> = {
     textColor: '#f8fafc',
     mutedTextColor: 'rgba(248, 250, 252, 0.72)',
     labelColor: '#C8102E',
-    statBackground: 'rgba(200, 16, 46, 0.15)',
-    statAltBackground: 'rgba(0, 0, 0, 0.22)',
+    statBackground:
+      'linear-gradient(145deg, rgba(200, 16, 46, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%)',
+    statAltBackground:
+      'linear-gradient(145deg, rgba(0, 0, 0, 0.35) 0%, rgba(200, 16, 46, 0.15) 100%)',
     badgeBackground: '#C8102E',
     badgeTextColor: '#ffffff',
   },
   AAL: {
     cardBackground: 'linear-gradient(165deg, #0078D2 0%, #004a82 50%, #002849 100%)',
-    headerBackground: '#ffffff',
+    headerBackground: 'linear-gradient(180deg, #ffffff 0%, #f0f4fa 100%)',
     headerTextColor: '#0078D2',
     headerMutedColor: 'rgba(0, 120, 210, 0.72)',
     accentBarColor: 'linear-gradient(90deg, #0078D2 0%, #ffffff 42%, #C8102E 100%)',
@@ -258,8 +289,10 @@ const GALLERY_LIVERY: Record<string, AirlineTileStyle> = {
     textColor: '#f8fafc',
     mutedTextColor: 'rgba(248, 250, 252, 0.75)',
     labelColor: '#7ec8f8',
-    statBackground: 'rgba(255, 255, 255, 0.1)',
-    statAltBackground: 'rgba(0, 0, 0, 0.2)',
+    statBackground:
+      'linear-gradient(145deg, rgba(255, 255, 255, 0.14) 0%, rgba(0, 120, 210, 0.12) 100%)',
+    statAltBackground:
+      'linear-gradient(145deg, rgba(0, 0, 0, 0.32) 0%, rgba(200, 16, 46, 0.12) 100%)',
     badgeBackground: '#C8102E',
     badgeTextColor: '#ffffff',
   },
@@ -274,14 +307,16 @@ const GALLERY_LIVERY: Record<string, AirlineTileStyle> = {
     textColor: '#f0fff4',
     mutedTextColor: 'rgba(240, 255, 244, 0.75)',
     labelColor: '#8CD600',
-    statBackground: 'rgba(140, 214, 0, 0.14)',
-    statAltBackground: 'rgba(0, 0, 0, 0.22)',
+    statBackground:
+      'linear-gradient(145deg, rgba(140, 214, 0, 0.2) 0%, rgba(255, 255, 255, 0.06) 100%)',
+    statAltBackground:
+      'linear-gradient(145deg, rgba(0, 0, 0, 0.34) 0%, rgba(0, 103, 71, 0.18) 100%)',
     badgeBackground: '#8CD600',
     badgeTextColor: '#004530',
   },
   JBU: {
     cardBackground: 'linear-gradient(165deg, #003087 0%, #001d52 55%, #000c22 100%)',
-    headerBackground: '#ffffff',
+    headerBackground: 'linear-gradient(180deg, #ffffff 0%, #f0f4fa 100%)',
     headerTextColor: '#003087',
     headerMutedColor: 'rgba(0, 48, 135, 0.72)',
     accentBarColor: '#6699CC',
@@ -290,8 +325,10 @@ const GALLERY_LIVERY: Record<string, AirlineTileStyle> = {
     textColor: '#f8fafc',
     mutedTextColor: 'rgba(248, 250, 252, 0.72)',
     labelColor: '#6699CC',
-    statBackground: 'rgba(102, 153, 204, 0.16)',
-    statAltBackground: 'rgba(0, 0, 0, 0.22)',
+    statBackground:
+      'linear-gradient(145deg, rgba(102, 153, 204, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%)',
+    statAltBackground:
+      'linear-gradient(145deg, rgba(0, 0, 0, 0.34) 0%, rgba(0, 48, 135, 0.18) 100%)',
     badgeBackground: '#6699CC',
     badgeTextColor: '#003087',
   },
@@ -306,8 +343,10 @@ const GALLERY_LIVERY: Record<string, AirlineTileStyle> = {
     textColor: '#f8fafc',
     mutedTextColor: 'rgba(248, 250, 252, 0.75)',
     labelColor: '#48BFE5',
-    statBackground: 'rgba(72, 191, 229, 0.14)',
-    statAltBackground: 'rgba(0, 0, 0, 0.2)',
+    statBackground:
+      'linear-gradient(145deg, rgba(72, 191, 229, 0.2) 0%, rgba(255, 255, 255, 0.08) 100%)',
+    statAltBackground:
+      'linear-gradient(145deg, rgba(0, 0, 0, 0.32) 0%, rgba(1, 66, 106, 0.18) 100%)',
     badgeBackground: '#95C93D',
     badgeTextColor: '#01426A',
   },
@@ -322,8 +361,10 @@ const GALLERY_LIVERY: Record<string, AirlineTileStyle> = {
     textColor: '#f8fafc',
     mutedTextColor: 'rgba(248, 250, 252, 0.72)',
     labelColor: '#C4D600',
-    statBackground: 'rgba(196, 214, 0, 0.12)',
-    statAltBackground: 'rgba(0, 0, 0, 0.22)',
+    statBackground:
+      'linear-gradient(145deg, rgba(196, 214, 0, 0.18) 0%, rgba(255, 255, 255, 0.06) 100%)',
+    statAltBackground:
+      'linear-gradient(145deg, rgba(0, 0, 0, 0.34) 0%, rgba(27, 54, 93, 0.2) 100%)',
     badgeBackground: '#C4D600',
     badgeTextColor: '#1B365D',
   },
@@ -338,8 +379,10 @@ const GALLERY_LIVERY: Record<string, AirlineTileStyle> = {
     textColor: '#FFD100',
     mutedTextColor: 'rgba(255, 209, 0, 0.72)',
     labelColor: '#FFD100',
-    statBackground: 'rgba(255, 209, 0, 0.12)',
-    statAltBackground: 'rgba(255, 255, 255, 0.06)',
+    statBackground:
+      'linear-gradient(145deg, rgba(255, 209, 0, 0.18) 0%, rgba(255, 255, 255, 0.04) 100%)',
+    statAltBackground:
+      'linear-gradient(145deg, rgba(255, 255, 255, 0.08) 0%, rgba(0, 0, 0, 0.28) 100%)',
     badgeBackground: '#FFD100',
     badgeTextColor: '#000000',
   },
@@ -356,14 +399,16 @@ function genericGalleryLivery(brand: AirlineBrand): AirlineTileStyle {
 
   return {
     cardBackground: `linear-gradient(165deg, ${primary} 0%, ${darkPrimary} 55%, ${deepPrimary} 100%)`,
-    headerBackground: headerIsLight ? accent : '#ffffff',
+    headerBackground: headerIsLight
+      ? `linear-gradient(180deg, ${accent} 0%, ${mixHex(accent, '#ffffff', 0.35)} 100%)`
+      : 'linear-gradient(180deg, #ffffff 0%, #f0f4fa 100%)',
     headerTextColor: headerIsLight ? primary : primary,
     headerMutedColor: headerIsLight ? 'rgba(15, 23, 42, 0.65)' : 'rgba(0, 0, 0, 0.55)',
     accentBarColor: brand.secondaryColor
       ? `linear-gradient(90deg, ${accent} 0%, ${brand.secondaryColor} 100%)`
       : accent,
-    statBackground: mixHex(primary, '#ffffff', luminance(primary) > 0.5 ? 0.12 : 0.08),
-    statAltBackground: mixHex(primary, '#000000', 0.2),
+    statBackground: `linear-gradient(145deg, ${mixHex(primary, '#ffffff', 0.14)} 0%, ${mixHex(primary, '#ffffff', 0.06)} 100%)`,
+    statAltBackground: `linear-gradient(145deg, ${mixHex(primary, '#000000', 0.35)} 0%, ${mixHex(primary, '#000000', 0.18)} 100%)`,
     logoBackground: headerIsLight ? '#ffffff' : mixHex(accent, '#ffffff', 0.9),
     textColor: textOnPrimary,
     mutedTextColor:
