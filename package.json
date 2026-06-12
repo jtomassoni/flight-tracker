@@ -7,8 +7,9 @@
     "node": "22.x"
   },
   "scripts": {
-    "dev": "next dev -H 0.0.0.0",
-    "build": "next build",
+    "dev": "npm run build:legacy-led && next dev -H 0.0.0.0",
+    "build:legacy-led": "node scripts/build-legacy-led.mjs",
+    "build": "npm run build:legacy-led && next build",
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit"
@@ -25,6 +26,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
+    "esbuild": "^0.28.1",
     "eslint": "^9.39.1",
     "eslint-config-next": "^16.0.7",
     "postcss": "^8.5.6",

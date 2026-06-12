@@ -667,10 +667,13 @@ function drawLandscapeFlightPanel(
     flightScale.scaleX,
     flightScale.scaleY
   );
-  const flightY = Math.max(
-    1,
-    Math.floor((layout.flightBandH - flightMetrics.height) / 2)
-  );
+  // Wall displays add rows to fill height — flightBandH becomes huge; keep the
+  // flight ID pinned to the top instead of vertically centering in empty space.
+  const compactFlightBandH = 2 * LED_FONT.glyphH + LED_FONT.gapY + 2;
+  const flightY =
+    layout.flightBandH > compactFlightBandH + 4
+      ? 1
+      : Math.max(1, Math.floor((layout.flightBandH - flightMetrics.height) / 2));
 
   drawLedTextScaled(
     ctx,

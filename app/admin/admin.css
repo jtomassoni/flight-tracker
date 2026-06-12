@@ -221,48 +221,7 @@ html.admin-page body {
   }
 }
 
-.admin-panel-card--kiosk {
-  flex-shrink: 0;
-  border-color: rgba(56, 189, 248, 0.28);
-  background: rgba(8, 47, 73, 0.45);
-}
-
-.admin-kiosk-hint,
-.admin-kiosk-localhint {
-  font-size: 0.72rem;
-  line-height: 1.45;
-  color: var(--admin-muted);
-}
-
-.admin-kiosk-hint code {
-  font-size: 0.68rem;
-  color: #7dd3fc;
-}
-
-.admin-kiosk-localhint code {
-  font-size: 0.68rem;
-  color: #7dd3fc;
-}
-
-.admin-kiosk-url-row {
-  display: flex;
-  gap: 0.5rem;
-  align-items: stretch;
-}
-
-.admin-kiosk-steps {
-  margin: 0;
-  padding-left: 1.1rem;
-  font-size: 0.68rem;
-  line-height: 1.5;
-  color: rgba(148, 163, 184, 0.85);
-}
-
-.admin-kiosk-steps li + li {
-  margin-top: 0.2rem;
-}
-
-.admin-panel__logos {
+.admin-panel-card {
   flex-shrink: 0;
 }
 

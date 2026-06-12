@@ -1,0 +1,181 @@
+/* DEN FIDS board — ?view=fids on old iPad display */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html.fids-mode,
+html.fids-mode body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+html.fids-mode body {
+  font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif;
+  background: #0c2340;
+  color: #ffffff;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.fids-shell {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-orient: vertical;
+  -webkit-flex-direction: column;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.fids-panel-header {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-box-pack: justify;
+  -webkit-justify-content: space-between;
+  justify-content: space-between;
+  background: #071525;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 8px 10px;
+  min-height: 52px;
+}
+
+.fids-brand {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  min-width: 0;
+  -webkit-box-flex: 1;
+  -webkit-flex: 1;
+  flex: 1;
+}
+
+.fids-brand-mark {
+  width: 32px;
+  height: 32px;
+  margin-right: 8px;
+  -webkit-flex-shrink: 0;
+  flex-shrink: 0;
+}
+
+.fids-airport-name {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fids-panel-title {
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fids-col-header,
+.fids-row {
+  display: -webkit-box;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-box-align: center;
+  -webkit-align-items: center;
+  align-items: center;
+  padding: 6px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.fids-col-header {
+  background: #071525;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.fids-row {
+  font-size: 13px;
+  min-height: 38px;
+  background: #0c2340;
+}
+
+.fids-col-dest { -webkit-flex: 1.15; flex: 1.15; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fids-col-airline { -webkit-flex: 1.1; flex: 1.1; }
+.fids-col-flight { -webkit-flex: 0.8; flex: 0.8; font-weight: 700; }
+.fids-col-gate { -webkit-flex: 0.55; flex: 0.55; }
+.fids-col-time { -webkit-flex: 0.6; flex: 0.6; }
+
+.fids-logo-wrap {
+  width: 60px;
+  height: 22px;
+  background: #fff;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+}
+
+.fids-logo-wrap img { max-width: 100%; max-height: 100%; }
+.fids-airline-code { font-size: 10px; font-weight: 700; color: #0c2340; }
+
+.fids-rows-wrap {
+  -webkit-flex: 1;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.fids-rows-track.scroll {
+  -webkit-animation: fids-scroll-y 32s linear infinite;
+  animation: fids-scroll-y 32s linear infinite;
+}
+
+@-webkit-keyframes fids-scroll-y {
+  0% { -webkit-transform: translateY(0); transform: translateY(0); }
+  100% { -webkit-transform: translateY(-50%); transform: translateY(-50%); }
+}
+
+@keyframes fids-scroll-y {
+  0% { -webkit-transform: translateY(0); transform: translateY(0); }
+  100% { -webkit-transform: translateY(-50%); transform: translateY(-50%); }
+}
+
+.fids-empty,
+.fids-loading {
+  -webkit-flex: 1;
+  flex: 1;
+  display: -webkit-flex;
+  display: flex;
+  -webkit-align-items: center;
+  align-items: center;
+  -webkit-justify-content: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.55);
+  font-size: 14px;
+  text-transform: uppercase;
+}
+
+.fids-footer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: #071525;
+  padding: 6px 10px;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.fids-footer-error { color: #f87171; margin-top: 4px; }

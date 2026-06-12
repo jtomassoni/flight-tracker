@@ -10,7 +10,6 @@ import {
   type ThemeId,
 } from '@/lib/settings';
 import AirlineLogoGallery from '@/components/admin/AirlineLogoGallery';
-import IpadKioskLink from '@/components/admin/IpadKioskLink';
 import { AIRLINE_ICAO_LIST } from '@/lib/airlines';
 import FlightMap from '@/components/display/maps/FlightMap';
 import { getTheme, getThemeSwatches, THEME_LIST } from '@/lib/themes';
@@ -297,8 +296,6 @@ export default function AdminPanel() {
           </Link>
         </div>
       </header>
-
-      <IpadKioskLink settings={settings} />
 
       <div className="admin-panel__grid">
         <Panel title="Visual Identity">
