@@ -156,9 +156,17 @@ html.admin-page body {
   height: 100%;
   width: 100%;
   margin: 0 auto;
-  padding: max(0.875rem, env(safe-area-inset-top)) max(1.25rem, env(safe-area-inset-right))
-    max(0.875rem, env(safe-area-inset-bottom)) max(1.25rem, env(safe-area-inset-left));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 0.875rem 1.25rem;
   gap: 0.875rem;
+}
+
+@supports (padding: max(0px, 0px)) {
+  .admin-panel {
+    padding: max(0.875rem, env(safe-area-inset-top, 0px)) max(1.25rem, env(safe-area-inset-right, 0px))
+      max(0.875rem, env(safe-area-inset-bottom, 0px)) max(1.25rem, env(safe-area-inset-left, 0px));
+  }
 }
 
 .admin-panel__header {
@@ -207,6 +215,104 @@ html.admin-page body {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr) minmax(0, 1fr);
     align-items: stretch;
   }
+
+  .admin-panel__logos {
+    grid-column: 1 / -1;
+  }
+}
+
+.admin-panel-card--kiosk {
+  flex-shrink: 0;
+  border-color: rgba(56, 189, 248, 0.28);
+  background: rgba(8, 47, 73, 0.45);
+}
+
+.admin-kiosk-hint,
+.admin-kiosk-localhint {
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--admin-muted);
+}
+
+.admin-kiosk-hint code {
+  font-size: 0.68rem;
+  color: #7dd3fc;
+}
+
+.admin-kiosk-localhint code {
+  font-size: 0.68rem;
+  color: #7dd3fc;
+}
+
+.admin-kiosk-url-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.admin-kiosk-steps {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.68rem;
+  line-height: 1.5;
+  color: rgba(148, 163, 184, 0.85);
+}
+
+.admin-kiosk-steps li + li {
+  margin-top: 0.2rem;
+}
+
+.admin-panel__logos {
+  flex-shrink: 0;
+}
+
+.admin-logos-hint {
+  font-size: 0.7rem;
+  line-height: 1.4;
+  color: var(--admin-muted);
+}
+
+.admin-logos-scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 0 -0.125rem;
+  padding: 0.125rem 0.125rem 0.375rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.35) transparent;
+}
+
+.admin-logos-scroll::-webkit-scrollbar {
+  height: 5px;
+}
+
+.admin-logos-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(56, 189, 248, 0.35);
+}
+
+.admin-logos-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-top: 0.125rem;
+}
+
+.admin-logos-count {
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(148, 163, 184, 0.75);
+}
+
+.admin-logos-tester-link {
+  color: rgba(56, 189, 248, 0.85);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+.admin-logos-tester-link:hover {
+  color: var(--admin-accent);
 }
 
 .admin-panel-card {
@@ -402,6 +508,136 @@ html.admin-page body {
   .admin-panel {
     height: auto;
     min-height: 100%;
+  }
+}
+
+/* iPad & small tablets — portrait 768px, landscape 1024×768 */
+@media (max-width: 1024px), (max-height: 820px) {
+  .admin-shell {
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .admin-panel {
+    height: auto;
+    min-height: 100%;
+    padding: 0.65rem 0.75rem;
+    gap: 0.65rem;
+  }
+
+  .admin-panel__header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.625rem;
+  }
+
+  .admin-panel__header-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    justify-content: stretch;
+    gap: 0.375rem;
+  }
+
+  .admin-panel__header-actions > :first-child {
+    grid-column: 1 / -1;
+    justify-self: start;
+  }
+
+  .admin-panel__header-actions .admin-btn-primary[href],
+  .admin-panel__header-actions a.admin-btn-primary {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+
+  .admin-heading {
+    font-size: 1.125rem;
+    line-height: 1.2;
+  }
+
+  .admin-panel-card {
+    padding: 0.65rem 0.75rem;
+    gap: 0.625rem;
+  }
+
+  .admin-theme-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: auto;
+  }
+
+  .admin-theme-chip {
+    min-height: 3.25rem;
+    padding: 0.5rem 0.6rem;
+  }
+
+  .admin-theme-chip__desc {
+    display: none;
+  }
+
+  .admin-theme-chip__label {
+    font-size: 0.65rem;
+  }
+
+  .admin-corridor-preview {
+    flex: none;
+    height: 132px;
+    min-height: 132px;
+  }
+
+  .admin-field-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-auto-rows: auto;
+    gap: 0.5rem;
+  }
+
+  .admin-config-summary {
+    gap: 0.3rem;
+  }
+
+  .admin-stat-pill {
+    font-size: 0.62rem;
+    padding: 0.2rem 0.45rem;
+  }
+
+  .admin-logos-hint {
+    display: none;
+  }
+
+  .airline-logo-gallery__item {
+    flex-basis: 8.25rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-panel__grid {
+    gap: 0.55rem;
+  }
+
+  .admin-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .admin-corridor-preview {
+    height: 112px;
+    min-height: 112px;
+  }
+
+  .admin-zip-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-zip-row button {
+    margin-top: 0;
+    width: 100%;
+  }
+
+  .admin-location-summary {
+    padding: 0.5rem 0.625rem;
+  }
+
+  .admin-location-summary p {
+    font-size: 0.75rem;
   }
 }
 

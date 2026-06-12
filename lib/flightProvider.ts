@@ -77,6 +77,22 @@ const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<FetchFlightsResult>>();
 let rateLimitedUntil = 0;
 
+const UPSTREAM_FETCH_TIMEOUT_MS = 15_000;
+
+async function fetchWithServerTimeout(
+  url: string,
+  init?: RequestInit,
+  timeoutMs = UPSTREAM_FETCH_TIMEOUT_MS
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 function getProviderName(): ProviderName {
   if (process.env.NODE_ENV === 'development') return 'mock';
   return PRODUCTION_FLIGHT_PROVIDER;
@@ -132,7 +148,7 @@ async function fetchFromAdsbFi(
   const distNm = Math.ceil(milesToNauticalMiles(radiusMi));
   const url = `https://opendata.adsb.fi/api/v3/lat/${lat}/lon/${lon}/dist/${distNm}`;
 
-  const res = await fetch(url, {
+  const res = await fetchWithServerTimeout(url, {
     headers: { Accept: 'application/json' },
     cache: 'no-store',
   });
@@ -162,7 +178,7 @@ async function fetchFromAirplanesLive(
     headers['api-auth'] = process.env.FLIGHT_API_KEY;
   }
 
-  const res = await fetch(url, { headers, cache: 'no-store' });
+  const res = await fetchWithServerTimeout(url, { headers, cache: 'no-store' });
 
   if (!res.ok) {
     throw new UpstreamHttpError('airplanes.live', res.status);

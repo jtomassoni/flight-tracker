@@ -28,7 +28,7 @@ export function ledRouteLabel(ac: NormalizedAircraft): string {
 
 export function formatLedRouteHero(route: string): string {
   const [origin, dest] = route.split('-');
-  return `${origin ?? '???'} -> ${dest ?? '???'}`;
+  return `${origin ?? '???'}→${dest ?? '???'}`;
 }
 
 export function formatLedFlightId(ac: NormalizedAircraft, brand: AirlineBrand): string {

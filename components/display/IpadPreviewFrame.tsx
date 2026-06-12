@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { IPAD_BEZEL_PX, IPAD_CHIN_PX, IPAD_SCREEN, type IpadOrientation } from '@/lib/kiosk';
+import { observeResize } from '@/lib/observeResize';
 
 type IpadPreviewFrameProps = {
   orientation: IpadOrientation;
@@ -27,9 +28,7 @@ export default function IpadPreviewFrame({ orientation, children }: IpadPreviewF
     };
 
     fit();
-    const observer = new ResizeObserver(fit);
-    observer.observe(stage);
-    return () => observer.disconnect();
+    return observeResize(stage, fit);
   }, [deviceW, deviceH]);
 
   return (

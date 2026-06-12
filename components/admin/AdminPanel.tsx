@@ -9,9 +9,13 @@ import {
   type DisplaySettings,
   type ThemeId,
 } from '@/lib/settings';
+import AirlineLogoGallery from '@/components/admin/AirlineLogoGallery';
+import IpadKioskLink from '@/components/admin/IpadKioskLink';
+import { AIRLINE_ICAO_LIST } from '@/lib/airlines';
 import FlightMap from '@/components/display/maps/FlightMap';
 import { getTheme, getThemeSwatches, THEME_LIST } from '@/lib/themes';
 import { THEME_ROTATION_SEC } from '@/lib/constants';
+import '@/components/admin/airline-logo-gallery.css';
 
 type Option<T extends string | number> = { value: T; label: string };
 
@@ -294,6 +298,8 @@ export default function AdminPanel() {
         </div>
       </header>
 
+      <IpadKioskLink settings={settings} />
+
       <div className="admin-panel__grid">
         <Panel title="Visual Identity">
           <Toggle
@@ -470,6 +476,27 @@ export default function AdminPanel() {
             <span className="admin-stat-pill rounded-md px-2 py-1">
               {settings.skyMapZoom === 'close' ? 'Close zoom' : 'Normal zoom'}
             </span>
+          </div>
+        </Panel>
+
+        <Panel title="Airline Logos" className="admin-panel__logos">
+          <p className="admin-logos-hint">
+            CDN source vs FlightWall LED render for each carrier. Click a card to inspect in the
+            theme tester.
+          </p>
+          <div className="admin-logos-scroll">
+            <AirlineLogoGallery linkToTester />
+          </div>
+          <div className="admin-logos-footer">
+            <span className="admin-logos-count admin-mono">
+              {AIRLINE_ICAO_LIST.length} carriers
+            </span>
+            <Link
+              href="/admin/theme-tester"
+              className="admin-logos-tester-link admin-mono text-[10px] uppercase tracking-widest"
+            >
+              Open theme tester →
+            </Link>
           </div>
         </Panel>
       </div>

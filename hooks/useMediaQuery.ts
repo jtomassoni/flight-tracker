@@ -8,9 +8,18 @@ export function useMediaQuery(query: string): boolean {
   useEffect(() => {
     const mq = window.matchMedia(query);
     setMatches(mq.matches);
-    const handler = (e: MediaQueryListEvent) => setMatches(e.matches);
-    mq.addEventListener('change', handler);
-    return () => mq.removeEventListener('change', handler);
+
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
+      setMatches('matches' in e && typeof e.matches === 'boolean' ? e.matches : mq.matches);
+    };
+
+    if (typeof mq.addEventListener === 'function') {
+      mq.addEventListener('change', handler as (e: MediaQueryListEvent) => void);
+      return () => mq.removeEventListener('change', handler as (e: MediaQueryListEvent) => void);
+    }
+
+    mq.addListener(handler);
+    return () => mq.removeListener(handler);
   }, [query]);
 
   return matches;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { observeResize } from '@/lib/observeResize';
 
 type KioskTickerProps = {
   children: ReactNode;
@@ -28,10 +29,7 @@ export default function KioskTicker({
     };
 
     measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(outer);
-    observer.observe(inner);
-    return () => observer.disconnect();
+    return observeResize([outer, inner], measure);
   }, [children]);
 
   return (

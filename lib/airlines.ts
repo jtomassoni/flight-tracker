@@ -121,6 +121,13 @@ const FALLBACK_BRAND: AirlineBrand = {
   logoUrl: 'https://images.kiwi.com/airlines/64/XX.png',
 };
 
+export const AIRLINE_ICAO_LIST = Object.keys(AIRLINES).sort();
+
+export function getAirlineByIcao(icao: string): AirlineBrand | null {
+  const key = icao.trim().toUpperCase();
+  return AIRLINES[key] ?? null;
+}
+
 export function getAirlineFromCallsign(callsign?: string): AirlineBrand | null {
   if (!callsign) return null;
   const prefix = callsign.trim().slice(0, 3).toUpperCase();

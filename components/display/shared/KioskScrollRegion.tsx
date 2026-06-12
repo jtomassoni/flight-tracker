@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { observeResize } from '@/lib/observeResize';
 
 type KioskScrollRegionProps = {
   children: ReactNode;
@@ -29,10 +30,7 @@ export default function KioskScrollRegion({
     };
 
     measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(outer);
-    observer.observe(inner);
-    return () => observer.disconnect();
+    return observeResize([outer, inner], measure);
   }, [children]);
 
   return (

@@ -11,6 +11,7 @@ import {
   renderLedBuffer,
 } from '@/lib/ledMatrix';
 import type { IpadOrientation } from '@/lib/kiosk';
+import { observeResize } from '@/lib/observeResize';
 
 type LedMatrixCanvasProps = {
   orientation: IpadOrientation;
@@ -82,12 +83,11 @@ export default function LedMatrixCanvas({
 
     void loadAndDraw();
 
-    const observer = new ResizeObserver(() => draw());
-    observer.observe(canvas);
+    const stopObserving = observeResize(canvas, draw);
 
     return () => {
       cancelled = true;
-      observer.disconnect();
+      stopObserving();
     };
   }, [orientation, content, ipadPreview]);
 

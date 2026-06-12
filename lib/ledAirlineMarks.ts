@@ -1,6 +1,6 @@
 /** Procedural LED marks for carriers whose CDN logos collapse at matrix scale. */
 
-/** Native art size — one mark pixel maps to one LED on typical logo tiles (~40–60 px). */
+/** Native art size — one mark pixel = one LED on typical logo tiles (~40–60 px). */
 export const LED_MARK_NATIVE_SIZE = 41;
 
 type PixelMark = {
@@ -9,60 +9,6 @@ type PixelMark = {
   /** Row-major color keys — '.' = transparent */
   pixels: string;
   palette: Record<string, string>;
-};
-
-/** Southwest heart — 41×41 native wall-tile res; tilted twin-lobe red / blue / gold bands */
-const SWA_MARK: PixelMark = {
-  w: 41,
-  h: 41,
-  palette: {
-    B: '#304CB2',
-    Y: '#FFB612',
-    R: '#C8102E',
-  },
-  pixels: [
-    '..........RRRR........RRRRRR.............',
-    '..........RRRR........RRRRRR.............',
-    '........RRRRRRRRRR..RRRRRRRR.............',
-    '........RRRRRRRRRR..RRRRRRRR.............',
-    '......RRRRRRRRRRRRRRRRRRRRRRRR...........',
-    '......RRRRRRRRRRRRRRRRRRRRRRRR...........',
-    '....RRRRRRRRRRRRRRRRBBBBBBBBBBBBBB.......',
-    '....RRRRRRRRRRRRRRRRBBBBBBBBBBBBBB.......',
-    '....RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBB.....',
-    '....RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBB.....',
-    '..RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBB.....',
-    '..RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBB.....',
-    '..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYY...',
-    '..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYY...',
-    '..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYY.',
-    '..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYY.',
-    '..RRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYY.',
-    '..RRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYY.',
-    '..RRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYY.',
-    '..RRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYY.',
-    '..RRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYYYY.',
-    '..RRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYYYY.',
-    '..RRRRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYY...',
-    '..RRRRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYY...',
-    '..RRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYY...',
-    '..RRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYY...',
-    '....BBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYYYY...',
-    '....BBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYYYY...',
-    '......BBBBBBBBBBBBBBYYYYYYYYYYYYYYYY.....',
-    '......BBBBBBBBBBBBBBYYYYYYYYYYYYYYYY.....',
-    '........BBBBBBBBBBBBYYYYYYYYYYYYYY.......',
-    '........BBBBBBBBBBBBYYYYYYYYYYYYYY.......',
-    '..........BBBBBBBBBBYYYYYYYYYYYY.........',
-    '..........BBBBBBBBBBYYYYYYYYYYYY.........',
-    '............BBBBBBBBYYYYYYYYYY...........',
-    '............BBBBBBBBYYYYYYYYYY...........',
-    '..............BBBBYYYYYYYYYY.............',
-    '..............BBBBYYYYYYYYYY.............',
-    '................YYYYYYYYYY...............',
-    '................YYYYYYYYYY...............',
-    '.........................................',
-  ].join(''),
 };
 
 function buildUpTriangleMark(
@@ -87,6 +33,60 @@ function buildUpTriangleMark(
   return rows.join('');
 }
 
+/** Southwest heart — 41×41, tilted twin-lobe; red / blue / gold on navy tile */
+const SWA_MARK: PixelMark = {
+  w: LED_MARK_NATIVE_SIZE,
+  h: LED_MARK_NATIVE_SIZE,
+  palette: {
+    B: '#304CB2',
+    Y: '#FFB612',
+    R: '#C8102E',
+  },
+  pixels: [
+    '.........................................',
+    '.........................................',
+    '..........RRRR........RRRRRR.............',
+    '..........RRRR........RRRRRR.............',
+    '........RRRRRRRRRR..RRRRRRRR.............',
+    '........RRRRRRRRRR..RRRRRRRR.............',
+    '......RRRRRRRRRRRRRRRRRRRRRRRR...........',
+    '......RRRRRRRRRRRRRRRRRRRRRRRR...........',
+    '....RRRRRRRRRRRRRRRRBBBBBBBBBBBBBB.......',
+    '....RRRRRRRRRRRRRRRRBBBBBBBBBBBBBB.......',
+    '....RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBB.....',
+    '....RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBB.....',
+    '..RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBB.....',
+    '..RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBB.....',
+    '..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYY...',
+    '..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYY...',
+    '..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYY.',
+    '..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYY.',
+    '..RRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYY.',
+    '..RRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYY.',
+    '..RRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYY.',
+    '..RRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYY.',
+    '..RRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYYYY.',
+    '..RRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYYYY.',
+    '..RRRRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYY...',
+    '..RRRRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYY...',
+    '..RRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYY...',
+    '..RRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYY...',
+    '....BBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYYYY...',
+    '....BBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYYYY...',
+    '......BBBBBBBBBBBBBBYYYYYYYYYYYYYYYY.....',
+    '......BBBBBBBBBBBBBBYYYYYYYYYYYYYYYY.....',
+    '........BBBBBBBBBBBBYYYYYYYYYYYYYY.......',
+    '........BBBBBBBBBBBBYYYYYYYYYYYYYY.......',
+    '..........BBBBBBBBBBYYYYYYYYYYYY.........',
+    '..........BBBBBBBBBBYYYYYYYYYYYY.........',
+    '............BBBBBBBBYYYYYYYYYY...........',
+    '............BBBBBBBBYYYYYYYYYY...........',
+    '..............BBBBYYYYYYYYYY.............',
+    '..............BBBBYYYYYYYYYY.............',
+    '................YYYYYYYYYY...............',
+  ].join(''),
+};
+
 /** Delta widget — 41×41, bold red chevron on navy LED tiles */
 const DAL_MARK: PixelMark = {
   w: LED_MARK_NATIVE_SIZE,
@@ -97,68 +97,108 @@ const DAL_MARK: PixelMark = {
   pixels: buildUpTriangleMark(LED_MARK_NATIVE_SIZE, 4, 20, 2, 'R'),
 };
 
-/** American — intertwined AA eagle monogram — 21×21, blue + red on white LED tiles */
+/** American — intertwined AA eagle monogram — 41×41, blue + red on white tile */
 const AAL_MARK: PixelMark = {
-  w: 21,
-  h: 21,
+  w: LED_MARK_NATIVE_SIZE,
+  h: LED_MARK_NATIVE_SIZE,
   palette: {
     B: '#0078D2',
     R: '#C8102E',
   },
   pixels: [
-    '.....................',
-    '.....................',
-    '.......BB...RR.......',
-    '......BBBB.RRRR......',
-    '.....BB..BRR..RR.....',
-    '....BB...BRR...RR....',
-    '...BBBBBBBRRRRRRR....',
-    '..BB.....BR.....RR...',
-    '..BB......R......RR..',
-    '.BB.......R.......RR.',
-    '.BB.......R.......RR.',
-    'BB........R........RR',
-    'BB........R........RR',
-    '.BB......RR......RR..',
-    '..BB....RR..RR....RR.',
-    '...BBBBRR...RRRRR....',
-    '....BB.........RR....',
-    '.....................',
-    '.....................',
-    '.....................',
-    '.....................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '..............BBBB......RRRR.............',
+    '..............BBBB......RRRR.............',
+    '............BBBBBBBB..RRRRRRRR...........',
+    '............BBBBBBBB..RRRRRRRR...........',
+    '..........BBBB....BBRRRR....RRRR.........',
+    '..........BBBB....BBRRRR....RRRR.........',
+    '........BBBB......BBRRRR......RRRR.......',
+    '........BBBB......BBRRRR......RRRR.......',
+    '......BBBBBBBBBBBBBBRRRRRRRRRRRRRR.......',
+    '......BBBBBBBBBBBBBBRRRRRRRRRRRRRR.......',
+    '....BBBB..........BBRR..........RRRR.....',
+    '....BBBB..........BBRR..........RRRR.....',
+    '....BBBB............RR............RRRR...',
+    '....BBBB............RR............RRRR...',
+    '..BBBB..............RR..............RRRR.',
+    '..BBBB..............RR..............RRRR.',
+    '..BBBB..............RR..............RRRR.',
+    '..BBBB..............RR..............RRRR.',
+    'BBBB................RR................RRR',
+    'BBBB................RR................RRR',
+    'BBBB................RR................RRR',
+    'BBBB................RR................RRR',
+    '..BBBB............RRRR............RRRR...',
+    '..BBBB............RRRR............RRRR...',
+    '....BBBB........RRRR....RRRR........RRRR.',
+    '....BBBB........RRRR....RRRR........RRRR.',
+    '......BBBBBBBBRRRR......RRRRRRRRRR.......',
+    '......BBBBBBBBRRRR......RRRRRRRRRR.......',
+    '........BBBB..................RRRR.......',
+    '........BBBB..................RRRR.......',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
   ].join(''),
 };
 
-/** SkyWest — italic bold SW monogram — 21×21, logo blue on navy LED tiles */
+/** SkyWest — italic bold SW monogram — 41×41, logo blue on navy tile */
 const SKW_MARK: PixelMark = {
-  w: 21,
-  h: 21,
+  w: LED_MARK_NATIVE_SIZE,
+  h: LED_MARK_NATIVE_SIZE,
   palette: {
     B: '#0072CE',
   },
   pixels: [
-    '.....................',
-    '.....................',
-    '...BBBBB....B........',
-    '..BBBBBBB..BBB.......',
-    '.BB..BBBB.BB.BB......',
-    'BB...BB.B.BB.BB......',
-    'BB...BB.B.BB.BB......',
-    '.BB..BB...BB.BB......',
-    '..BBBBB....BBB.......',
-    '...BBBB.....BB.......',
-    '....BB......BB.......',
-    '.....B......BB.......',
-    '.....B.......B.......',
-    '....BB.......B.......',
-    '...BBB........B......',
-    '..BBB................',
-    '.....................',
-    '.....................',
-    '.....................',
-    '.....................',
-    '.....................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '......BBBBBBBBBBBBBB..........BB.........',
+    '......BBBBBBBBBBBBBB..........BB.........',
+    '....BBBBBBBBBBBBBBBBBB....BBBBBBBB.......',
+    '....BBBBBBBBBBBBBBBBBB....BBBBBBBB.......',
+    '..BBBBBBBB....BBBBBBBBBBBB..BBBBBBBB.....',
+    '..BBBBBBBB....BBBBBBBBBBBB..BBBBBBBB.....',
+    '..BBBBBBBB......BBBBBB..BB..BBBBBBBB.....',
+    '..BBBBBBBB......BBBBBB..BB..BBBBBBBB.....',
+    '..BBBBBBBB......BBBBBB..BB..BBBBBBBB.....',
+    '..BBBBBBBB......BBBBBB..BB..BBBBBBBB.....',
+    '....BBBBBB....BBBBBB....BBBBBB..BBBBBB...',
+    '....BBBBBB....BBBBBB....BBBBBB..BBBBBB...',
+    '......BBBBBBBBBBBBBB........BBBBBBBB.....',
+    '......BBBBBBBBBBBBBB........BBBBBBBB.....',
+    '........BBBBBBBBBBBB..........BBBBBB.....',
+    '........BBBBBBBBBBBB..........BBBBBB.....',
+    '..........BBBBBBBB............BBBBBB.....',
+    '..........BBBBBBBB............BBBBBB.....',
+    '............BBBB..............BBBBBB.....',
+    '............BBBB..............BBBBBB.....',
+    '............BBBB................BB.......',
+    '............BBBB................BB.......',
+    '..........BBBBBB................BB.......',
+    '..........BBBBBB................BB.......',
+    '........BBBBBBBBBB................BB.....',
+    '........BBBBBBBBBB................BB.....',
+    '......BBBBBBBBBB.........................',
+    '......BBBBBBBBBB.........................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
   ].join(''),
 };
 
@@ -215,26 +255,28 @@ export function drawLedAirlineMark(
   const bounds = markBounds(mark);
   if (!bounds) return false;
 
-  const margin = 0;
+  const contentW = bounds.maxX - bounds.minX + 1;
+  const contentH = bounds.maxY - bounds.minY + 1;
+  const margin = 1;
   const availW = Math.max(1, w - margin * 2);
   const availH = Math.max(1, h - margin * 2);
-  const fitScale = Math.min(availW / mark.w, availH / mark.h);
-  /** 1 mark pixel = 1 LED — never upscale (chunky blocks on ~40 px tiles). */
+  const fitScale = Math.min(availW / contentW, availH / contentH);
+  /** 1 mark pixel = 1 LED — never upscale (chunky 2× blocks on ~40 px tiles). */
   const scale = Math.min(1, Math.floor(fitScale)) || 1;
-  const drawW = mark.w * scale;
-  const drawH = mark.h * scale;
+  const drawW = contentW * scale;
+  const drawH = contentH * scale;
   const ox = x + Math.floor((w - drawW) / 2);
   const oy = y + Math.floor((h - drawH) / 2);
 
-  for (let row = 0; row < mark.h; row += 1) {
-    for (let col = 0; col < mark.w; col += 1) {
+  for (let row = bounds.minY; row <= bounds.maxY; row += 1) {
+    for (let col = bounds.minX; col <= bounds.maxX; col += 1) {
       const key = mark.pixels[row * mark.w + col];
       if (!key || key === '.') continue;
       const color = mark.palette[key];
       if (!color) continue;
 
-      const dx = col;
-      const dy = row;
+      const dx = col - bounds.minX;
+      const dy = row - bounds.minY;
       ctx.fillStyle = color;
       for (let sy = 0; sy < scale; sy += 1) {
         for (let sx = 0; sx < scale; sx += 1) {

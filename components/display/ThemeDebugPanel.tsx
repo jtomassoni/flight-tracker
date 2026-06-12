@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useIsTouchDevice } from '@/hooks/useMediaQuery';
 import { THEME_ROTATION_SEC } from '@/lib/constants';
@@ -66,6 +67,20 @@ function IconTablet() {
         strokeWidth="1.5"
       />
       <circle cx="12" cy="18" r="0.75" fill="currentColor" />
+    </svg>
+  );
+}
+
+function IconAirline() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
+      <path
+        d="M4 18h16M7 14l3-8 4 5 3-3"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -228,6 +243,15 @@ export default function ThemeDebugPanel({
             </Flyout>
           )}
         </div>
+
+        <Link
+          href="/admin/theme-tester"
+          className="theme-debug-bar__btn"
+          aria-label="Airline logo tester"
+          title="Airline logo tester"
+        >
+          <IconAirline />
+        </Link>
 
         <div className="relative">
           <BarButton

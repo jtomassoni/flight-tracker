@@ -80,6 +80,23 @@ chromium-browser --kiosk --app=https://your-app.vercel.app/display
 
 Configure theme and filters at `/admin` first — settings persist in localStorage on that browser.
 
+### iPad 4 / iOS 10 — `/old-ipad-display`
+
+The full display app (Next.js / React) **does not run** on iPad 4 (MD514LL/A, iOS 10.3.3). Use the dedicated endpoint instead:
+
+**`/old-ipad-display`** — plain HTML, no React, polls `/api/flights`, DEN-style departures board.
+
+**Setup (Mac admin → iPad display):**
+
+1. On your Mac, open `/admin`, configure location/radius/filters, and click **Save**.
+2. Copy the **Old iPad Display** URL from the panel at the top (settings are embedded in the link).
+3. On the iPad, paste the URL into Safari or Chrome.
+   - **Local dev:** replace `localhost` with your Mac's LAN IP (e.g. `http://192.168.1.12:3000/old-ipad-display?...`). Same Wi‑Fi; run `npm run dev`.
+   - **Production:** use the Vercel URL as copied.
+4. **Add to Home Screen** on the iPad for kiosk mode.
+
+`/display` on an old iPad auto-redirects to `/old-ipad-display`. `/kiosk` is a short alias that redirects there too.
+
 ## API provider notes
 
 ### adsb.fi (default)

@@ -2,16 +2,14 @@ import type { IpadOrientation } from '@/lib/kiosk';
 import {
   drawLedText,
   drawLedTextCompact,
+  drawLedTextCompactRight,
+  drawLedTextRight,
   drawLedTextScaled,
   LED_FONT,
   ledCharCellH,
   ledCompactCellH,
   ledScaledTextMetrics,
-  measureLedText,
-  measureLedTextCompact,
   pickFlightIdScale,
-  truncateLedText,
-  truncateLedTextCompact,
   truncateLedTextScaled,
 } from '@/lib/ledFont';
 import { drawLedAirlineMark } from '@/lib/ledAirlineMarks';
@@ -90,10 +88,15 @@ type LayoutRegion = {
   flightX: number;
   flightBandH: number;
   flightW: number;
-  routeY: number;
-  originY: number;
-  destY: number;
-  telRows: number[];
+  dividerX: number;
+  bandTop: number;
+  bandH: number;
+  routeZoneTop: number;
+  routeZoneH: number;
+  statsZoneTop: number;
+  statsZoneH: number;
+  useStackedRoute: boolean;
+  statsUseFullFont: boolean;
 };
 
 const COMPACT_SAFE = 5;
@@ -107,20 +110,21 @@ const LOGO_TOP_INSET = 1;
 /** Black panel rows between the logo and the bottom edge. */
 const LOGO_BOTTOM_GAP = 2;
 
-/** Gap between logo tile and right-column flight info (LED pixels). */
-const RIGHT_COL_GAP = 3;
+/** Gap between logo column and right flight-info column (LED pixels). */
+const RIGHT_COL_GAP = 4;
 /** Horizontal inset inside the right column text band. */
-const RIGHT_COL_PAD = 2;
-/** Vertical gap between route hero and telemetry block. */
-const ROUTE_TEL_GAP = 4;
-/** Vertical gap between telemetry rows. */
-const TEL_ROW_GAP = 3;
+const RIGHT_COL_PAD = 3;
+/** Inset inside the logo-aligned right column band. */
+const RIGHT_BAND_INSET = 3;
 
-/** Logo column width — ~48% of grid (50% larger than the prior 32% band). */
-const LOGO_WIDTH_FRACTION = 0.48;
+/** Logo column — leaves room for a hero route stack on the right. */
+const LOGO_WIDTH_FRACTION = 0.4;
 
 /** Logo tile size relative to the max square that fits the column. */
-const LOGO_SIZE_SCALE = 0.94 * 1.15 * 1.1;
+const LOGO_SIZE_SCALE = 0.92;
+
+/** Upper band share for stacked origin / arrow / destination. */
+const ROUTE_ZONE_RATIO = 0.58;
 
 function computeLogoColumnWidth(cols: number): number {
   return Math.max(12, Math.floor(cols * LOGO_WIDTH_FRACTION));
@@ -175,61 +179,66 @@ function centerLedTextXScaled(
   return bandX + Math.max(0, Math.floor((bandW - width) / 2));
 }
 
-function centerLedTextX(text: string, bandX: number, bandW: number): number {
-  const display = truncateLedText(text, bandW);
-  const width = measureLedText(display);
-  return bandX + Math.max(0, Math.floor((bandW - width) / 2));
+/** Split route hero into origin / destination for stacked departure-board layout. */
+function parseLedRouteHero(hero: string): { origin: string; dest: string } {
+  const arrow = hero.indexOf('→');
+  if (arrow >= 0) {
+    return {
+      origin: hero.slice(0, arrow).trim(),
+      dest: hero.slice(arrow + 1).trim(),
+    };
+  }
+  return { origin: hero.trim(), dest: '' };
 }
 
-function centerLedTextCompactX(text: string, bandX: number, bandW: number): number {
-  const display = truncateLedTextCompact(text, bandW);
-  const width = measureLedTextCompact(display);
-  return bandX + Math.max(0, Math.floor((bandW - width) / 2));
-}
-
-/** Route and telemetry stacked in the right panel, spread within the logo band. */
+/**
+ * Weighted zones: route dominates the upper band; aircraft + speed share one
+ * anchored stats row below — reads like a designed FIDS panel, not equal slots.
+ */
 function buildRightContentLayout(
   rows: number,
-  heroH: number,
-  compactH: number,
   logoY: number,
   logoH: number
-): { routeY: number; telRows: number[] } {
-  const telBlockH =
-    LED_TELEMETRY_COUNT * compactH + (LED_TELEMETRY_COUNT - 1) * TEL_ROW_GAP;
-  const stackH = heroH + ROUTE_TEL_GAP + telBlockH;
-  const bandInset = 2;
-  const bandTop = logoY + bandInset;
-  const bandBottom = Math.min(rows - 1, logoY + logoH - bandInset);
-  const bandH = Math.max(compactH, bandBottom - bandTop);
-  const stackTop =
-    stackH >= bandH
-      ? Math.max(1, bandTop)
-      : bandTop + Math.floor((bandH - stackH) / 2);
-  const routeY = stackTop;
-  const telStart = stackTop + heroH + ROUTE_TEL_GAP;
-  const telRows = Array.from(
-    { length: LED_TELEMETRY_COUNT },
-    (_, i) => telStart + i * (compactH + TEL_ROW_GAP)
-  );
-  return { routeY, telRows };
+): Pick<
+  LayoutRegion,
+  | 'bandTop'
+  | 'bandH'
+  | 'routeZoneTop'
+  | 'routeZoneH'
+  | 'statsZoneTop'
+  | 'statsZoneH'
+  | 'useStackedRoute'
+  | 'statsUseFullFont'
+> {
+  const bandTop = logoY + RIGHT_BAND_INSET;
+  const bandBottom = Math.min(rows - 1, logoY + logoH - RIGHT_BAND_INSET);
+  const bandH = Math.max(ledCompactCellH() * 2, bandBottom - bandTop);
+  const routeZoneH = Math.max(ledCharCellH(), Math.floor(bandH * ROUTE_ZONE_RATIO));
+  const statsZoneH = bandH - routeZoneH;
+  const routeZoneTop = bandTop;
+  const statsZoneTop = bandTop + routeZoneH;
+  const useStackedRoute = routeZoneH >= ledCharCellH() * 2 + 6;
+  const statsUseFullFont = statsZoneH >= ledCharCellH() + 1;
+
+  return {
+    bandTop,
+    bandH,
+    routeZoneTop,
+    routeZoneH,
+    statsZoneTop,
+    statsZoneH,
+    useStackedRoute,
+    statsUseFullFont,
+  };
 }
 
 function buildLandscapeLayout(cols: number, rows: number): LayoutRegion {
   const pad = 1;
   const logo = computeLogoColumn(cols, rows);
-  const compactH = ledCompactCellH();
-  const heroH = ledCharCellH();
-
+  const dividerX = logo.columnW + 1;
   const mainX = logo.columnW + RIGHT_COL_GAP + RIGHT_COL_PAD;
   const mainW = cols - mainX - pad - RIGHT_COL_PAD;
-  const { routeY, telRows } = buildRightContentLayout(
-    rows,
-    heroH,
-    compactH,
-    logo.logoY,
-    logo.logoH
-  );
+  const rightLayout = buildRightContentLayout(rows, logo.logoY, logo.logoH);
 
   return {
     pad,
@@ -244,10 +253,8 @@ function buildLandscapeLayout(cols: number, rows: number): LayoutRegion {
     flightX: logo.flightX,
     flightBandH: logo.flightBandH,
     flightW: logo.flightW,
-    routeY,
-    originY: 0,
-    destY: 0,
-    telRows,
+    dividerX,
+    ...rightLayout,
   };
 }
 
@@ -492,24 +499,137 @@ function renderLogoMark(
   return logoRect;
 }
 
-function drawTelemetryColumn(
+function drawPanelChrome(ctx: CanvasRenderingContext2D, layout: LayoutRegion): void {
+  const { dividerX, bandTop, bandH, statsZoneTop, mainX, mainW } = layout;
+  ctx.fillStyle = LED_COLORS.muted;
+  ctx.fillRect(dividerX, bandTop, 1, bandH);
+  if (layout.statsZoneH > 2) {
+    ctx.fillStyle = LED_COLORS.unlit;
+    ctx.fillRect(mainX, statsZoneTop - 1, mainW, 1);
+  }
+}
+
+function drawRouteBlock(
+  ctx: CanvasRenderingContext2D,
+  layout: LayoutRegion,
+  routeHero: string
+): void {
+  const { mainX, mainW, routeZoneTop, routeZoneH, useStackedRoute } = layout;
+  const textX = mainX + 2;
+  const textW = mainW - 4;
+  const { origin, dest } = parseLedRouteHero(routeHero);
+
+  if (useStackedRoute && dest) {
+    const arrowH = ledCharCellH();
+    const gap = 2;
+    const endSlotH = Math.max(
+      ledCharCellH(),
+      Math.floor((routeZoneH - arrowH - gap * 2) / 2)
+    );
+    const endScale = pickFlightIdScale(origin, textW, endSlotH);
+    const endMetrics = ledScaledTextMetrics(
+      origin,
+      endScale.scaleX,
+      endScale.scaleY
+    );
+    const blockH = endMetrics.height * 2 + arrowH + gap * 2;
+    let y = routeZoneTop + Math.round((routeZoneH - blockH) / 2);
+
+    drawLedTextScaled(
+      ctx,
+      origin,
+      centerLedTextXScaled(origin, textX, textW, endScale.scaleX),
+      y,
+      LED_COLORS.hero,
+      textW,
+      endScale.scaleX,
+      endScale.scaleY,
+      endScale.scaleX === 1
+    );
+    y += endMetrics.height + gap;
+
+    drawLedTextScaled(
+      ctx,
+      '→',
+      centerLedTextXScaled('→', textX, textW, 1),
+      y,
+      LED_COLORS.phosphor,
+      textW,
+      1,
+      1,
+      false
+    );
+    y += arrowH + gap;
+
+    drawLedTextScaled(
+      ctx,
+      dest,
+      centerLedTextXScaled(dest, textX, textW, endScale.scaleX),
+      y,
+      LED_COLORS.hero,
+      textW,
+      endScale.scaleX,
+      endScale.scaleY,
+      endScale.scaleX === 1
+    );
+    return;
+  }
+
+  const scale = pickFlightIdScale(routeHero, textW, routeZoneH);
+  const metrics = ledScaledTextMetrics(
+    routeHero,
+    scale.scaleX,
+    scale.scaleY
+  );
+  const y = routeZoneTop + Math.round((routeZoneH - metrics.height) / 2);
+
+  drawLedTextScaled(
+    ctx,
+    routeHero,
+    centerLedTextXScaled(routeHero, textX, textW, scale.scaleX),
+    y,
+    LED_COLORS.hero,
+    textW,
+    scale.scaleX,
+    scale.scaleY,
+    scale.scaleX === 1
+  );
+}
+
+function drawStatsRow(
   ctx: CanvasRenderingContext2D,
   layout: LayoutRegion,
   telemetry: LedTelemetryField[]
 ): void {
-  const { telX, telW, telRows } = layout;
+  const { mainX, mainW, statsZoneTop, statsZoneH, statsUseFullFont } = layout;
+  const textX = mainX + 2;
+  const textW = mainW - 4;
+  const aircraft = telemetry[0]?.value ?? '';
+  const speed = telemetry[1]?.value ?? '';
+  const rowH = statsUseFullFont ? ledCharCellH() : ledCompactCellH();
+  const rowY = statsZoneTop + Math.round((statsZoneH - rowH) / 2);
 
-  for (let i = 0; i < telemetry.length; i += 1) {
-    const row = telRows[i];
-    const field = telemetry[i];
-    if (row == null || field == null) continue;
-    drawLedTextCompact(
+  const split = Math.floor(textW * 0.52);
+
+  if (statsUseFullFont) {
+    drawLedText(ctx, aircraft, textX, rowY, LED_COLORS.telemetry, split);
+    drawLedTextRight(
       ctx,
-      field.value,
-      centerLedTextCompactX(field.value, telX, telW),
-      row,
+      speed,
+      textX + textW,
+      rowY,
       LED_COLORS.telemetry,
-      telW
+      textW - split - 1
+    );
+  } else {
+    drawLedTextCompact(ctx, aircraft, textX, rowY, LED_COLORS.telemetry, textW);
+    drawLedTextCompactRight(
+      ctx,
+      speed,
+      textX + textW,
+      rowY,
+      LED_COLORS.telemetry,
+      textW
     );
   }
 }
@@ -555,31 +675,18 @@ function drawLandscapeFlightPanel(
   drawLedTextScaled(
     ctx,
     content.flightId,
-    centerLedTextXScaled(
-      content.flightId,
-      layout.flightX,
-      layout.flightW,
-      flightScale.scaleX
-    ),
+    layout.flightX + 1,
     flightY,
     LED_COLORS.hero,
-    layout.flightW,
+    layout.flightW - 2,
     flightScale.scaleX,
     flightScale.scaleY,
     true
   );
 
-  drawLedText(
-    ctx,
-    content.routeHero,
-    centerLedTextX(content.routeHero, layout.mainX, layout.mainW),
-    layout.routeY,
-    LED_COLORS.phosphor,
-    layout.mainW,
-    true
-  );
-
-  drawTelemetryColumn(ctx, layout, content.telemetry);
+  drawPanelChrome(ctx, layout);
+  drawRouteBlock(ctx, layout, content.routeHero);
+  drawStatsRow(ctx, layout, content.telemetry);
 }
 
 function drawLogoFallback(
@@ -736,7 +843,7 @@ function drawLitDot(
   const body = dimColor(r, g, b, strength);
   ctx.fillStyle = `rgb(${body.r},${body.g},${body.b})`;
   ctx.beginPath();
-  ctx.arc(cx, cy, radius * 0.86, 0, Math.PI * 2);
+  ctx.arc(cx, cy, radius * 0.92, 0, Math.PI * 2);
   ctx.fill();
 }
 
@@ -818,7 +925,7 @@ export function paintLedDots(
     ? ledViewport(width, height, cols, rows)
     : ledWallViewport(width, height, cols, rows);
   const { offsetX, offsetY, cellW, cellH, displayCols, displayRows } = viewport;
-  const radius = Math.min(cellW, cellH) * 0.4;
+  const radius = Math.min(cellW, cellH) * 0.44;
   const data = buffer.data;
   const logoBg = options.logoBackground;
   const logoPalette = options.logoPalette;
@@ -858,7 +965,9 @@ export function paintLedDots(
 
       const textColor = snapTextColor(r, g, b);
       if (textColor) {
-        const strength = ledCellBrightness(x, y) * 0.98;
+        const evenPhosphor =
+          textColor === LED_COLORS.hero || textColor === LED_COLORS.phosphor;
+        const strength = evenPhosphor ? 1 : ledCellBrightness(x, y) * 0.98;
         litCells.push({ cx, cy, color: textColor, strength });
       }
     }
@@ -867,6 +976,29 @@ export function paintLedDots(
   for (const cell of litCells) {
     drawLitDot(ctx, cell.cx, cell.cy, radius, cell.color, cell.strength);
   }
+}
+
+export type LedLogoTileContent = Pick<
+  LedFlightContent,
+  | 'logoUrl'
+  | 'logoIcao'
+  | 'logoFallback'
+  | 'logoBackground'
+  | 'logoBorder'
+  | 'accentStripe'
+  | 'logoPalette'
+  | 'logoTileBorder'
+>;
+
+/** Isolated logo tile for theme-tester previews (same pipeline as FlightWall). */
+export async function drawLedLogoTile(
+  ctx: CanvasRenderingContext2D,
+  size: number,
+  content: LedLogoTileContent
+): Promise<{ x: number; y: number; w: number; h: number } | null> {
+  const layout = { logoX: 0, logoY: 0, logoW: size, logoH: size };
+  const logo = content.logoUrl ? await loadLedLogo(content.logoUrl) : null;
+  return renderLogoMark(ctx, layout, logo, content);
 }
 
 export function loadLedLogo(url: string): Promise<HTMLImageElement | null> {

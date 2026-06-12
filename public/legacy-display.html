@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"
+    />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="format-detection" content="telephone=no" />
+    <title>Flight Tracker — Display</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      html,
+      body {
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+        -webkit-text-size-adjust: 100%;
+      }
+
+      body {
+        font-family: 'Helvetica Neue', Arial, Helvetica, sans-serif;
+        background: #0c2340;
+        color: #ffffff;
+        -webkit-user-select: none;
+        user-select: none;
+        -webkit-touch-callout: none;
+      }
+
+      .shell {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-orient: vertical;
+        -webkit-box-direction: normal;
+        -webkit-flex-direction: column;
+        flex-direction: column;
+        height: 100%;
+        min-height: 100vh;
+        overflow: hidden;
+      }
+
+      .panel-header {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        align-items: center;
+        -webkit-box-pack: justify;
+        -webkit-justify-content: space-between;
+        justify-content: space-between;
+        background: #071525;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        padding: 8px 10px;
+        min-height: 52px;
+      }
+
+      .brand {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        align-items: center;
+        min-width: 0;
+        -webkit-box-flex: 1;
+        -webkit-flex: 1;
+        flex: 1;
+      }
+
+      .brand-mark {
+        width: 32px;
+        height: 32px;
+        margin-right: 8px;
+        -webkit-flex-shrink: 0;
+        flex-shrink: 0;
+      }
+
+      .airport-name {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        line-height: 1.2;
+      }
+
+      .panel-title {
+        font-size: 22px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        -webkit-flex-shrink: 0;
+        flex-shrink: 0;
+      }
+
+      .col-header,
+      .row {
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        align-items: center;
+        padding: 6px 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+
+      .col-header {
+        background: #071525;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+      }
+
+      .row {
+        font-size: 13px;
+        line-height: 1.25;
+        min-height: 38px;
+        background: #0c2340;
+      }
+
+      .col-dest {
+        -webkit-box-flex: 1.15;
+        -webkit-flex: 1.15;
+        flex: 1.15;
+        font-weight: 700;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        padding-right: 4px;
+      }
+
+      .col-airline {
+        -webkit-box-flex: 1.1;
+        -webkit-flex: 1.1;
+        flex: 1.1;
+        padding-right: 4px;
+      }
+
+      .col-flight {
+        -webkit-box-flex: 0.8;
+        -webkit-flex: 0.8;
+        flex: 0.8;
+        font-weight: 700;
+        padding-right: 4px;
+      }
+
+      .col-gate {
+        -webkit-box-flex: 0.55;
+        -webkit-flex: 0.55;
+        flex: 0.55;
+        font-weight: 600;
+        padding-right: 4px;
+      }
+
+      .col-time {
+        -webkit-box-flex: 0.6;
+        -webkit-flex: 0.6;
+        flex: 0.6;
+        font-weight: 600;
+      }
+
+      .logo-wrap {
+        width: 60px;
+        height: 22px;
+        background: #ffffff;
+        border-radius: 1px;
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        align-items: center;
+        -webkit-box-pack: center;
+        -webkit-justify-content: center;
+        justify-content: center;
+        padding: 2px 4px;
+      }
+
+      .logo-wrap img {
+        max-width: 100%;
+        max-height: 100%;
+        display: block;
+      }
+
+      .airline-code {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: #0c2340;
+      }
+
+      .rows-wrap {
+        -webkit-box-flex: 1;
+        -webkit-flex: 1;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
+        position: relative;
+      }
+
+      .rows-track {
+        will-change: transform;
+      }
+
+      .rows-track.scroll {
+        -webkit-animation: scroll-y 32s linear infinite;
+        animation: scroll-y 32s linear infinite;
+      }
+
+      @-webkit-keyframes scroll-y {
+        0% {
+          -webkit-transform: translateY(0);
+          transform: translateY(0);
+        }
+        100% {
+          -webkit-transform: translateY(-50%);
+          transform: translateY(-50%);
+        }
+      }
+
+      @keyframes scroll-y {
+        0% {
+          -webkit-transform: translateY(0);
+          transform: translateY(0);
+        }
+        100% {
+          -webkit-transform: translateY(-50%);
+          transform: translateY(-50%);
+        }
+      }
+
+      .empty,
+      .loading {
+        -webkit-box-flex: 1;
+        -webkit-flex: 1;
+        flex: 1;
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        align-items: center;
+        -webkit-box-pack: center;
+        -webkit-justify-content: center;
+        justify-content: center;
+        padding: 24px;
+        font-size: 14px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.55);
+      }
+
+      .footer {
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        background: #071525;
+        padding: 6px 10px;
+        font-size: 9px;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: rgba(255, 255, 255, 0.45);
+      }
+
+      .footer-error {
+        color: #f87171;
+        margin-top: 4px;
+      }
+
+      .legacy-badge {
+        opacity: 0.35;
+      }
+
+      .error-panel {
+        -webkit-box-flex: 1;
+        -webkit-flex: 1;
+        flex: 1;
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-orient: vertical;
+        -webkit-box-direction: normal;
+        -webkit-flex-direction: column;
+        flex-direction: column;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        align-items: center;
+        -webkit-box-pack: center;
+        -webkit-justify-content: center;
+        justify-content: center;
+        padding: 24px;
+        text-align: center;
+      }
+
+      .error-panel h2 {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: #f5e842;
+        margin-bottom: 10px;
+      }
+
+      .error-panel p {
+        font-size: 12px;
+        line-height: 1.5;
+        color: rgba(255, 255, 255, 0.65);
+        max-width: 28em;
+      }
+
+      .error-panel code {
+        font-size: 11px;
+        color: #ffffff;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="shell" id="app">
+      <div class="loading" id="status">Loading flight information…</div>
+    </div>
+
+    <script>
+      (function () {
+        var SETTINGS_KEY = 'flight-tracker-settings-v2';
+        var DEFAULT_LAT = 39.7392;
+        var DEFAULT_LON = -105.0333;
+        var LEGACY_MAX_AIRCRAFT = 8;
+
+        var DESTINATIONS = [
+          'Los Angeles',
+          'Montrose',
+          'Nashville',
+          'New York-LGA',
+          'Newark',
+          'Orlando',
+          'Phoenix',
+          'Las Vegas',
+          'Seattle',
+          'Dallas',
+          'Chicago',
+          'Salt Lake City',
+          'San Francisco',
+          'Atlanta',
+          'Houston',
+          'Minneapolis',
+          'Portland',
+          'San Diego',
+          'Boston',
+          'Washington-Dulles',
+        ];
+
+        var AIRLINE_IATA = {
+          UAL: 'UA',
+          SWA: 'WN',
+          DAL: 'DL',
+          AAL: 'AA',
+          FFT: 'F9',
+          JBU: 'B6',
+          ASA: 'AS',
+          SKW: 'OO',
+          RPA: 'YX',
+          NKS: 'NK',
+        };
+
+        var pollTimer = null;
+        var lastUpdated = null;
+        var errorMessage = null;
+        var pollAttempt = 0;
+        var flightCount = 0;
+
+        function trim(str) {
+          return String(str || '').replace(/^\s+|\s+$/g, '');
+        }
+
+        function parseQuery() {
+          var out = {};
+          var search = window.location.search;
+          if (!search || search.length < 2) return out;
+          var parts = search.replace(/^\?/, '').split('&');
+          var i;
+          for (i = 0; i < parts.length; i++) {
+            var pair = parts[i].split('=');
+            var key = decodeURIComponent(pair[0] || '');
+            var val = decodeURIComponent(pair[1] || '');
+            if (key) out[key] = val;
+          }
+          return out;
+        }
+
+        function num(val, fallback) {
+          var n = parseFloat(val);
+          return isNaN(n) ? fallback : n;
+        }
+
+        function int(val, fallback) {
+          var n = parseInt(val, 10);
+          return isNaN(n) ? fallback : n;
+        }
+
+        function setStatus(message) {
+          var status = document.getElementById('status');
+          if (status) status.textContent = message;
+        }
+
+        function showError(title, detail) {
+          var host = window.location.host || 'server';
+          document.getElementById('app').innerHTML =
+            '<div class="error-panel">' +
+            '<h2>' + title + '</h2>' +
+            '<p>' + detail + '</p>' +
+            '<p style="margin-top:12px">Server: <code>' + host + '</code></p>' +
+            '</div>' +
+            '<div class="footer"><span class="legacy-badge">iPad kiosk · retrying every 60s</span></div>';
+        }
+
+        function requestJson(url, timeoutMs, callback) {
+          var xhr = new XMLHttpRequest();
+          var finished = false;
+
+          function finish(err, data) {
+            if (finished) return;
+            finished = true;
+            clearTimeout(timer);
+            callback(err, data);
+          }
+
+          var timer = setTimeout(function () {
+            try {
+              xhr.abort();
+            } catch (e) {}
+            finish(new Error('Timed out reaching ' + url));
+          }, timeoutMs);
+
+          xhr.open('GET', url, true);
+          xhr.timeout = timeoutMs;
+          xhr.onreadystatechange = function () {
+            if (xhr.readyState !== 4 || finished) return;
+            if (xhr.status === 0) {
+              finish(new Error('Cannot reach server — check Wi-Fi and URL host'));
+              return;
+            }
+            if (xhr.status >= 200 && xhr.status < 300) {
+              try {
+                finish(null, JSON.parse(xhr.responseText));
+              } catch (parseErr) {
+                finish(new Error('Bad response from server'));
+              }
+              return;
+            }
+            finish(new Error('Server returned ' + xhr.status));
+          };
+          xhr.onerror = function () {
+            finish(new Error('Network error — is the app running?'));
+          };
+          xhr.ontimeout = function () {
+            finish(new Error('Request timed out'));
+          };
+          xhr.send();
+        }
+
+        function pad2(n) {
+          return n < 10 ? '0' + n : String(n);
+        }
+
+        function settingsFromQuery(query) {
+          var hasCoords = query.lat != null || query.lon != null;
+          if (!hasCoords && !query.radiusMi && !query.max && !query.refresh) return null;
+
+          return {
+            lat: num(query.lat, DEFAULT_LAT),
+            lon: num(query.lon, DEFAULT_LON),
+            radiusMi: int(query.radiusMi, 10),
+            maxAircraft: Math.min(int(query.max, 8), LEGACY_MAX_AIRCRAFT),
+            refreshIntervalSec: Math.max(int(query.refresh, 60), 60),
+            altitudeFilter: query.altitude || 'all',
+            hideNoCallsign: query.hideNoCallsign === '1',
+            mode: query.mode || 'nearby',
+          };
+        }
+
+        function loadSettings() {
+          var defaults = {
+            lat: DEFAULT_LAT,
+            lon: DEFAULT_LON,
+            radiusMi: 10,
+            maxAircraft: LEGACY_MAX_AIRCRAFT,
+            refreshIntervalSec: 60,
+            altitudeFilter: 'all',
+            hideNoCallsign: false,
+            mode: 'nearby',
+          };
+
+          var stored = null;
+          try {
+            var raw = localStorage.getItem(SETTINGS_KEY);
+            if (raw) stored = JSON.parse(raw);
+          } catch (e) {}
+
+          var merged = {
+            lat: stored && typeof stored.lat === 'number' ? stored.lat : defaults.lat,
+            lon: stored && typeof stored.lon === 'number' ? stored.lon : defaults.lon,
+            radiusMi: stored && typeof stored.radiusMi === 'number' ? stored.radiusMi : defaults.radiusMi,
+            maxAircraft: Math.min(
+              stored && typeof stored.maxAircraft === 'number' ? stored.maxAircraft : defaults.maxAircraft,
+              LEGACY_MAX_AIRCRAFT
+            ),
+            refreshIntervalSec: Math.max(
+              stored && typeof stored.refreshIntervalSec === 'number'
+                ? stored.refreshIntervalSec
+                : defaults.refreshIntervalSec,
+              60
+            ),
+            altitudeFilter: (stored && stored.altitudeFilter) || defaults.altitudeFilter,
+            hideNoCallsign: !!(stored && stored.hideNoCallsign),
+            mode: (stored && stored.mode) || defaults.mode,
+          };
+
+          var fromUrl = settingsFromQuery(parseQuery());
+          if (fromUrl) {
+            merged = {
+              lat: fromUrl.lat,
+              lon: fromUrl.lon,
+              radiusMi: fromUrl.radiusMi,
+              maxAircraft: fromUrl.maxAircraft,
+              refreshIntervalSec: fromUrl.refreshIntervalSec,
+              altitudeFilter: fromUrl.altitudeFilter,
+              hideNoCallsign: fromUrl.hideNoCallsign,
+              mode: fromUrl.mode,
+            };
+            try {
+              localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
+            } catch (e) {}
+          }
+
+          return merged;
+        }
+
+        function airlineIata(callsign) {
+          if (!callsign) return 'XX';
+          var prefix = trim(callsign).slice(0, 3).toUpperCase();
+          return AIRLINE_IATA[prefix] || prefix.slice(0, 2) || 'XX';
+        }
+
+        function displayId(ac) {
+          if (trim(ac.callsign)) return trim(ac.callsign).toUpperCase();
+          return String(ac.hex || '').toUpperCase();
+        }
+
+        function fidsDestination(index) {
+          return DESTINATIONS[index % DESTINATIONS.length];
+        }
+
+        function fidsGate(index, hex) {
+          var gates = ['A', 'B', 'C'];
+          var safeHex = String(hex || '00');
+          var concourse = gates[parseInt(safeHex.slice(-1), 16) % gates.length];
+          var num = 10 + ((index * 7 + parseInt(safeHex.slice(0, 2), 16)) % 35);
+          return concourse + num;
+        }
+
+        function fidsDepartureTime(index, updated) {
+          var base = updated || new Date();
+          var totalMin = base.getHours() * 60 + base.getMinutes() + index * 6;
+          var h24 = Math.floor(totalMin / 60) % 24;
+          var m = totalMin % 60;
+          var suffix = h24 >= 12 ? 'P' : 'A';
+          var h12 = h24 % 12 || 12;
+          return h12 + ':' + pad2(m) + suffix;
+        }
+
+        function fidsFlightNumber(ac) {
+          var id = displayId(ac);
+          if (id.length >= 3 && /^[A-Z]{2,3}/.test(id)) {
+            var airline = id.slice(0, 2);
+            var num = id.slice(2).replace(/^0+/, '') || id.slice(2);
+            return airline + ' ' + num;
+          }
+          return id;
+        }
+
+        function score(ac) {
+          var s = 0;
+          var dist = num(ac.distanceMi, 99);
+          s += dist < 50 ? 50 - dist * 2 : 0;
+          if (ac.altitudeFt != null) s += ac.altitudeFt < 50000 ? 25 - ac.altitudeFt / 2000 : 0;
+          var vRate = Math.abs(num(ac.verticalRateFpm, 0));
+          if (vRate > 200) s += vRate / 100 < 15 ? vRate / 100 : 15;
+          if (trim(ac.callsign)) s += 10;
+          if (ac.seenSecondsAgo != null) s += ac.seenSecondsAgo < 5 ? 5 - ac.seenSecondsAgo : 0;
+          return s;
+        }
+
+        function sortAircraft(list) {
+          return list.slice().sort(function (a, b) {
+            return score(b) - score(a);
+          });
+        }
+
+        function passesAltitude(ac, filter) {
+          var alt = ac.altitudeFt;
+          if (filter === 'all') return true;
+          if (alt == null) return false;
+          if (filter === 'below10k') return alt < 10000;
+          if (filter === '10k-25k') return alt >= 10000 && alt <= 25000;
+          if (filter === 'above25k') return alt > 25000;
+          return true;
+        }
+
+        function filterAircraft(list, settings) {
+          var out = [];
+          var i;
+          for (i = 0; i < list.length; i++) {
+            var ac = list[i];
+            if (settings.hideNoCallsign && !trim(ac.callsign)) continue;
+            if (!passesAltitude(ac, settings.altitudeFilter)) continue;
+            out.push(ac);
+          }
+          return out;
+        }
+
+        function rowHtml(ac, index) {
+          var iata = airlineIata(ac.callsign);
+          return (
+            '<div class="row">' +
+            '<div class="col-dest">' + fidsDestination(index) + '</div>' +
+            '<div class="col-airline"><div class="logo-wrap">' +
+            '<img src="https://images.kiwi.com/airlines/64/' + iata + '.png" alt="' + iata + '" ' +
+            'onerror="this.style.display=\'none\';if(this.nextSibling)this.nextSibling.style.display=\'block\'">' +
+            '<span class="airline-code" style="display:none">' + iata + '</span>' +
+            '</div></div>' +
+            '<div class="col-flight">' + fidsFlightNumber(ac) + '</div>' +
+            '<div class="col-gate">' + fidsGate(index, ac.hex) + '</div>' +
+            '<div class="col-time">' + fidsDepartureTime(index, lastUpdated) + '</div>' +
+            '</div>'
+          );
+        }
+
+        function renderRows(list) {
+          if (!list.length) {
+            return '<div class="empty">No flights in range — widen radius in admin kiosk URL.</div>';
+          }
+
+          var html = '';
+          var i;
+          for (i = 0; i < list.length; i++) {
+            html += rowHtml(list[i], i);
+          }
+
+          return (
+            '<div class="rows-wrap" id="rows-wrap">' +
+            '<div class="rows-track" id="rows-track">' + html + '</div>' +
+            '</div>'
+          );
+        }
+
+        function render(aircraft) {
+          flightCount = aircraft.length;
+          var footer =
+            '<div class="footer">' +
+            '<span>' +
+            (lastUpdated ? 'Updated ' + lastUpdated.toLocaleTimeString() + ' · ' : '') +
+            flightCount + ' flights</span>' +
+            '<span class="legacy-badge"> · iPad kiosk</span>' +
+            (errorMessage ? '<div class="footer-error">' + errorMessage + '</div>' : '') +
+            '</div>';
+
+          document.getElementById('app').innerHTML =
+            '<div class="panel-header">' +
+            '<div class="brand">' +
+            '<svg class="brand-mark" viewBox="0 0 40 40" aria-hidden="true">' +
+            '<circle cx="20" cy="20" r="18" fill="none" stroke="#ffffff" stroke-width="1.5"></circle>' +
+            '<path d="M8 28 L20 10 L32 28 Z" fill="none" stroke="#ffffff" stroke-width="1.5"></path>' +
+            '</svg>' +
+            '<div class="airport-name">Denver International Airport</div>' +
+            '</div>' +
+            '<div class="panel-title">Departures</div>' +
+            '</div>' +
+            '<div class="col-header">' +
+            '<div class="col-dest">Departing To</div>' +
+            '<div class="col-airline">Airline</div>' +
+            '<div class="col-flight">Flight</div>' +
+            '<div class="col-gate">Gate</div>' +
+            '<div class="col-time">Time</div>' +
+            '</div>' +
+            renderRows(aircraft) +
+            footer;
+
+          setupScroll();
+        }
+
+        function setupScroll() {
+          var wrap = document.getElementById('rows-wrap');
+          var track = document.getElementById('rows-track');
+          if (!wrap || !track) return;
+          if (track.scrollHeight > wrap.clientHeight + 4) {
+            track.className = 'rows-track scroll';
+            track.innerHTML = track.innerHTML + track.innerHTML;
+          }
+        }
+
+        function schedulePoll(intervalSec) {
+          if (pollTimer) clearTimeout(pollTimer);
+          pollTimer = setTimeout(poll, intervalSec * 1000);
+        }
+
+        function poll() {
+          var settings = loadSettings();
+          pollAttempt += 1;
+          setStatus('Connecting to ' + window.location.host + '…');
+
+          var params =
+            'lat=' + encodeURIComponent(String(settings.lat)) +
+            '&lon=' + encodeURIComponent(String(settings.lon)) +
+            '&radiusMi=' + encodeURIComponent(String(settings.radiusMi));
+
+          requestJson('/api/flights?' + params, 25000, function (err, data) {
+            if (err) {
+              errorMessage = err.message || 'Failed to fetch flights';
+              if (!lastUpdated) {
+                showError('Cannot load flights', errorMessage);
+              } else {
+                render([]);
+              }
+              schedulePoll(settings.refreshIntervalSec);
+              return;
+            }
+
+            errorMessage = null;
+            lastUpdated = new Date(data.fetchedAt);
+            var aircraft = data.aircraft || [];
+            var filtered = filterAircraft(aircraft, settings);
+            var sorted = sortAircraft(filtered);
+            var displayed = sorted.slice(0, settings.maxAircraft);
+            render(displayed);
+            schedulePoll(settings.refreshIntervalSec);
+          });
+        }
+
+        window.addEventListener('online', poll);
+        window.addEventListener('storage', function (e) {
+          if (e.key === SETTINGS_KEY) poll();
+        });
+
+        setStatus('Starting iPad kiosk…');
+        poll();
+      })();
+    </script>
+  </body>
+</html>

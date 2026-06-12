@@ -15,6 +15,7 @@ import {
   loadSettings,
   type DisplaySettings,
 } from '@/lib/settings';
+import { FetchTimeoutError, fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import type { LayoutId } from '@/lib/themes';
 
 const LIVE_LAYOUTS = new Set<LayoutId>(['radar-scope', 'google-map', 'led-matrix']);
@@ -75,7 +76,7 @@ export function useFlightData(pollLayout?: LayoutId) {
         radiusMi: String(current.radiusMi),
       });
 
-      const res = await fetch(`/api/flights?${params.toString()}`);
+      const res = await fetchWithTimeout(`/api/flights?${params.toString()}`);
       if (!res.ok) throw new Error(`API error ${res.status}`);
 
       const data = (await res.json()) as FlightsApiResponse;
@@ -97,7 +98,12 @@ export function useFlightData(pollLayout?: LayoutId) {
       setState((prev) => ({
         ...prev,
         status: 'error',
-        errorMessage: err instanceof Error ? err.message : 'Failed to fetch flights',
+        errorMessage:
+          err instanceof FetchTimeoutError
+            ? 'Flight data request timed out — check network connection'
+            : err instanceof Error
+              ? err.message
+              : 'Failed to fetch flights',
       }));
     }
 
