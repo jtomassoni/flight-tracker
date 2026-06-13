@@ -62,6 +62,7 @@
       altitudeFilter: 'all',
       hideNoCallsign: false,
       mode: 'nearby',
+      useMockData: true,
     };
 
     var stored = null;
@@ -87,11 +88,53 @@
       altitudeFilter: (stored && stored.altitudeFilter) || defaults.altitudeFilter,
       hideNoCallsign: !!(stored && stored.hideNoCallsign),
       mode: (stored && stored.mode) || defaults.mode,
+      useMockData: stored && stored.useMockData === false ? false : defaults.useMockData,
     };
 
     var fromUrl = settingsFromQuery(parseQuery());
     if (fromUrl) {
       merged = fromUrl;
+      try {
+        localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
+      } catch (e) {}
+    }
+
+    // Night dimming + keep-awake — layered on independently of the coords/refresh
+    // block above so they work whether or not other settings came from the URL.
+    merged.nightDimEnabled =
+      stored && typeof stored.nightDimEnabled === 'boolean' ? stored.nightDimEnabled : false;
+    merged.nightDimStart = (stored && stored.nightDimStart) || '22:00';
+    merged.nightDimEnd = (stored && stored.nightDimEnd) || '06:00';
+    merged.nightDimLevel =
+      stored && typeof stored.nightDimLevel === 'number' ? stored.nightDimLevel : 60;
+    merged.keepAwake = stored && typeof stored.keepAwake === 'boolean' ? stored.keepAwake : true;
+
+    var query = parseQuery();
+    var dimTouched = false;
+    if (query.awake != null) {
+      merged.keepAwake = !(query.awake === '0' || query.awake === 'false');
+      dimTouched = true;
+    }
+    if (query.dim != null) {
+      merged.nightDimEnabled = query.dim === '1' || query.dim === 'true';
+      dimTouched = true;
+    }
+    if (query.dimStart) {
+      merged.nightDimStart = query.dimStart;
+      dimTouched = true;
+    }
+    if (query.dimEnd) {
+      merged.nightDimEnd = query.dimEnd;
+      dimTouched = true;
+    }
+    if (query.dimLevel != null) {
+      var lvl = int(query.dimLevel, 60);
+      if (lvl < 0) lvl = 0;
+      if (lvl > 95) lvl = 95;
+      merged.nightDimLevel = lvl;
+      dimTouched = true;
+    }
+    if (dimTouched) {
       try {
         localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
       } catch (e) {}

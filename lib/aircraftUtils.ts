@@ -1,4 +1,5 @@
 import type { NormalizedAircraft, VerticalTrend } from '@/types/aircraft';
+import { formatBrandedCallsign } from './airlines';
 
 export function formatCallsign(callsign?: string): string {
   if (!callsign) return '—';
@@ -64,7 +65,7 @@ export function headingToCardinal(headingDeg?: number): string {
 }
 
 export function displayIdentifier(ac: NormalizedAircraft): string {
-  return formatCallsign(ac.callsign) !== '—'
-    ? formatCallsign(ac.callsign)
-    : ac.hex.toUpperCase();
+  const branded = formatBrandedCallsign(ac.callsign);
+  if (branded) return branded;
+  return ac.hex.toUpperCase();
 }

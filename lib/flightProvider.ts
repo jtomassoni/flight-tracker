@@ -1,7 +1,8 @@
 /**
  * Flight data provider.
  *
- * Production uses adsb.fi (free, no key). Dev uses mock data automatically.
+ * Production uses adsb.fi (free, no key). In development, mock data is the default;
+ * pass `useMock: false` (or `mock=0` on the API) for live ADS-B while iterating locally.
  * To switch providers, change PRODUCTION_FLIGHT_PROVIDER below.
  */
 
@@ -19,6 +20,8 @@ export type FetchFlightsParams = {
   lat?: number;
   lon?: number;
   radiusMi: number;
+  /** Dev only — when true, serve mock fleet; when false, hit live ADS-B. Ignored in production. */
+  useMock?: boolean;
 };
 
 export type FetchFlightsResult = {
@@ -44,6 +47,8 @@ type RawAircraft = {
   squawk?: string;
   seen_pos?: number;
   dst?: number;
+  /** Registration / tail number */
+  r?: string;
 };
 
 type RawResponse = {
@@ -77,6 +82,16 @@ const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<FetchFlightsResult>>();
 let rateLimitedUntil = 0;
 
+/** Demo mode pulls real nearby flights once per location, then reuses them so the board is relevant to the entered ZIP. */
+const DEMO_CACHE_TTL_MS = 5 * 60_000;
+/** Keep demo snappy — fall back to the synthetic fleet rather than wait on a slow upstream. */
+const DEMO_FETCH_TIMEOUT_MS = 6_000;
+const DEMO_MAX_FLIGHTS = 10;
+
+type DemoEntry = { aircraft: NormalizedAircraft[]; fetchedAt: number };
+const demoCache = new Map<string, DemoEntry>();
+const demoInflight = new Map<string, Promise<NormalizedAircraft[]>>();
+
 const UPSTREAM_FETCH_TIMEOUT_MS = 15_000;
 
 async function fetchWithServerTimeout(
@@ -93,8 +108,10 @@ async function fetchWithServerTimeout(
   }
 }
 
-function getProviderName(): ProviderName {
-  if (process.env.NODE_ENV === 'development') return 'mock';
+function getProviderName(useMock?: boolean): ProviderName {
+  if (process.env.NODE_ENV === 'development') {
+    return useMock === false ? PRODUCTION_FLIGHT_PROVIDER : 'mock';
+  }
   return PRODUCTION_FLIGHT_PROVIDER;
 }
 
@@ -105,6 +122,12 @@ function cacheKey(lat: number, lon: number, radiusMi: number, provider: Provider
 function trimCallsign(flight?: string): string | undefined {
   if (!flight) return undefined;
   const trimmed = flight.trim();
+  return trimmed.length > 0 ? trimmed : undefined;
+}
+
+function trimRegistration(registration?: string): string | undefined {
+  if (!registration) return undefined;
+  const trimmed = registration.trim().toUpperCase();
   return trimmed.length > 0 ? trimmed : undefined;
 }
 
@@ -126,6 +149,7 @@ function normalizeRaw(
   return {
     hex: raw.hex.toLowerCase(),
     callsign: trimCallsign(raw.flight),
+    registration: trimRegistration(raw.r),
     lat: raw.lat,
     lon: raw.lon,
     altitudeFt,
@@ -143,15 +167,20 @@ function normalizeRaw(
 async function fetchFromAdsbFi(
   lat: number,
   lon: number,
-  radiusMi: number
+  radiusMi: number,
+  timeoutMs = UPSTREAM_FETCH_TIMEOUT_MS
 ): Promise<NormalizedAircraft[]> {
   const distNm = Math.ceil(milesToNauticalMiles(radiusMi));
   const url = `https://opendata.adsb.fi/api/v3/lat/${lat}/lon/${lon}/dist/${distNm}`;
 
-  const res = await fetchWithServerTimeout(url, {
-    headers: { Accept: 'application/json' },
-    cache: 'no-store',
-  });
+  const res = await fetchWithServerTimeout(
+    url,
+    {
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    },
+    timeoutMs
+  );
 
   if (!res.ok) {
     throw new UpstreamHttpError('adsb.fi', res.status);
@@ -168,7 +197,8 @@ async function fetchFromAdsbFi(
 async function fetchFromAirplanesLive(
   lat: number,
   lon: number,
-  radiusMi: number
+  radiusMi: number,
+  timeoutMs = UPSTREAM_FETCH_TIMEOUT_MS
 ): Promise<NormalizedAircraft[]> {
   const distNm = Math.ceil(milesToNauticalMiles(radiusMi));
   const url = `https://api.airplanes.live/v2/lat/${lat}/lon/${lon}/dist/${distNm}`;
@@ -178,7 +208,7 @@ async function fetchFromAirplanesLive(
     headers['api-auth'] = process.env.FLIGHT_API_KEY;
   }
 
-  const res = await fetchWithServerTimeout(url, { headers, cache: 'no-store' });
+  const res = await fetchWithServerTimeout(url, { headers, cache: 'no-store' }, timeoutMs);
 
   if (!res.ok) {
     throw new UpstreamHttpError('airplanes.live', res.status);
@@ -272,14 +302,66 @@ async function fetchLiveWithCache(
   return request;
 }
 
+/**
+ * Demo dataset: one quick live lookup near the requested point, capped to the closest
+ * DEMO_MAX_FLIGHTS and cached per location. Returns [] when upstream is unavailable so
+ * the caller can fall back to the synthetic fleet.
+ */
+async function fetchDemoFlights(
+  lat: number,
+  lon: number,
+  radiusMi: number
+): Promise<NormalizedAircraft[]> {
+  const key = `${lat.toFixed(4)}:${lon.toFixed(4)}:${radiusMi}`;
+  const now = Date.now();
+
+  const cached = demoCache.get(key);
+  if (cached && now - cached.fetchedAt < DEMO_CACHE_TTL_MS) {
+    return cached.aircraft;
+  }
+
+  const pending = demoInflight.get(key);
+  if (pending) return pending;
+
+  const request = (async (): Promise<NormalizedAircraft[]> => {
+    try {
+      const aircraft =
+        PRODUCTION_FLIGHT_PROVIDER === 'airplanes.live'
+          ? await fetchFromAirplanesLive(lat, lon, radiusMi, DEMO_FETCH_TIMEOUT_MS)
+          : await fetchFromAdsbFi(lat, lon, radiusMi, DEMO_FETCH_TIMEOUT_MS);
+
+      const trimmed = [...aircraft]
+        .sort((a, b) => a.distanceMi - b.distanceMi)
+        .slice(0, DEMO_MAX_FLIGHTS);
+
+      if (trimmed.length > 0) {
+        demoCache.set(key, { aircraft: trimmed, fetchedAt: Date.now() });
+      }
+      return trimmed;
+    } catch (error) {
+      console.warn(
+        '[flightProvider] Demo live fetch failed; using synthetic mock fleet:',
+        error
+      );
+      return [];
+    } finally {
+      demoInflight.delete(key);
+    }
+  })();
+
+  demoInflight.set(key, request);
+  return request;
+}
+
 export async function fetchFlights(params: FetchFlightsParams): Promise<FetchFlightsResult> {
   const lat = params.lat ?? DEFAULT_LAT;
   const lon = params.lon ?? DEFAULT_LON;
-  const provider = getProviderName();
+  const provider = getProviderName(params.useMock);
 
   if (provider === 'mock') {
+    const demo = await fetchDemoFlights(lat, lon, params.radiusMi);
     return {
-      aircraft: getMockAircraft(lat, lon),
+      aircraft: demo.length > 0 ? demo : getMockAircraft(lat, lon),
       provider: 'mock',
       source: 'mock',
       fetchedAt: new Date().toISOString(),

@@ -1,6 +1,8 @@
 export type NormalizedAircraft = {
   hex: string;
   callsign?: string;
+  /** Tail number when broadcast (ADS-B `r` field). */
+  registration?: string;
   flightNumber?: string;
   lat: number;
   lon: number;

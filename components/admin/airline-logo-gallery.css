@@ -23,10 +23,10 @@
   border: 1px solid rgba(34, 197, 94, 0.28);
 }
 
-.airline-logo-badge--cdn-raster {
-  color: #7dd3fc;
-  background: rgba(56, 189, 248, 0.12);
-  border: 1px solid rgba(56, 189, 248, 0.28);
+.airline-logo-badge--approved {
+  color: #c4b5fd;
+  background: rgba(139, 92, 246, 0.14);
+  border: 1px solid rgba(139, 92, 246, 0.3);
 }
 
 .airline-logo-badge--iata-fallback {
@@ -45,10 +45,60 @@
   padding-bottom: 0.125rem;
 }
 
+.airline-logo-gallery--compact .airline-logo-gallery__grid {
+  display: contents;
+}
+
 .airline-logo-gallery--expanded {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.airline-logo-gallery__summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--admin-border);
+  border-radius: 0.875rem;
+  background: var(--admin-surface);
+}
+
+.airline-logo-gallery__summary-text {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--admin-muted);
+}
+
+.airline-logo-gallery__summary-count {
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--admin-accent);
+}
+
+.airline-logo-gallery__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(13.5rem, 1fr));
   gap: 0.875rem;
+}
+
+.airline-logo-gallery--expanded .airline-logo-gallery__grid {
+  grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
+}
+
+@media (min-width: 720px) {
+  .airline-logo-gallery--expanded .airline-logo-gallery__grid {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (min-width: 1024px) {
+  .airline-logo-gallery--expanded .airline-logo-gallery__grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
 }
 
 .airline-logo-gallery__item {
@@ -64,14 +114,7 @@
   display: block;
   color: inherit;
   text-decoration: none;
-  border-radius: 0.625rem;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
-}
-
-.airline-logo-gallery[data-link-cards='true'] .airline-logo-card__link:hover .airline-logo-card,
-.airline-logo-gallery[data-link-cards='true'] .airline-logo-card__link:focus-visible .airline-logo-card {
-  border-color: var(--admin-border-active);
-  box-shadow: 0 0 0 1px var(--admin-border-active);
+  border-radius: 0.875rem;
 }
 
 .airline-logo-card {
@@ -87,8 +130,33 @@
 }
 
 .airline-logo-gallery--expanded .airline-logo-card {
-  padding: 0.875rem;
+  position: relative;
+  padding: 0.75rem;
+  padding-top: 0.85rem;
   border-radius: 0.875rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.airline-logo-gallery[data-link-cards='true'] .airline-logo-card__link:hover .airline-logo-card,
+.airline-logo-gallery[data-link-cards='true'] .airline-logo-card__link:focus-visible .airline-logo-card {
+  border-color: var(--admin-border-active);
+  box-shadow: 0 0 0 1px var(--admin-border-active);
+  transform: translateY(-1px);
+}
+
+.airline-logo-card__accent {
+  display: none;
+}
+
+.airline-logo-gallery--expanded .airline-logo-card__accent {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 0.75rem;
+  right: 0.75rem;
+  height: 3px;
+  border-radius: 0 0 2px 2px;
+  opacity: 0.85;
 }
 
 .airline-logo-card__header {
@@ -124,8 +192,70 @@
 }
 
 .airline-logo-gallery--expanded .airline-logo-card__name {
-  font-size: 0.78rem;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: var(--admin-text);
+}
+
+.airline-logo-card__compare {
+  display: none;
+}
+
+.airline-logo-gallery--expanded .airline-logo-card__compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+  margin-top: 0.15rem;
+}
+
+.airline-logo-card__preview {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin: 0;
+  min-width: 0;
+}
+
+.airline-logo-card__preview-label {
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--admin-muted);
+  text-align: center;
+}
+
+.airline-logo-card__preview-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 1;
+  border-radius: 0.5rem;
+  border: 1px solid var(--admin-border);
+  overflow: hidden;
+}
+
+.airline-logo-card__preview-box--light {
+  background: #fff;
+}
+
+.airline-logo-card__preview-box--light img {
+  width: 2.5rem;
+  height: 2.5rem;
+  object-fit: contain;
+}
+
+.airline-logo-card__preview-box--led {
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+.airline-logo-card__preview-box--led .airline-led-tile {
+  width: 4rem !important;
+  height: 4rem !important;
+}
+
+.airline-logo-gallery--expanded .airline-logo-card__previews {
+  display: none;
 }
 
 .airline-logo-card__previews {
@@ -134,11 +264,6 @@
   gap: 0.35rem;
   align-items: center;
   min-width: 0;
-}
-
-.airline-logo-gallery--expanded .airline-logo-card__previews {
-  grid-template-columns: 2.75rem 1fr;
-  gap: 0.5rem;
 }
 
 .airline-logo-card__cdn {
@@ -154,20 +279,10 @@
   flex-shrink: 0;
 }
 
-.airline-logo-gallery--expanded .airline-logo-card__cdn {
-  width: 2.75rem;
-  height: 2.75rem;
-}
-
 .airline-logo-card__cdn img {
   width: 1.65rem;
   height: 1.65rem;
   object-fit: contain;
-}
-
-.airline-logo-gallery--expanded .airline-logo-card__cdn img {
-  width: 2rem;
-  height: 2rem;
 }
 
 .airline-logo-card__led {
@@ -180,12 +295,6 @@
   border-radius: 0.35rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: #000;
-}
-
-.airline-logo-gallery--expanded .airline-logo-card__led {
-  height: auto;
-  min-height: 4rem;
-  padding: 0.25rem;
 }
 
 .airline-logo-card__led .airline-led-tile {

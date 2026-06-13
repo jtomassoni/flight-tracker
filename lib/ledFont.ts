@@ -10,6 +10,8 @@ const GLYPHS: Record<string, readonly number[]> = {
   '·': [0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00],
   '°': [0x06, 0x09, 0x09, 0x06, 0x00, 0x00, 0x00],
   '→': [0x08, 0x04, 0x02, 0x1f, 0x02, 0x04, 0x08],
+  '↑': [0x04, 0x0e, 0x15, 0x04, 0x04, 0x04, 0x04],
+  '↓': [0x04, 0x04, 0x04, 0x04, 0x15, 0x0e, 0x04],
   '>': [0x08, 0x04, 0x02, 0x04, 0x08, 0x00, 0x00],
   '.': [0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x04],
   '/': [0x01, 0x01, 0x02, 0x04, 0x08, 0x10, 0x10],
@@ -125,6 +127,38 @@ export function pickFlightIdScale(
   }
 
   return { scaleX: 1, scaleY: 1 };
+}
+
+/** Wall kiosk — try intermediate scales so hero flight IDs fill a wider column. */
+export function pickWallFlightIdScale(
+  text: string,
+  bandW: number,
+  bandH: number
+): { scaleX: number; scaleY: number } {
+  for (const scale of [2, 1.5, 1]) {
+    const { width, height } = ledScaledTextMetrics(text, scale, scale);
+    if (width <= bandW && height + 2 <= bandH) {
+      return { scaleX: scale, scaleY: scale };
+    }
+  }
+
+  return { scaleX: 1, scaleY: 1 };
+}
+
+/** Telemetry lines — shrink to fit full aircraft names beside speed readouts. */
+export function pickTelemetryScale(
+  text: string,
+  bandW: number,
+  bandH: number
+): { scaleX: number; scaleY: number } {
+  for (const scale of [1, 0.85, 0.75, 0.65]) {
+    const { width, height } = ledScaledTextMetrics(text, scale, scale);
+    if (width <= bandW && height + 1 <= bandH) {
+      return { scaleX: scale, scaleY: scale };
+    }
+  }
+
+  return { scaleX: 0.65, scaleY: 0.65 };
 }
 
 function drawGlyphPixels(

@@ -9,8 +9,82 @@
   ];
   var AIRLINE_IATA = {
     UAL: 'UA', SWA: 'WN', DAL: 'DL', AAL: 'AA', FFT: 'F9',
-    JBU: 'B6', ASA: 'AS', SKW: 'OO', RPA: 'YX', NKS: 'NK',
+    JBU: 'B6', ASA: 'AS',
   };
+  var EXCLUSIVE_MAINLINE = {
+    ENY: 'AAL', PDT: 'AAL', JIA: 'AAL',
+    EDV: 'DAL',
+    QXE: 'ASA',
+    AWI: 'UAL', LOF: 'UAL',
+  };
+  var MAINLINE_FLIGHT_RANGES = [
+    { min: 3420, max: 3499, mainline: 'ASA' },
+    { min: 2920, max: 3109, mainline: 'AAL' },
+    { min: 3520, max: 3569, mainline: 'DAL' },
+    { min: 4439, max: 4858, mainline: 'DAL' },
+    { min: 9783, max: 9784, mainline: 'DAL' },
+    { min: 3805, max: 3854, mainline: 'UAL' },
+    { min: 4085, max: 4714, mainline: 'UAL' },
+    { min: 4860, max: 4868, mainline: 'UAL' },
+    { min: 5176, max: 6060, mainline: 'UAL' },
+    { min: 5660, max: 6189, mainline: 'UAL' },
+    { min: 3100, max: 3399, mainline: 'AAL' },
+    { min: 4000, max: 4420, mainline: 'DAL' },
+    { min: 6070, max: 6999, mainline: 'UAL' },
+  ];
+  var MULTI_PARTNER = { SKW: 1, RPA: 1, ASH: 1, GJS: 1 };
+  var REGIONAL_OPERATORS = {
+    SKW: 1, RPA: 1, ENY: 1, PDT: 1, JIA: 1, EDV: 1, QXE: 1, AWI: 1, ASH: 1, GJS: 1, LOF: 1,
+  };
+  var DEFAULT_MAINLINE = 'UAL';
+
+  function parseFlightNumber(callsign) {
+    var numPart = shared.trim(callsign).slice(3).replace(/\D/g, '');
+    if (!numPart) return null;
+    var n = parseInt(numPart, 10);
+    return isNaN(n) ? null : n;
+  }
+
+  function mainlineFromFlightNumber(flightNumber) {
+    var i;
+    for (i = 0; i < MAINLINE_FLIGHT_RANGES.length; i++) {
+      var range = MAINLINE_FLIGHT_RANGES[i];
+      if (flightNumber >= range.min && flightNumber <= range.max) return range.mainline;
+    }
+    return null;
+  }
+
+  function resolveCallsignPrefix(callsign) {
+    var prefix = shared.trim(callsign).slice(0, 3).toUpperCase();
+    if (EXCLUSIVE_MAINLINE[prefix]) return EXCLUSIVE_MAINLINE[prefix];
+    if (MULTI_PARTNER[prefix] || REGIONAL_OPERATORS[prefix]) {
+      var flightNumber = parseFlightNumber(callsign);
+      if (flightNumber != null) {
+        var mainline = mainlineFromFlightNumber(flightNumber);
+        if (mainline) return mainline;
+      }
+      return DEFAULT_MAINLINE;
+    }
+    return prefix;
+  }
+
+  function airlineIata(callsign) {
+    if (!callsign) return 'XX';
+    var prefix = resolveCallsignPrefix(callsign);
+    return AIRLINE_IATA[prefix] || prefix.slice(0, 2) || 'XX';
+  }
+
+  function displayId(ac) {
+    var raw = shared.trim(ac.callsign);
+    if (!raw) return String(ac.hex || '').toUpperCase();
+    var upper = raw.toUpperCase();
+    if (upper.length <= 3) return upper;
+    var prefix = upper.slice(0, 3);
+    var mainline = resolveCallsignPrefix(upper);
+    var suffix = upper.slice(3);
+    if (REGIONAL_OPERATORS[prefix]) return mainline + '(' + prefix + ')' + suffix;
+    return mainline + suffix;
+  }
 
   var pollTimer = null;
   var lastUpdated = null;
@@ -23,24 +97,14 @@
     if (el) el.textContent = msg;
   }
 
-  function airlineIata(callsign) {
-    if (!callsign) return 'XX';
-    var prefix = shared.trim(callsign).slice(0, 3).toUpperCase();
-    return AIRLINE_IATA[prefix] || prefix.slice(0, 2) || 'XX';
-  }
-
-  function displayId(ac) {
-    if (shared.trim(ac.callsign)) return shared.trim(ac.callsign).toUpperCase();
-    return String(ac.hex || '').toUpperCase();
-  }
-
   function rowHtml(ac, index) {
+    var icao = resolveCallsignPrefix(ac.callsign);
     var iata = airlineIata(ac.callsign);
     return (
       '<div class="fids-row">' +
       '<div class="fids-col-dest">' + DESTINATIONS[index % DESTINATIONS.length] + '</div>' +
       '<div class="fids-col-airline"><div class="fids-logo-wrap">' +
-      '<img src="https://images.kiwi.com/airlines/64/' + iata + '.png" alt="' + iata + '" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\'">' +
+      '<img src="/airline-logos/' + icao + '.png" alt="' + iata + '" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\'">' +
       '<span class="fids-airline-code" style="display:none">' + iata + '</span></div></div>' +
       '<div class="fids-col-flight">' + displayId(ac) + '</div>' +
       '<div class="fids-col-gate">A' + (10 + index % 20) + '</div>' +
@@ -100,7 +164,8 @@
     var params =
       'lat=' + encodeURIComponent(String(settings.lat)) +
       '&lon=' + encodeURIComponent(String(settings.lon)) +
-      '&radiusMi=' + encodeURIComponent(String(settings.radiusMi));
+      '&radiusMi=' + encodeURIComponent(String(settings.radiusMi)) +
+      '&mock=' + encodeURIComponent(settings.useMockData === false ? '0' : '1');
 
     shared.requestJson('/api/flights?' + params, 25000, function (err, data) {
       if (err) {

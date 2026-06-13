@@ -118,7 +118,7 @@ app/
   admin/            # Settings UI
   api/
     flights/        # Server-side data proxy
-    airline-logo/   # Logo proxy for LED canvas
+    airline-logos/  # Approved-logo catalog + approval workflow
 components/
   display/          # Theme layouts + dev theme tester (dev only)
   admin/            # Admin panel

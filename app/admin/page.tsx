@@ -1,16 +1,5 @@
-import type { Metadata } from 'next';
-import AdminPanel from '@/components/admin/AdminPanel';
-import './admin.css';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Command Center',
-};
-
-export default function AdminPage() {
-  return (
-    <div className="admin-shell relative">
-      <div className="admin-horizon" aria-hidden />
-      <AdminPanel />
-    </div>
-  );
+export default function AdminIndexPage() {
+  redirect('/admin/themes');
 }

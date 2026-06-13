@@ -74,8 +74,6 @@ Design at **32×32**. The runtime scales with nearest-neighbor — do not rely o
 | SKW | SkyWest | `#1B365D` | Mountain or wordless mark — **use lime/white** |
 | ENY | Envoy | `#e8edf2` | American Eagle lineage — red/blue |
 | RPA | Republic | `#e8edf2` | Simple monogram or wing |
-| NKS | Spirit | `#FFD100` | Yellow tile — **use black/dark** mark |
-
 Brand hex values are defined in `lib/airlines.ts` if you need exact livery colors.
 
 ---
@@ -136,11 +134,6 @@ Each entry: **recognizable mark**, **palette**, and layout intent.
 
 - **Mark:** Bold “R” or wing stripe — geometric, not script.
 - **Colors:** `#1F3A5F`, `#E8B923` on light gray tile.
-
-### NKS — Spirit Airlines
-
-- **Mark:** Stylized “S” or pin / wing badge — must read on **yellow** `#FFD100` tile.
-- **Colors:** `#000000`, `#FFFFFF` — avoid mid-gray.
 
 ---
 
@@ -207,19 +200,22 @@ Once wired in `lib/airlines.ts`, open the FlightWall theme with a flight from th
 
 ## Integration (for developers)
 
-After assets exist:
+Logos come only from images approved through the in-app tool (Admin → Approve
+logos). There is **no CDN fallback** — the approval workflow writes the
+source-of-truth asset to `public/airline-logos/{ICAO}.png` and records it in
+`approved.json`.
 
-1. Add `public/led-logos/` PNGs per ICAO.
-2. Point FlightWall `logoUrl` at `/led-logos/{ICAO}.png` instead of (or before) the Kiwi proxy in `FlightWallMiniLayout` / `lib/airlines.ts`.
-3. Keep Kiwi URLs for Elegant & Modern gallery (128×128 cards) — those layouts have enough space for raster logos.
-4. Optional: add `ledLogoUrl(brand)` helper that prefers local pixel art, falls back to `/api/airline-logo`.
+Resolution order (`lib/airlines.ts`):
 
-Suggested helper behavior:
+1. In-app native pixel mark (`lib/ledAirlineMarks.ts`) when one exists for the ICAO — best legibility at LED matrix scale.
+2. Approved local logo via `approvedLogoUrl(icao)` (`lib/approvedLogos.ts`) → `/airline-logos/{ICAO}.png`.
+3. Otherwise an IATA text monogram (no remote image is ever fetched).
 
 ```ts
-// Prefer native pixel art; Kiwi CDN is fallback for gallery only
-export function airlineLedLogoUrl(brand: AirlineBrand): string {
-  return `/led-logos/${brand.icao}.png`;
+// Approved local asset only; undefined falls through to the text monogram / LED text fallback.
+export function airlineLedLogoUrl(brand: AirlineBrand): string | undefined {
+  if (LED_NATIVE_MARK_ICAO.has(brand.icao)) return undefined; // native pixel mark
+  return approvedLogoUrl(brand.icao);
 }
 ```
 
@@ -229,7 +225,7 @@ export function airlineLedLogoUrl(brand: AirlineBrand): string {
 
 1. **SWA** — heart with wings (current pain point: reads as “K” or `WN`)
 2. **UAL, DAL, AAL** — high traffic over Denver
-3. **FFT, JBU, ASA, NKS**
+3. **FFT, JBU, ASA**
 4. **SKW, ENY, RPA** — regional operators
 
 ---

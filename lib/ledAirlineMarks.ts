@@ -33,57 +33,101 @@ function buildUpTriangleMark(
   return rows.join('');
 }
 
-/** Southwest heart — 41×41, tilted twin-lobe; red / blue / gold on navy tile */
+/** Trefoil shamrock — three overlapping lobes over a curling stem. */
+function buildShamrockMark(size: number, fill: string): string {
+  const r = size * 0.185;
+  const lobes = [
+    { cx: size * 0.5, cy: size * 0.27, r },
+    { cx: size * 0.27, cy: size * 0.5, r },
+    { cx: size * 0.73, cy: size * 0.5, r },
+  ];
+  const stemTop = size * 0.5;
+  const stemBottom = size * 0.92;
+  const rows: string[] = [];
+
+  for (let y = 0; y < size; y += 1) {
+    let row = '';
+    for (let x = 0; x < size; x += 1) {
+      const px = x + 0.5;
+      const py = y + 0.5;
+      let on = false;
+
+      for (const lobe of lobes) {
+        const dx = px - lobe.cx;
+        const dy = py - lobe.cy;
+        if (dx * dx + dy * dy <= lobe.r * lobe.r) {
+          on = true;
+          break;
+        }
+      }
+
+      if (!on && py >= stemTop && py <= stemBottom) {
+        const t = (py - stemTop) / (stemBottom - stemTop);
+        const stemCx = size * 0.5 + size * 0.1 * t * t;
+        const halfW = (1 - t) * (size * 0.045) + size * 0.022;
+        if (Math.abs(px - stemCx) <= halfW) on = true;
+      }
+
+      row += on ? fill : '.';
+    }
+    rows.push(row);
+  }
+
+  return rows.join('');
+}
+
+/** Southwest striped heart — 41×41, official 2014 mark with silver outline + dividers */
 const SWA_MARK: PixelMark = {
   w: LED_MARK_NATIVE_SIZE,
   h: LED_MARK_NATIVE_SIZE,
   palette: {
     B: '#304CB2',
-    Y: '#FFB612',
-    R: '#C8102E',
+    R: '#D5152E',
+    Y: '#FFBF27',
+    S: '#CCCCCC',
   },
   pixels: [
     '.........................................',
     '.........................................',
-    '..........RRRR........RRRRRR.............',
-    '..........RRRR........RRRRRR.............',
-    '........RRRRRRRRRR..RRRRRRRR.............',
-    '........RRRRRRRRRR..RRRRRRRR.............',
-    '......RRRRRRRRRRRRRRRRRRRRRRRR...........',
-    '......RRRRRRRRRRRRRRRRRRRRRRRR...........',
-    '....RRRRRRRRRRRRRRRRBBBBBBBBBBBBBB.......',
-    '....RRRRRRRRRRRRRRRRBBBBBBBBBBBBBB.......',
-    '....RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBB.....',
-    '....RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBB.....',
-    '..RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBB.....',
-    '..RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBB.....',
-    '..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYY...',
-    '..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYY...',
-    '..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYY.',
-    '..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYY.',
-    '..RRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYY.',
-    '..RRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYY.',
-    '..RRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYY.',
-    '..RRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYY.',
-    '..RRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYYYY.',
-    '..RRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYYYY.',
-    '..RRRRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYY...',
-    '..RRRRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYY...',
-    '..RRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYY...',
-    '..RRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYY...',
-    '....BBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYYYY...',
-    '....BBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYYYY...',
-    '......BBBBBBBBBBBBBBYYYYYYYYYYYYYYYY.....',
-    '......BBBBBBBBBBBBBBYYYYYYYYYYYYYYYY.....',
-    '........BBBBBBBBBBBBYYYYYYYYYYYYYY.......',
-    '........BBBBBBBBBBBBYYYYYYYYYYYYYY.......',
-    '..........BBBBBBBBBBYYYYYYYYYYYY.........',
-    '..........BBBBBBBBBBYYYYYYYYYYYY.........',
-    '............BBBBBBBBYYYYYYYYYY...........',
-    '............BBBBBBBBYYYYYYYYYY...........',
-    '..............BBBBYYYYYYYYYY.............',
-    '..............BBBBYYYYYYYYYY.............',
-    '................YYYYYYYYYY...............',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.............SSSS.......SSSS.............',
+    '...........SSSRSSSS...SSSYYSSS...........',
+    '..........SSRRRRSSSS.SSYYYYYYSS..........',
+    '.........SSRRRRRRSSSSSYYYYYYYYSS.........',
+    '.........SSSRRRRRRSSYYYYYYYYYYYS.........',
+    '........SSBSSRRRRRRSSYYYYYYYYYYSS........',
+    '........SBBBSSRRRRRRSSYYYYYYYYYYS........',
+    '........SBBBBSSRRRRRRSSYYYYYYYYYS........',
+    '........SBBBBBSSRRRRRRSSYYYYYYYYS........',
+    '........SBBBBBBSSRRRRRRSSYYYYYYYS........',
+    '........SBBBBBBBSSRRRRRRSSYYYYYYS........',
+    '........SBBBBBBBBSSRRRRRRSSYYYYYS........',
+    '........SSBBBBBBBBSSRRRRRRSSYYYSS........',
+    '.........SBBBBBBBBBSSRRRRRRSSYYS.........',
+    '.........SSBBBBBBBBBSSRRRRRRSSSS.........',
+    '..........SBBBBBBBBBBSSRRRRRRSS..........',
+    '..........SSBBBBBBBBBBSSRRRRRSS..........',
+    '...........SBBBBBBBBBBBSSRRRRS...........',
+    '...........SSBBBBBBBBBBBSSRRSS...........',
+    '............SSBBBBBBBBBBBSSSS............',
+    '.............SSBBBBBBBBBBBSS.............',
+    '..............SSBBBBBBBBBSS..............',
+    '...............SSBBBBBBBSS...............',
+    '................SSBBBBBSS................',
+    '.................SSSBSSS.................',
+    '...................SSS...................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
   ].join(''),
 };
 
@@ -108,42 +152,42 @@ const AAL_MARK: PixelMark = {
   pixels: [
     '.........................................',
     '.........................................',
-    '.........................................',
-    '.........................................',
-    '...BBBB..................................',
+    '..BBBBBB.................................',
     '...BBBBBBB...............................',
-    '....BBBBBBB..............................',
-    '.....BBBBBBB.............................',
-    '......BBBBBBB............................',
-    '......BBBBBBBB...........................',
+    '...BBBBBBBB..............................',
+    '....BBBBBBBB.............................',
+    '.....BBBBBBBB............................',
+    '.....BBBBBBBBB...........................',
+    '......BBBBBBBBB..........................',
     '.......BBBBBBBB..........................',
     '.......BBBBBBBBB.........................',
-    '........BBBBBBBB.........................',
-    '.........BBBBBBBB........................',
-    '.........BBBBBBBBB.......................',
+    '........BBBBBBBBB........................',
+    '........BBBBBBBBBB.......................',
+    '.........BBBBBBBBBB......................',
     '..........BBBBBBBBB......................',
     '...........BBBBBBBBB.....................',
+    '.............BBBBBBBB....................',
     '.........................................',
-    '....................BBBB.................',
-    '.....................BBBBB...............',
-    '.......................BBBB..............',
-    '.....................RRRRR...............',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.....................RRRR................',
     '....................RRRRRR...............',
     '...................RRRRRRRR..............',
     '..................RRRRRRRRRR.............',
-    '.................RRRRRRRRRRRR............',
-    '................RRRRRRRRRRRRR............',
-    '................RRRRRRRRRRRRRR...........',
-    '...............RRRRRRRRRRRRRRR...........',
-    '...............RRRRRRRRRRRRRRR...........',
-    '..............RRRRRRRRRRRRRRRR...........',
-    '.............RRRRRRRRRRRRRRRRR...........',
-    '.............RRRRRRRRRRRRRRRRRR..........',
-    '............RRRRRRRRRRRRRRRRRRR..........',
-    '............RRRRRRRRRRRRRRRRRRRR.........',
-    '...........RRRRRRRRRRRRRRRRRRRRR.........',
-    '..........RRRRRRRRRRRRRRRRRRRRRR.........',
-    '...........RRRRRRRRRRRRRRRRRRRR..........',
+    '..................RRRRRRRRRR.............',
+    '..................RRRRRRRRRRR............',
+    '..................RRRRRRRRRRRR...........',
+    '..................RRRRRRRRRRRRR..........',
+    '...................RRRRRRRRRRRRR.........',
+    '...................RRRRRRRRRRRRRR........',
+    '....................RRRRRRRRRRRRRR.......',
+    '.....................RRRRRRRRRRRRR.......',
+    '.....................RRRRRRRRRRRRRR......',
+    '......................RRRRRRRRRRRRRR.....',
+    '.......................RRRRRRRRRRRRRR....',
+    '........................RRRRRRRRRRRRRR...',
+    '..........................RRRRRRRRRRRRR..',
     '.........................................',
     '.........................................',
     '.........................................',
@@ -202,11 +246,226 @@ const SKW_MARK: PixelMark = {
   ].join(''),
 };
 
+/** Military — star roundel on olive tile */
+const MIL_MARK: PixelMark = {
+  w: LED_MARK_NATIVE_SIZE,
+  h: LED_MARK_NATIVE_SIZE,
+  palette: { G: '#3D4F2F', D: '#2C1810', Y: '#C5A572' },
+  pixels: [
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '....................D....................',
+    '...............DDDDDYDDDDD...............',
+    '..............DDDGGGYGGGDDD..............',
+    '............DDDGGGGYGYGGGGDDD............',
+    '...........DDGGGGGGYGYGGGGGGDD...........',
+    '..........DDGGGGGGGYGYGGGGGGGDD..........',
+    '..........DGGGGGGGYGGGYGGGGGGGD..........',
+    '.........DDGGGGGGGYGGGYGGGGGGGDD.........',
+    '........DDGGGGGGGGYGGGYGGGGGGGGDD........',
+    '........DDGGGGGGGGGGGGGGGGGGGGGDD........',
+    '.......YYYYYYYYYGGGGGGGGGYYYYYYYYY.......',
+    '........YYGGGGGGGGGGGGGGGGGGGGGYY........',
+    '........DGYYGGGGGGGGGGGGGGGGGYYGD........',
+    '.......DDGGYYGGGGGGGGGGGGGGGYYGGDD.......',
+    '........DGGGGYYGGGGGGGGGGGYYGGGGD........',
+    '........DGGGGGYYGGGGGGGGGYYGGGGGD........',
+    '........DGGGGGGYGGGGGGGGGYGGGGGGD........',
+    '........DDGGGGYGGGGGGGGGGGYGGGGDD........',
+    '........DDGGGGYGGGGGGGGGGGYGGGGDD........',
+    '.........DDGGGYGGGGYYYGGGGYGGGDD.........',
+    '..........DGGYGGGGYYGYYGGGGYGGD..........',
+    '..........DDGYGGYYGGGGGYYGGYGDD..........',
+    '...........DDYGYYGGGGGGGYYGYDD...........',
+    '............YYYGGGGGGGGGGGYYY............',
+    '............YYDDDGGGGGGGDDDYY............',
+    '...............DDDDDDDDDDD...............',
+    '....................D....................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+  ].join(''),
+};
+
+/** Private jet — sleek profile with gold stripe */
+const PVT_MARK: PixelMark = {
+  w: LED_MARK_NATIVE_SIZE,
+  h: LED_MARK_NATIVE_SIZE,
+  palette: { S: '#1E293B', G: '#D4AF37', D: '#64748B' },
+  pixels: [
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........SSSSSSSSS.......................',
+    '.........SSSSSSSSS.......................',
+    '.........SSSSSSSSS.......................',
+    '.........SSSSSSSSS.......................',
+    '.........SSSSS.......S...................',
+    '.........SSSSSSSSSSSSSSSSSSSS............',
+    '.........SSSSSSSSSSSSSSSSSSSSSSS.........',
+    '.........SSSSSSSSSSSSSSSSSSSSSSSSS.......',
+    '.........SSSSSSSSSSSSSSSSSSSSSSSSSSSSS...',
+    '.........SSSSSSSSSSSSSSSSSSSSSSSSSSSSS...',
+    '.........SSSSSSGGGGGGGGGGGGGGSSSSSSSSS...',
+    '.........SSSSSSGGGGGGGGGGGGGGSSSSSSSSS...',
+    '.........SSSSSSSSSSSSSSSSSSSSSSSSS.......',
+    '............SSSSSSSSSSSSSSSSSSS..........',
+    '..............SSSSSDDDDDSSSS.............',
+    '..............SSSSSDDDDDSSSS.............',
+    '...................DDDDD.................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+  ].join(''),
+};
+
+/** General aviation — high-wing single prop */
+const GA_MARK: PixelMark = {
+  w: LED_MARK_NATIVE_SIZE,
+  h: LED_MARK_NATIVE_SIZE,
+  palette: { W: '#FFFFFF', B: '#166534', R: '#DC2626', D: '#64748B' },
+  pixels: [
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '...................RRR...................',
+    '...................RRR...................',
+    '...................RRR...................',
+    '...................RRR...................',
+    '...................RRR...................',
+    '.........................................',
+    '........BBBBBBBBBBBBBBBBBBBBBBBBB........',
+    '........BBBBBBBBBBBBBBBBBBBBBBBBB........',
+    '..................WWWWW..................',
+    '..................WWWWW..................',
+    '..................WWWWW..................',
+    '..................WWWWW..................',
+    '..................WWWWW..................',
+    '...........WWWWWWWWWWWWWWWWWWW...........',
+    '...........WWWWWWWWWWWWWWWWWWWWWWW.......',
+    '...........WWWWWWWWWWWWWWWWWWWWWWW.......',
+    '...........WWWWWWWWWWWWWWWWWWW...........',
+    '..................DDDDD..................',
+    '..................DDDDD..................',
+    '..................DDDDD..................',
+    '..................DDDDD..................',
+    '.................DDDDDDD.................',
+    '.................DDDDDDD.................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+  ].join(''),
+};
+
+/** Notable / VIP jet — gold star on plum disc */
+const VIP_MARK: PixelMark = {
+  w: LED_MARK_NATIVE_SIZE,
+  h: LED_MARK_NATIVE_SIZE,
+  palette: { P: '#581C87', Y: '#FBBF24' },
+  pixels: [
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '....................P....................',
+    '...............PPPPPYPPPPP...............',
+    '.............PPPPPPYYYPPPPPP.............',
+    '............PPPPPPPYYYPPPPPPP............',
+    '...........PPPPPPPPYYYPPPPPPPP...........',
+    '..........PPPPPPPPYYYPYPPPPPPPP..........',
+    '.........PPPPPPPPPYYYPYPPPPPPPPP.........',
+    '........PPPPPPPPPYPYYYPYPPPPPPPPP........',
+    '........PPPPPPPPPYPYPYYYPPPPPPPPP........',
+    '.......PPPPPPPPPYYPYPPYYYPPPPPPPPP.......',
+    '......YYYYYYYYYYYPYPPPPYYYYYYYYYYYY......',
+    '.......YYYYYPPYYPYYPPPPYYPYYYYYYYY.......',
+    '.......PYYYYYYYPPPYPPPYYYYPYYYPYYP.......',
+    '.......PPPYPYYPPPPPPPPPPPPPYPPYPPP.......',
+    '......PPPPPYYPYYPPPPPPPPPPYYYYPPPPP......',
+    '.......PPPPPYYPPYYPPPPPYYPYYYPPPPP.......',
+    '.......PPPPPPPYYYPPPPPPYYYYPPPPPPP.......',
+    '.......PPPPPPPYPPPPPYPPPYPYPPPPPPP.......',
+    '.......PPPPPPYYYPPPYYPPPPYYYPPPPPP.......',
+    '.......PPPPPPYPYPPYPYPPPPYPYPPPPPP.......',
+    '........PPPPPYPYPYPPYPPYYYYYPPPPP........',
+    '........PPPPPYYYYPPPYYYYPYYYYPPPP........',
+    '.........PPPYYYYYPYYPYYPPPYYYPPP.........',
+    '..........PPYYYPYYPPPPPYYPPYYPP..........',
+    '...........PYYYYYPPPPPPPPYYYYP...........',
+    '...........YYYYPPPPPPPPPPPYYYY...........',
+    '...........YYPPPPPPPPPPPPPPPYY...........',
+    '...............PPPPPPPPPPP...............',
+    '....................P....................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+    '.........................................',
+  ].join(''),
+};
+
+/** Aer Lingus — green trefoil shamrock on a light tile */
+const EIN_MARK: PixelMark = {
+  w: LED_MARK_NATIVE_SIZE,
+  h: LED_MARK_NATIVE_SIZE,
+  palette: {
+    G: '#4FB748',
+  },
+  pixels: buildShamrockMark(LED_MARK_NATIVE_SIZE, 'G'),
+};
+
 const MARKS: Record<string, PixelMark> = {
   AAL: AAL_MARK,
+  EIN: EIN_MARK,
   SWA: SWA_MARK,
   DAL: DAL_MARK,
   SKW: SKW_MARK,
+  MIL: MIL_MARK,
+  PVT: PVT_MARK,
+  GA: GA_MARK,
+  VIP: VIP_MARK,
 };
 
 export function hasLedAirlineMark(icao: string): boolean {
@@ -247,7 +506,8 @@ export function drawLedAirlineMark(
   x: number,
   y: number,
   w: number,
-  h: number
+  h: number,
+  options?: { maxScale?: number }
 ): boolean {
   const mark = MARKS[icao];
   if (!mark) return false;
@@ -261,8 +521,9 @@ export function drawLedAirlineMark(
   const availW = Math.max(1, w - margin * 2);
   const availH = Math.max(1, h - margin * 2);
   const fitScale = Math.min(availW / contentW, availH / contentH);
-  /** 1 mark pixel = 1 LED — never upscale (chunky 2× blocks on ~40 px tiles). */
-  const scale = Math.min(1, Math.floor(fitScale)) || 1;
+  const maxScale = options?.maxScale ?? 1;
+  /** 1 mark pixel = 1 LED on wall tiles; previews may upscale to fill the canvas. */
+  const scale = Math.max(1, Math.min(maxScale, Math.floor(fitScale)) || 1);
   const drawW = contentW * scale;
   const drawH = contentH * scale;
   const ox = x + Math.floor((w - drawW) / 2);

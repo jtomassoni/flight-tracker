@@ -1,6 +1,12 @@
 import type { NormalizedAircraft } from '@/types/aircraft';
 import { bearingDeg, headingDelta } from './geo';
+import { isCargoCallsign } from './cargoCarriers';
 import type { AltitudeFilter, DisplayMode, DisplaySettings } from './settings';
+
+/** Climb rate (fpm) marking a still-ascending departure. */
+const TAKEOFF_MIN_CLIMB_FPM = 256;
+/** Ceiling (ft) below which a strong climb reads as a recent takeoff rather than cruise. */
+const TAKEOFF_MAX_ALT_FT = 12000;
 
 function passesAltitudeFilter(ac: NormalizedAircraft, filter: AltitudeFilter): boolean {
   const alt = ac.altitudeFt;
@@ -26,10 +32,16 @@ function passesModeFilter(
 ): boolean {
   if (mode === 'nearby') return true;
 
-  const bearingToCenter = bearingDeg(ac.lat, ac.lon, centerLat, centerLon);
-  const heading = ac.headingDeg;
   const vRate = ac.verticalRateFpm ?? 0;
   const alt = ac.altitudeFt ?? 0;
+
+  // Direction-agnostic: a low, strongly-climbing aircraft just left the ground.
+  if (mode === 'takeoffs') {
+    return ac.altitudeFt != null && alt < TAKEOFF_MAX_ALT_FT && vRate > TAKEOFF_MIN_CLIMB_FPM;
+  }
+
+  const bearingToCenter = bearingDeg(ac.lat, ac.lon, centerLat, centerLon);
+  const heading = ac.headingDeg;
 
   if (heading == null) {
     return mode === 'overflights' && alt > 18000;
@@ -56,6 +68,7 @@ export function applyClientFilters(
 ): NormalizedAircraft[] {
   return aircraft.filter((ac) => {
     if (settings.hideNoCallsign && !ac.callsign?.trim()) return false;
+    if (settings.cargoOnly && !isCargoCallsign(ac.callsign)) return false;
     if (!passesAltitudeFilter(ac, settings.altitudeFilter)) return false;
     if (!passesModeFilter(ac, settings.mode, settings.lat, settings.lon)) return false;
     return true;

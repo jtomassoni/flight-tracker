@@ -1,8 +1,8 @@
 'use client';
 
-import Image from 'next/image';
 import type { DisplayLayoutProps } from '@/types/display';
-import { getAirlineBrand } from '@/lib/airlines';
+import AirlineLogoImage from '@/components/display/shared/AirlineLogoImage';
+import { getAircraftDisplayBrand } from '@/lib/airlines';
 import {
   displayIdentifier,
   formatAltitude,
@@ -26,7 +26,7 @@ export default function FirstClassHeroLayout({
   const { trafficCols: gridClass, viewport } = useLayoutDensity();
   const hero = featured;
   const rest = displayedAircraft.slice(1);
-  const brand = hero ? getAirlineBrand(hero.callsign) : null;
+  const brand = hero ? getAircraftDisplayBrand(hero) : null;
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background font-serif text-foreground">
@@ -58,7 +58,13 @@ export default function FirstClassHeroLayout({
             <div className="flex flex-wrap items-center gap-4 md:gap-6">
               {brand && (
                 <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg border border-accent/30 bg-background/50 md:h-16 md:w-16">
-                  <Image src={brand.logoUrl} alt={brand.name} fill className="object-contain p-2" unoptimized />
+                  <AirlineLogoImage
+                    brand={brand}
+                    size={128}
+                    alt={brand.name}
+                    fill
+                    className="object-contain p-2"
+                  />
                 </div>
               )}
               <div className="min-w-0 flex-1">
@@ -116,7 +122,7 @@ export default function FirstClassHeroLayout({
           <KioskScrollRegion className="min-h-0 flex-1" durationSec={38}>
             <div className={`grid gap-2 ${gridClass}`}>
             {rest.map((ac) => {
-              const b = getAirlineBrand(ac.callsign);
+              const b = getAircraftDisplayBrand(ac);
               const trend = getVerticalTrend(ac.verticalRateFpm);
               return (
                 <div

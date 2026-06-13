@@ -1,9 +1,9 @@
 'use client';
 
-import Image from 'next/image';
 import { useLayoutDensity } from '@/hooks/useLayoutDensity';
 import type { DisplayLayoutProps } from '@/types/display';
-import { airlineLogoUrl, getAirlineBrand, getAirlineTileStyle } from '@/lib/airlines';
+import AirlineLogoImage from '@/components/display/shared/AirlineLogoImage';
+import { getAircraftDisplayBrand, getAirlineTileStyle } from '@/lib/airlines';
 import {
   displayIdentifier,
   formatAltitude,
@@ -54,7 +54,7 @@ export default function AirlineGalleryLayout({
         <FlightListState status={status} count={displayedAircraft.length} />
         <div className={`grid gap-3 sm:gap-4 ${gridClass}`}>
           {visibleAircraft.map((ac) => {
-            const brand = getAirlineBrand(ac.callsign);
+            const brand = getAircraftDisplayBrand(ac);
             const tile = getAirlineTileStyle(brand);
             const id = displayIdentifier(ac);
             const trend = getVerticalTrend(ac.verticalRateFpm);
@@ -91,12 +91,13 @@ export default function AirlineGalleryLayout({
                       border: `1px solid ${tile.borderColor}44`,
                     }}
                   >
-                    <Image
-                      src={airlineLogoUrl(brand, 128)}
+                    <AirlineLogoImage
+                      brand={brand}
+                      size={128}
+                      background={tile.logoBackground}
                       alt={brand.name}
                       fill
                       className="object-contain p-2"
-                      unoptimized
                     />
                   </div>
                   <div className="relative min-w-0">
@@ -118,7 +119,7 @@ export default function AirlineGalleryLayout({
                   </div>
                 </div>
 
-                <div className="gallery-stats-grid grid grid-cols-2 gap-1.5 p-3">
+                <div className="gallery-stats-grid grid flex-1 grid-cols-2 gap-1.5 p-3">
                   {(showGalleryStats
                     ? [
                         ['Distance', formatDistance(ac.distanceMi)],
@@ -130,22 +131,35 @@ export default function AirlineGalleryLayout({
                         ['Distance', formatDistance(ac.distanceMi)],
                         ['Altitude', formatAltitude(ac.altitudeFt)],
                       ]
-                  ).map(([label, value], i) => (
-                    <div
-                      key={label}
-                      className={`gallery-stat rounded-lg px-3 py-2.5 ${i % 2 === 1 ? 'gallery-stat--alt' : ''}`}
-                    >
-                      <p
-                        className="relative text-[10px] font-semibold uppercase tracking-wider"
-                        style={{ color: tile.labelColor }}
+                  ).map(([label, value], i) => {
+                    const spaceIdx = value.lastIndexOf(' ');
+                    const main = spaceIdx > 0 ? value.slice(0, spaceIdx) : value;
+                    const unit = spaceIdx > 0 ? value.slice(spaceIdx + 1) : '';
+                    return (
+                      <div
+                        key={label}
+                        className={`gallery-stat flex h-full flex-col justify-between rounded-lg px-4 py-3 ${i % 2 === 1 ? 'gallery-stat--alt' : ''}`}
                       >
-                        {label}
-                      </p>
-                      <p className="gallery-stat__value relative mt-0.5 font-mono text-lg font-semibold">
-                        {value}
-                      </p>
-                    </div>
-                  ))}
+                        <p
+                          className="relative text-[11px] font-semibold uppercase tracking-wider"
+                          style={{ color: tile.labelColor }}
+                        >
+                          {label}
+                        </p>
+                        <p className="gallery-stat__value relative mt-1 flex items-baseline gap-1 font-mono leading-none">
+                          <span className="text-3xl font-bold sm:text-4xl">{main}</span>
+                          {unit && (
+                            <span
+                              className="text-sm font-semibold uppercase tracking-wide"
+                              style={{ color: tile.labelColor }}
+                            >
+                              {unit}
+                            </span>
+                          )}
+                        </p>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 <div

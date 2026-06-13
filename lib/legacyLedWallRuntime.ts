@@ -1,7 +1,12 @@
 import type { NormalizedAircraft } from '@/types/aircraft';
-import { airlineLedLogoUrl, getAirlineBrand, getAirlineLedWallStyle } from '@/lib/airlines';
+import {
+  airlineLedLogoUrl,
+  getAircraftDisplayBrand,
+  getAirlineLedWallStyle,
+} from '@/lib/airlines';
 import {
   formatLedFlightId,
+  formatLedOperatorTag,
   formatLedRouteHero,
   ledRouteLabel,
   ledTelemetryFields,
@@ -17,15 +22,16 @@ import {
 import type { IpadOrientation } from '@/lib/kiosk';
 
 export function aircraftToLedContent(ac: NormalizedAircraft): LedFlightContent {
-  const brand = getAirlineBrand(ac.callsign);
+  const brand = getAircraftDisplayBrand(ac);
   const wallStyle = getAirlineLedWallStyle(brand);
   const routeLine = ledRouteLabel(ac);
   return {
     airlineName: brand.name,
     flightId: formatLedFlightId(ac, brand),
+    operatorTag: formatLedOperatorTag(ac),
     routeHero: formatLedRouteHero(routeLine),
     telemetry: ledTelemetryFields(ac),
-    logoUrl: airlineLedLogoUrl(brand, 128),
+    logoUrl: airlineLedLogoUrl(brand),
     logoIcao: brand.icao,
     logoFallback: brand.iata,
     logoBackground: wallStyle.logoBackground,

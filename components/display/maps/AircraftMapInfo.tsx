@@ -1,5 +1,6 @@
 import type { NormalizedAircraft } from '@/types/aircraft';
-import { getAirlineBrand } from '@/lib/airlines';
+import { getAircraftDisplayBrand } from '@/lib/airlines';
+import { formatAircraftTypeDisplay } from '@/lib/aircraftTypes';
 import {
   displayIdentifier,
   formatAltitude,
@@ -22,7 +23,7 @@ type AircraftMapInfoProps = {
 };
 
 export default function AircraftMapInfo({ aircraft, pinned }: AircraftMapInfoProps) {
-  const brand = getAirlineBrand(aircraft.callsign);
+  const brand = getAircraftDisplayBrand(aircraft);
   const trend = getVerticalTrend(aircraft.verticalRateFpm);
   const trendColor = TREND_COLOR[trend] ?? '#94a3b8';
 
@@ -69,7 +70,9 @@ export default function AircraftMapInfo({ aircraft, pinned }: AircraftMapInfoPro
 
       {(aircraft.aircraftType || aircraft.squawk) && (
         <p className="mt-2 border-t border-slate-200 pt-2 font-mono text-[10px] text-slate-500">
-          {aircraft.aircraftType && <span>{aircraft.aircraftType.toUpperCase()}</span>}
+          {aircraft.aircraftType && (
+            <span>{formatAircraftTypeDisplay(aircraft.aircraftType)}</span>
+          )}
           {aircraft.aircraftType && aircraft.squawk && <span> · </span>}
           {aircraft.squawk && <span>SQ {aircraft.squawk}</span>}
         </p>

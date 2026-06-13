@@ -1,7 +1,9 @@
 "use strict";
 var LegacyLedWall = (() => {
   var __defProp = Object.defineProperty;
+  var __defProps = Object.defineProperties;
   var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
+  var __getOwnPropDescs = Object.getOwnPropertyDescriptors;
   var __getOwnPropNames = Object.getOwnPropertyNames;
   var __getOwnPropSymbols = Object.getOwnPropertySymbols;
   var __hasOwnProp = Object.prototype.hasOwnProperty;
@@ -18,6 +20,7 @@ var LegacyLedWall = (() => {
       }
     return a;
   };
+  var __spreadProps = (a, b) => __defProps(a, __getOwnPropDescs(b));
   var __export = (target, all) => {
     for (var name in all)
       __defProp(target, name, { get: all[name], enumerable: true });
@@ -41,6 +44,513 @@ var LegacyLedWall = (() => {
     detectOrientation: () => detectOrientation
   });
 
+  // public/airline-logos/approved.json
+  var approved_default = {
+    SWA: {
+      file: "SWA.png",
+      source: "SWA-up1781311064934.png",
+      approvedAt: "2026-06-13T00:37:46.247Z"
+    },
+    AAL: {
+      file: "AAL.png",
+      source: "AAL-up1781311232260.png",
+      approvedAt: "2026-06-13T00:40:41.178Z"
+    },
+    ACA: {
+      file: "ACA.png",
+      source: "ACA-up1781311169105.png",
+      approvedAt: "2026-06-13T00:40:43.309Z"
+    },
+    ASA: {
+      file: "ASA.png",
+      source: "ASA-up1781311260399.png",
+      approvedAt: "2026-06-13T00:41:01.321Z"
+    },
+    DAL: {
+      file: "DAL.png",
+      source: "DAL-up1781311312502.png",
+      approvedAt: "2026-06-13T00:41:53.309Z"
+    },
+    AAY: {
+      file: "AAY.png",
+      source: "AAY-up1781311380611.png",
+      approvedAt: "2026-06-13T00:43:01.582Z"
+    },
+    AFR: {
+      file: "AFR.png",
+      source: "AFR-up1781311408706.png",
+      approvedAt: "2026-06-13T00:43:30.043Z"
+    },
+    AMX: {
+      file: "AMX.png",
+      source: "AMX-up1781311430809.png",
+      approvedAt: "2026-06-13T00:43:51.990Z"
+    },
+    BAW: {
+      file: "BAW.png",
+      source: "BAW-up1781311464385.png",
+      approvedAt: "2026-06-13T00:44:25.282Z"
+    },
+    CAY: {
+      file: "CAY.png",
+      source: "CAY-up1781311483325.png",
+      approvedAt: "2026-06-13T00:44:44.287Z"
+    },
+    CMP: {
+      file: "CMP.png",
+      source: "CMP-up1781311499184.png",
+      approvedAt: "2026-06-13T00:45:00.731Z"
+    },
+    DLH: {
+      file: "DLH.png",
+      source: "DLH-up1781311519654.png",
+      approvedAt: "2026-06-13T00:45:20.663Z"
+    },
+    EDW: {
+      file: "EDW.png",
+      source: "EDW-up1781311534077.png",
+      approvedAt: "2026-06-13T00:45:34.775Z"
+    },
+    EIN: {
+      file: "EIN.png",
+      source: "EIN-up1781311546211.png",
+      approvedAt: "2026-06-13T00:45:47.321Z"
+    },
+    FFT: {
+      file: "FFT.png",
+      source: "FFT-up1781311556290.png",
+      approvedAt: "2026-06-13T00:45:57.109Z"
+    },
+    ICE: {
+      file: "ICE.png",
+      source: "ICE-up1781311568957.png",
+      approvedAt: "2026-06-13T00:46:10.020Z"
+    },
+    JBU: {
+      file: "JBU.png",
+      source: "JBU-up1781311580081.png",
+      approvedAt: "2026-06-13T00:46:20.833Z"
+    },
+    MXY: {
+      file: "MXY.png",
+      source: "MXY-up1781311593428.png",
+      approvedAt: "2026-06-13T00:46:34.259Z"
+    },
+    SCX: {
+      file: "SCX.png",
+      source: "SCX-up1781311604801.png",
+      approvedAt: "2026-06-13T00:46:45.592Z"
+    },
+    THY: {
+      file: "THY.png",
+      source: "THY-up1781311623978.png",
+      approvedAt: "2026-06-13T00:47:05.353Z"
+    },
+    UAL: {
+      file: "UAL.png",
+      source: "UAL-up1781311634268.png",
+      approvedAt: "2026-06-13T00:47:15.278Z"
+    },
+    VIV: {
+      file: "VIV.png",
+      source: "VIV-up1781311645016.png",
+      approvedAt: "2026-06-13T00:47:25.747Z"
+    },
+    VOI: {
+      file: "VOI.png",
+      source: "VOI-up1781311658426.png",
+      approvedAt: "2026-06-13T00:47:39.441Z"
+    },
+    WJA: {
+      file: "WJA.png",
+      source: "WJA-up1781311668416.png",
+      approvedAt: "2026-06-13T00:47:49.102Z"
+    }
+  };
+
+  // lib/approvedLogos.ts
+  var APPROVED_LOGOS = approved_default;
+  function approvedLogoUrl(icao) {
+    const entry = APPROVED_LOGOS[icao == null ? void 0 : icao.trim().toUpperCase()];
+    if (!(entry == null ? void 0 : entry.file)) return void 0;
+    const version = entry.approvedAt ? Date.parse(entry.approvedAt) : NaN;
+    const suffix = Number.isFinite(version) ? `?v=${version}` : "";
+    return `/airline-logos/${entry.file}${suffix}`;
+  }
+
+  // lib/aircraftCategories.ts
+  var CATEGORY_ICAO = {
+    MILITARY: "MIL",
+    BIZJET: "PVT",
+    GA: "GA",
+    VIP: "VIP",
+    CARGO: "CGO"
+  };
+  var FAMOUS_TAILS = {
+    N628TS: { name: "Elon Musk" },
+    N898TS: { name: "Taylor Swift" },
+    N757AF: { name: "Trump Force One" }
+  };
+  var MILITARY_CALLSIGN_PREFIXES = [
+    "RCH",
+    "REACH",
+    "EVAC",
+    "NAVY",
+    "ARMY",
+    "USAF",
+    "USN",
+    "USMC",
+    "SPAR",
+    "CONDO",
+    "DUKE",
+    "IRON",
+    "HKY",
+    "MOXY",
+    "TOPCAT",
+    "TITAN",
+    "VIPER",
+    "JAKE"
+  ];
+  var MILITARY_TYPE_PREFIXES = [
+    "F15",
+    "F16",
+    "F18",
+    "F22",
+    "F35",
+    "A10",
+    "B52",
+    "B1",
+    "B2",
+    "C5",
+    "C17",
+    "C130",
+    "C30J",
+    "KC10",
+    "KC135",
+    "KC46",
+    "E3",
+    "E6",
+    "E8",
+    "P8",
+    "T38",
+    "V22",
+    "H60",
+    "UH60",
+    "CH47",
+    "AH64",
+    "L159",
+    "T6"
+  ];
+  var BIZJET_TYPE_PREFIXES = [
+    "GLF",
+    "GLEX",
+    "G550",
+    "G650",
+    "GL7T",
+    "GL5T",
+    "CL30",
+    "CL35",
+    "CL60",
+    "C25",
+    "C56",
+    "C68",
+    "C750",
+    "E50P",
+    "E55P",
+    "E545",
+    "E550",
+    "FA7X",
+    "FA8X",
+    "FA50",
+    "GALX",
+    "LJ35",
+    "LJ45",
+    "LJ60",
+    "LJ75",
+    "H25B",
+    "PC24",
+    "HDJT",
+    "E35L"
+  ];
+  var GA_TYPE_PREFIXES = [
+    "C150",
+    "C152",
+    "C172",
+    "C182",
+    "C206",
+    "C210",
+    "PA28",
+    "PA32",
+    "PA44",
+    "SR20",
+    "SR22",
+    "DA40",
+    "DA42",
+    "BE33",
+    "BE35",
+    "BE36",
+    "M20P",
+    "RV",
+    "AA5",
+    "P28A",
+    "C77R",
+    "TBM9"
+  ];
+  var GA_EMITTER_CATEGORIES = /* @__PURE__ */ new Set(["A1", "A2"]);
+  var CARGO_CALLSIGN_PREFIXES = [
+    "FDX",
+    // FedEx
+    "UPS",
+    // UPS Airlines
+    "GTI",
+    // Atlas Air
+    "GEC",
+    // Lufthansa Cargo
+    "CLX",
+    // Cargolux
+    "CKS",
+    // Kalitta Air
+    "ABX",
+    // ABX Air
+    "BOX",
+    // AeroLogic
+    "GSS",
+    // Atlas Air / DHL (Global Supply Systems)
+    "BCS",
+    // DHL (European Air Transport)
+    "NCA",
+    // Nippon Cargo
+    "PAC",
+    // Polar Air Cargo
+    "MPH",
+    // Martinair Cargo
+    "ABW",
+    // AirBridgeCargo
+    "WGN",
+    // Western Global
+    "ICL",
+    // CAL Cargo
+    "CAO",
+    // Air China Cargo
+    "CKK"
+    // China Cargo
+  ];
+  var CATEGORY_BRANDS = {
+    [CATEGORY_ICAO.MILITARY]: {
+      name: "Military",
+      icao: CATEGORY_ICAO.MILITARY,
+      iata: "MI",
+      primaryColor: "#3D4F2F",
+      accentColor: "#C5A572",
+      secondaryColor: "#2C1810"
+    },
+    [CATEGORY_ICAO.BIZJET]: {
+      name: "Private Jet",
+      icao: CATEGORY_ICAO.BIZJET,
+      iata: "PJ",
+      primaryColor: "#1E293B",
+      accentColor: "#D4AF37",
+      secondaryColor: "#64748B"
+    },
+    [CATEGORY_ICAO.GA]: {
+      name: "General Aviation",
+      icao: CATEGORY_ICAO.GA,
+      iata: "GA",
+      primaryColor: "#166534",
+      accentColor: "#FFFFFF",
+      secondaryColor: "#DC2626"
+    },
+    [CATEGORY_ICAO.VIP]: {
+      name: "Notable Jet",
+      icao: CATEGORY_ICAO.VIP,
+      iata: "VIP",
+      primaryColor: "#581C87",
+      accentColor: "#FBBF24",
+      secondaryColor: "#FFFFFF"
+    },
+    [CATEGORY_ICAO.CARGO]: {
+      name: "Cargo",
+      icao: CATEGORY_ICAO.CARGO,
+      iata: "CG",
+      primaryColor: "#44403C",
+      accentColor: "#F59E0B",
+      secondaryColor: "#1C1917"
+    }
+  };
+  function normalizeTail(value) {
+    if (!value) return void 0;
+    const normalized = value.trim().toUpperCase().replace(/[^A-Z0-9]/g, "");
+    return normalized.length > 0 ? normalized : void 0;
+  }
+  function aircraftTail(ac) {
+    var _a;
+    return (_a = normalizeTail(ac.registration)) != null ? _a : normalizeTail(ac.callsign);
+  }
+  function lookupFamousTail(ac) {
+    var _a;
+    const tail = aircraftTail(ac);
+    if (!tail) return null;
+    return (_a = FAMOUS_TAILS[tail]) != null ? _a : null;
+  }
+  function matchesPrefix(value, prefixes) {
+    if (!value) return false;
+    const upper = value.trim().toUpperCase();
+    return prefixes.some((prefix) => upper.startsWith(prefix));
+  }
+  function isNNumberCallsign(callsign) {
+    if (!callsign) return false;
+    return /^N[0-9][0-9A-Z]{0,4}[A-Z]$/.test(callsign.trim().toUpperCase());
+  }
+  function isMilitary(ac) {
+    var _a;
+    const callsign = (_a = ac.callsign) == null ? void 0 : _a.trim().toUpperCase();
+    if (callsign) {
+      const prefix = callsign.slice(0, 3);
+      if (MILITARY_CALLSIGN_PREFIXES.includes(prefix)) return true;
+      if (MILITARY_CALLSIGN_PREFIXES.some((mil) => callsign.startsWith(mil))) return true;
+    }
+    return matchesPrefix(ac.aircraftType, MILITARY_TYPE_PREFIXES);
+  }
+  function isCargo(ac) {
+    var _a;
+    const callsign = (_a = ac.callsign) == null ? void 0 : _a.trim().toUpperCase();
+    if (!callsign) return false;
+    const prefix = callsign.slice(0, 3);
+    return CARGO_CALLSIGN_PREFIXES.includes(prefix);
+  }
+  function isBizjet(ac) {
+    if (matchesPrefix(ac.aircraftType, BIZJET_TYPE_PREFIXES)) return true;
+    if (ac.aircraftType === "PC12") return true;
+    if (isNNumberCallsign(ac.callsign) && ac.category === "A3") return true;
+    return false;
+  }
+  function isGeneralAviation(ac) {
+    if (matchesPrefix(ac.aircraftType, GA_TYPE_PREFIXES)) return true;
+    if (ac.category && GA_EMITTER_CATEGORIES.has(ac.category)) return true;
+    if (isNNumberCallsign(ac.callsign) && !isBizjet(ac)) return true;
+    return false;
+  }
+  function classifyAircraft(ac, isAirline) {
+    if (isAirline) return "airline";
+    if (lookupFamousTail(ac)) return "vip";
+    if (isMilitary(ac)) return "military";
+    if (isCargo(ac)) return "cargo";
+    if (isBizjet(ac)) return "bizjet";
+    if (isGeneralAviation(ac)) return "ga";
+    return "unknown";
+  }
+  function getNonAirlineDisplayBrand(ac) {
+    const famous = lookupFamousTail(ac);
+    if (famous) {
+      return __spreadProps(__spreadValues({}, CATEGORY_BRANDS[CATEGORY_ICAO.VIP]), { name: famous.name });
+    }
+    switch (classifyAircraft(ac, false)) {
+      case "military":
+        return CATEGORY_BRANDS[CATEGORY_ICAO.MILITARY];
+      case "cargo":
+        return CATEGORY_BRANDS[CATEGORY_ICAO.CARGO];
+      case "bizjet":
+        return CATEGORY_BRANDS[CATEGORY_ICAO.BIZJET];
+      case "ga":
+        return CATEGORY_BRANDS[CATEGORY_ICAO.GA];
+      default:
+        return {
+          name: "Unknown",
+          icao: "UNK",
+          iata: "XX",
+          primaryColor: "#334155",
+          accentColor: "#94A3B8"
+        };
+    }
+  }
+  function isCategoryBrand(icao) {
+    return icao in CATEGORY_BRANDS;
+  }
+
+  // lib/regionalCarriers.ts
+  var REGIONAL_OPERATORS = {
+    SKW: { name: "SkyWest", icao: "SKW", iata: "OO" },
+    RPA: { name: "Republic", icao: "RPA", iata: "YX" },
+    ENY: { name: "Envoy", icao: "ENY", iata: "MQ" },
+    PDT: { name: "Piedmont", icao: "PDT", iata: "PT" },
+    JIA: { name: "PSA", icao: "JIA", iata: "OH" },
+    EDV: { name: "Endeavor", icao: "EDV", iata: "9E" },
+    QXE: { name: "Horizon", icao: "QXE", iata: "QX" },
+    AWI: { name: "Air Wisconsin", icao: "AWI", iata: "ZW" },
+    ASH: { name: "Mesa", icao: "ASH", iata: "YV" },
+    GJS: { name: "GoJet", icao: "GJS", iata: "G7" },
+    LOF: { name: "Trans States", icao: "LOF", iata: "AX" }
+  };
+  var EXCLUSIVE_MAINLINE = {
+    ENY: "AAL",
+    PDT: "AAL",
+    JIA: "AAL",
+    EDV: "DAL",
+    QXE: "ASA",
+    AWI: "UAL",
+    LOF: "UAL"
+  };
+  var MAINLINE_FLIGHT_RANGES = [
+    { min: 3420, max: 3499, mainline: "ASA" },
+    { min: 2920, max: 3109, mainline: "AAL" },
+    { min: 3520, max: 3569, mainline: "DAL" },
+    { min: 4439, max: 4858, mainline: "DAL" },
+    { min: 9783, max: 9784, mainline: "DAL" },
+    { min: 3805, max: 3854, mainline: "UAL" },
+    { min: 4085, max: 4714, mainline: "UAL" },
+    { min: 4860, max: 4868, mainline: "UAL" },
+    { min: 5176, max: 6060, mainline: "UAL" },
+    { min: 5660, max: 6189, mainline: "UAL" },
+    { min: 3100, max: 3399, mainline: "AAL" },
+    { min: 4e3, max: 4420, mainline: "DAL" },
+    { min: 6070, max: 6999, mainline: "UAL" }
+  ];
+  var MULTI_PARTNER_REGIONALS = /* @__PURE__ */ new Set(["SKW", "RPA", "ASH", "GJS"]);
+  var DEFAULT_MAINLINE = "UAL";
+  function parseCallsignParts(callsign) {
+    const trimmed = callsign.trim().toUpperCase();
+    const prefix = trimmed.slice(0, 3);
+    const numPart = trimmed.slice(3).replace(/\D/g, "");
+    const flightNumber = numPart ? parseInt(numPart, 10) : null;
+    return { prefix, flightNumber: flightNumber != null && !Number.isNaN(flightNumber) ? flightNumber : null };
+  }
+  function mainlineFromFlightNumber(flightNumber) {
+    for (const range of MAINLINE_FLIGHT_RANGES) {
+      if (flightNumber >= range.min && flightNumber <= range.max) {
+        return range.mainline;
+      }
+    }
+    return null;
+  }
+  function getRegionalOperator(callsign) {
+    var _a;
+    if (!callsign) return null;
+    const { prefix } = parseCallsignParts(callsign);
+    return (_a = REGIONAL_OPERATORS[prefix]) != null ? _a : null;
+  }
+  function resolveMainlineIcao(callsign) {
+    var _a;
+    const { prefix, flightNumber } = parseCallsignParts(callsign);
+    const exclusive = EXCLUSIVE_MAINLINE[prefix];
+    if (exclusive) return exclusive;
+    if (MULTI_PARTNER_REGIONALS.has(prefix) && flightNumber != null) {
+      return (_a = mainlineFromFlightNumber(flightNumber)) != null ? _a : DEFAULT_MAINLINE;
+    }
+    if (prefix in REGIONAL_OPERATORS) {
+      return DEFAULT_MAINLINE;
+    }
+    return prefix;
+  }
+  function resolveCallsignPrefix(callsign) {
+    return resolveMainlineIcao(callsign);
+  }
+  var CALLSIGN_BRAND_ALIAS = __spreadProps(__spreadValues({}, EXCLUSIVE_MAINLINE), {
+    SKW: DEFAULT_MAINLINE,
+    RPA: DEFAULT_MAINLINE,
+    ASH: DEFAULT_MAINLINE,
+    GJS: DEFAULT_MAINLINE
+  });
+
   // lib/airlines.ts
   var AIRLINES = {
     UAL: {
@@ -49,17 +559,15 @@ var LegacyLedWall = (() => {
       iata: "UA",
       primaryColor: "#0033A0",
       accentColor: "#FFFFFF",
-      secondaryColor: "#0D8BD9",
-      logoUrl: "https://images.kiwi.com/airlines/128/UA.png"
+      secondaryColor: "#0D8BD9"
     },
     SWA: {
       name: "Southwest",
       icao: "SWA",
       iata: "WN",
       primaryColor: "#304CB2",
-      accentColor: "#FFB612",
-      secondaryColor: "#C8102E",
-      logoUrl: "https://images.kiwi.com/airlines/128/WN.png"
+      accentColor: "#FFBF27",
+      secondaryColor: "#D5152E"
     },
     DAL: {
       name: "Delta",
@@ -67,8 +575,7 @@ var LegacyLedWall = (() => {
       iata: "DL",
       primaryColor: "#003366",
       accentColor: "#C8102E",
-      secondaryColor: "#FFFFFF",
-      logoUrl: "https://images.kiwi.com/airlines/128/DL.png"
+      secondaryColor: "#FFFFFF"
     },
     AAL: {
       name: "American",
@@ -76,8 +583,7 @@ var LegacyLedWall = (() => {
       iata: "AA",
       primaryColor: "#0078D2",
       accentColor: "#C8102E",
-      secondaryColor: "#FFFFFF",
-      logoUrl: "https://images.kiwi.com/airlines/128/AA.png"
+      secondaryColor: "#FFFFFF"
     },
     FFT: {
       name: "Frontier",
@@ -85,8 +591,7 @@ var LegacyLedWall = (() => {
       iata: "F9",
       primaryColor: "#006747",
       accentColor: "#8CD600",
-      secondaryColor: "#FFFFFF",
-      logoUrl: "https://images.kiwi.com/airlines/128/F9.png"
+      secondaryColor: "#FFFFFF"
     },
     JBU: {
       name: "JetBlue",
@@ -94,8 +599,7 @@ var LegacyLedWall = (() => {
       iata: "B6",
       primaryColor: "#003087",
       accentColor: "#FFFFFF",
-      secondaryColor: "#6699CC",
-      logoUrl: "https://images.kiwi.com/airlines/128/B6.png"
+      secondaryColor: "#6699CC"
     },
     ASA: {
       name: "Alaska",
@@ -103,64 +607,158 @@ var LegacyLedWall = (() => {
       iata: "AS",
       primaryColor: "#01426A",
       accentColor: "#48BFE5",
-      secondaryColor: "#95C93D",
-      logoUrl: "https://images.kiwi.com/airlines/128/AS.png"
+      secondaryColor: "#95C93D"
     },
-    SKW: {
-      name: "SkyWest",
-      icao: "SKW",
-      iata: "OO",
-      primaryColor: "#1B365D",
-      accentColor: "#C4D600",
-      secondaryColor: "#0072CE",
-      logoUrl: "https://images.kiwi.com/airlines/128/OO.png"
+    ACA: {
+      name: "Air Canada",
+      icao: "ACA",
+      iata: "AC",
+      primaryColor: "#D22630",
+      accentColor: "#FFFFFF",
+      secondaryColor: "#1A1A1A"
     },
-    ENY: {
-      name: "Envoy",
-      icao: "ENY",
-      iata: "MQ",
-      primaryColor: "#003366",
+    AFR: {
+      name: "Air France",
+      icao: "AFR",
+      iata: "AF",
+      primaryColor: "#002157",
+      accentColor: "#FFFFFF",
+      secondaryColor: "#ED1C24"
+    },
+    BAW: {
+      name: "British Airways",
+      icao: "BAW",
+      iata: "BA",
+      primaryColor: "#075AAA",
+      accentColor: "#FFFFFF",
+      secondaryColor: "#EB2226"
+    },
+    DLH: {
+      name: "Lufthansa",
+      icao: "DLH",
+      iata: "LH",
+      primaryColor: "#05164D",
+      accentColor: "#FFB81C",
+      secondaryColor: "#FFFFFF"
+    },
+    EIN: {
+      name: "Aer Lingus",
+      icao: "EIN",
+      iata: "EI",
+      primaryColor: "#00857D",
+      accentColor: "#FFFFFF",
+      secondaryColor: "#4FB748"
+    },
+    AMX: {
+      name: "Aerom\xE9xico",
+      icao: "AMX",
+      iata: "AM",
+      primaryColor: "#003263",
+      accentColor: "#FFFFFF",
+      secondaryColor: "#E4002B"
+    },
+    AAY: {
+      name: "Allegiant",
+      icao: "AAY",
+      iata: "G4",
+      primaryColor: "#00549F",
+      accentColor: "#F58025",
+      secondaryColor: "#FFFFFF"
+    },
+    MXY: {
+      name: "Breeze Airways",
+      icao: "MXY",
+      iata: "MX",
+      primaryColor: "#14264C",
+      accentColor: "#00A9E0",
+      secondaryColor: "#FFFFFF"
+    },
+    CAY: {
+      name: "Cayman Airways",
+      icao: "CAY",
+      iata: "KX",
+      primaryColor: "#002F6C",
       accentColor: "#C8102E",
-      secondaryColor: "#FFFFFF",
-      logoUrl: "https://images.kiwi.com/airlines/128/MQ.png"
+      secondaryColor: "#FFFFFF"
     },
-    RPA: {
-      name: "Republic",
-      icao: "RPA",
-      iata: "YX",
-      primaryColor: "#1F3A5F",
-      accentColor: "#E8B923",
-      secondaryColor: "#FFFFFF",
-      logoUrl: "https://images.kiwi.com/airlines/128/YX.png"
+    CMP: {
+      name: "Copa Airlines",
+      icao: "CMP",
+      iata: "CM",
+      primaryColor: "#003DA5",
+      accentColor: "#FFFFFF",
+      secondaryColor: "#0C2340"
     },
-    NKS: {
-      name: "Spirit",
-      icao: "NKS",
-      iata: "NK",
-      primaryColor: "#FFD100",
-      accentColor: "#000000",
-      secondaryColor: "#FFFFFF",
-      logoUrl: "https://images.kiwi.com/airlines/128/NK.png"
+    EDW: {
+      name: "Edelweiss",
+      icao: "EDW",
+      iata: "WK",
+      primaryColor: "#C8102E",
+      accentColor: "#FFFFFF",
+      secondaryColor: "#1A1A1A"
+    },
+    ICE: {
+      name: "Icelandair",
+      icao: "ICE",
+      iata: "FI",
+      primaryColor: "#00205B",
+      accentColor: "#FFFFFF",
+      secondaryColor: "#FFC72C"
+    },
+    THY: {
+      name: "Turkish Airlines",
+      icao: "THY",
+      iata: "TK",
+      primaryColor: "#C70A0C",
+      accentColor: "#FFFFFF",
+      secondaryColor: "#1A1A1A"
+    },
+    VIV: {
+      name: "VivaAerobus",
+      icao: "VIV",
+      iata: "VB",
+      primaryColor: "#00A650",
+      accentColor: "#FFFFFF",
+      secondaryColor: "#ED1C24"
+    },
+    VOI: {
+      name: "Volaris",
+      icao: "VOI",
+      iata: "Y4",
+      primaryColor: "#A6228E",
+      accentColor: "#FFFFFF",
+      secondaryColor: "#ED1C24"
+    },
+    WJA: {
+      name: "WestJet",
+      icao: "WJA",
+      iata: "WS",
+      primaryColor: "#0F1E60",
+      accentColor: "#00A0DF",
+      secondaryColor: "#FFFFFF"
+    },
+    SCX: {
+      name: "Sun Country",
+      icao: "SCX",
+      iata: "SY",
+      primaryColor: "#003594",
+      accentColor: "#C8102E",
+      secondaryColor: "#FFFFFF"
     }
   };
-  var FALLBACK_BRAND = {
-    name: "Unknown",
-    icao: "UNK",
-    iata: "XX",
-    primaryColor: "#334155",
-    accentColor: "#94A3B8",
-    logoUrl: "https://images.kiwi.com/airlines/64/XX.png"
-  };
   var AIRLINE_ICAO_LIST = Object.keys(AIRLINES).sort();
+  var CATEGORY_ICAO_LIST = Object.keys(CATEGORY_BRANDS).sort();
+  var LOGO_BRAND_ICAO_LIST = [...AIRLINE_ICAO_LIST, ...CATEGORY_ICAO_LIST];
   function getAirlineFromCallsign(callsign) {
     var _a;
     if (!callsign) return null;
-    const prefix = callsign.trim().slice(0, 3).toUpperCase();
-    return (_a = AIRLINES[prefix]) != null ? _a : null;
+    const resolved = resolveCallsignPrefix(callsign);
+    return (_a = AIRLINES[resolved]) != null ? _a : null;
   }
-  function getAirlineBrand(callsign) {
-    var _a;
-    return (_a = getAirlineFromCallsign(callsign)) != null ? _a : FALLBACK_BRAND;
+  function getAircraftDisplayBrand(ac) {
+    const airline = getAirlineFromCallsign(ac.callsign);
+    if (airline) return airline;
+    return getNonAirlineDisplayBrand(ac);
   }
   function hexToRgb(hex) {
     const normalized = hex.replace("#", "");
@@ -189,10 +787,31 @@ var LegacyLedWall = (() => {
     DAL: ["#C8102E", "#003366"],
     JBU: ["#FFFFFF", "#003087"],
     ASA: ["#FFFFFF", "#01426A"],
+    ACA: ["#FFFFFF", "#D22630"],
+    AFR: ["#FFFFFF", "#002157", "#ED1C24"],
+    BAW: ["#FFFFFF", "#075AAA", "#EB2226"],
+    DLH: ["#FFB81C", "#05164D"],
+    EIN: ["#4FB748"],
+    AMX: ["#FFFFFF", "#003263"],
+    AAY: ["#F58025", "#00549F"],
+    MXY: ["#00A9E0", "#14264C"],
+    CAY: ["#FFFFFF", "#002F6C", "#C8102E"],
+    CMP: ["#FFFFFF", "#003DA5"],
+    EDW: ["#FFFFFF", "#C8102E"],
+    ICE: ["#FFFFFF", "#00205B"],
+    THY: ["#FFFFFF", "#C70A0C"],
+    VIV: ["#FFFFFF", "#00A650", "#ED1C24"],
+    VOI: ["#FFFFFF", "#A83090", "#78A8D8", "#78C048", "#303030"],
+    WJA: ["#FFFFFF", "#0F1E60", "#00A0DF"],
+    SCX: ["#FFFFFF", "#003594"],
     SKW: ["#FFFFFF", "#C4D600"],
-    NKS: ["#000000", "#FFFFFF"]
+    SWA: ["#D5152E", "#FFBF27", "#304CB2", "#CCCCCC"],
+    MIL: ["#C5A572", "#3D4F2F", "#2C1810"],
+    PVT: ["#D4AF37", "#64748B", "#1E293B"],
+    GA: ["#FFFFFF", "#166534", "#DC2626"],
+    VIP: ["#FBBF24", "#581C87", "#FFFFFF"]
   };
-  var LED_LOGO_NO_TILE_BORDER = /* @__PURE__ */ new Set(["JBU", "SWA"]);
+  var LED_LOGO_NO_TILE_BORDER = /* @__PURE__ */ new Set(["JBU", "SWA", "MIL", "PVT", "GA", "VIP"]);
   function airlineLedLogoPalette(brand, logoBackground) {
     const override = LED_LOGO_PALETTE[brand.icao];
     if (override) return override;
@@ -211,7 +830,7 @@ var LegacyLedWall = (() => {
     }
     return palette;
   }
-  var COLOR_LOGO_TILE = /* @__PURE__ */ new Set(["AAL", "FFT", "ASA"]);
+  var COLOR_LOGO_TILE = /* @__PURE__ */ new Set(["AAL", "FFT", "ASA", "EIN"]);
   function getAirlineLedWallStyle(brand) {
     if (COLOR_LOGO_TILE.has(brand.icao)) {
       const logoBackground2 = "#ffffff";
@@ -223,8 +842,9 @@ var LegacyLedWall = (() => {
         logoTileBorder: !LED_LOGO_NO_TILE_BORDER.has(brand.icao)
       };
     }
-    const onDarkLogo = ["UAL", "DAL", "SKW", "JBU", "SWA"].includes(brand.icao);
-    const logoBackground = onDarkLogo ? brand.primaryColor : "#e8edf2";
+    const onBlackLogo = ["VOI"].includes(brand.icao);
+    const onDarkLogo = ["UAL", "DAL", "JBU", "SWA", "MIL", "PVT", "VIP"].includes(brand.icao);
+    const logoBackground = onBlackLogo ? "#070707" : onDarkLogo ? brand.primaryColor : "#e8edf2";
     return {
       logoBackground,
       logoBorder: mixHex(brand.primaryColor, "#000000", 0.25),
@@ -233,13 +853,123 @@ var LegacyLedWall = (() => {
       logoTileBorder: !LED_LOGO_NO_TILE_BORDER.has(brand.icao)
     };
   }
-  function airlineLogoCanvasUrl(brand, size = 128) {
-    return `/api/airline-logo?iata=${encodeURIComponent(brand.iata)}&size=${size}`;
+  function airlineLogoCanvasUrl(brand) {
+    return approvedLogoUrl(brand.icao);
   }
-  var LED_NATIVE_MARK_ICAO = /* @__PURE__ */ new Set(["AAL", "SWA", "DAL", "SKW"]);
-  function airlineLedLogoUrl(brand, size = 128) {
+  var LED_NATIVE_MARK_ICAO = /* @__PURE__ */ new Set([
+    "AAL",
+    "EIN",
+    "SWA",
+    "DAL",
+    "MIL",
+    "PVT",
+    "GA",
+    "VIP"
+  ]);
+  function airlineLedLogoUrl(brand) {
     if (LED_NATIVE_MARK_ICAO.has(brand.icao)) return void 0;
-    return airlineLogoCanvasUrl(brand, size);
+    return airlineLogoCanvasUrl(brand);
+  }
+
+  // lib/aircraftTypes.ts
+  var ICAO_TYPE_NAMES = {
+    // Boeing 737 family
+    B37M: "737 MAX 7",
+    B38M: "737 MAX 8",
+    B39M: "737 MAX 9",
+    B3XM: "737 MAX 10",
+    B737: "737",
+    B738: "737-800",
+    B739: "737-900",
+    B734: "737-400",
+    B735: "737-500",
+    B736: "737-600",
+    B73G: "737-700",
+    B752: "757-200",
+    B753: "757-300",
+    B762: "767-200",
+    B763: "767-300",
+    B764: "767-400",
+    B772: "777-200",
+    B77L: "777-200LR",
+    B77W: "777-300ER",
+    B788: "787-8",
+    B789: "787-9",
+    B78X: "787-10",
+    B748: "747-8",
+    B744: "747-400",
+    // Airbus A320 family
+    A318: "A318",
+    A319: "A319",
+    A320: "A320",
+    A321: "A321",
+    A19N: "A319neo",
+    A20N: "A320neo",
+    A21N: "A321neo",
+    A332: "A330-200",
+    A333: "A330-300",
+    A339: "A330-900",
+    A359: "A350-900",
+    A35K: "A350-1000",
+    A388: "A380",
+    // Embraer / regional jets
+    E170: "E170",
+    E175: "E175",
+    E75L: "E175",
+    E75S: "E175",
+    E190: "E190",
+    E195: "E195",
+    E290: "E190-E2",
+    E295: "E195-E2",
+    CRJ2: "CRJ-200",
+    CRJ7: "CRJ-700",
+    CRJ9: "CRJ-900",
+    BCS1: "A220-100",
+    BCS3: "A220-300",
+    // GA / biz (common near metro areas)
+    C172: "C172",
+    C182: "C182",
+    C208: "Caravan",
+    PC12: "PC-12",
+    SR22: "SR22",
+    GLF4: "Gulfstream IV",
+    GLF5: "Gulfstream V",
+    CL35: "Challenger 350"
+  };
+  var BOARD_TYPE_NAMES = {
+    B37M: "737-MAX7",
+    B38M: "737-MAX8",
+    B39M: "737-MAX9",
+    B3XM: "737MAX10",
+    B77L: "777LR",
+    B77W: "777ER",
+    A35K: "A350-1K",
+    GLF4: "Gulf IV",
+    GLF5: "Gulf V",
+    CL35: "CL350"
+  };
+  function normalizeTypeCode(raw) {
+    return raw.trim().toUpperCase();
+  }
+  function formatAircraftTypeDisplay(raw) {
+    if (!(raw == null ? void 0 : raw.trim())) return "Unknown";
+    const trimmed = raw.trim();
+    const code = normalizeTypeCode(trimmed);
+    const mapped = ICAO_TYPE_NAMES[code];
+    if (mapped) return mapped;
+    if (/^boeing\s+/i.test(trimmed)) {
+      return trimmed.replace(/^boeing\s+/i, "").trim();
+    }
+    if (/^airbus\s+/i.test(trimmed)) {
+      return `A${trimmed.replace(/^airbus\s+/i, "").trim()}`;
+    }
+    return trimmed;
+  }
+  function formatAircraftTypeBoard(raw) {
+    var _a;
+    if (!(raw == null ? void 0 : raw.trim())) return "Unknown";
+    const code = normalizeTypeCode(raw.trim());
+    return (_a = BOARD_TYPE_NAMES[code]) != null ? _a : formatAircraftTypeDisplay(raw);
   }
 
   // lib/ledFlightWall.ts
@@ -270,28 +1000,54 @@ var LegacyLedWall = (() => {
     return `${origin != null ? origin : "???"}\u2192${dest != null ? dest : "???"}`;
   }
   function formatLedFlightId(ac, brand) {
-    var _a, _b;
-    const raw = ((_a = ac.flightNumber) == null ? void 0 : _a.trim()) || ((_b = ac.callsign) == null ? void 0 : _b.trim().slice(3)) || "";
+    var _a, _b, _c, _d;
+    if (isCategoryBrand(brand.icao)) {
+      return ((_a = ac.registration) == null ? void 0 : _a.trim()) || ((_b = ac.callsign) == null ? void 0 : _b.trim()) || ac.hex.toUpperCase();
+    }
+    const raw = ((_c = ac.flightNumber) == null ? void 0 : _c.trim()) || ((_d = ac.callsign) == null ? void 0 : _d.trim().slice(3)) || "";
     const digits = raw.replace(/\D/g, "");
     const num = digits || raw || "----";
     return `${brand.iata} ${num}`;
   }
+  function formatLedOperatorTag(ac) {
+    var _a, _b;
+    return (_b = (_a = getRegionalOperator(ac.callsign)) == null ? void 0 : _a.icao) != null ? _b : "";
+  }
   function formatLedAircraftType(ac) {
     var _a, _b;
     const raw = ((_a = ac.aircraftType) == null ? void 0 : _a.trim()) || ((_b = ac.category) == null ? void 0 : _b.trim());
-    if (!raw) return "Unknown";
-    return raw.replace(/^Boeing\s+/i, "B").replace(/^Airbus\s+/i, "A");
+    return formatAircraftTypeBoard(raw);
   }
   function formatLedSpeedMph(groundSpeedKt) {
     if (groundSpeedKt == null) return "--- mph";
     const mph = Math.round(groundSpeedKt * 1.15078);
     return `${mph} mph`;
   }
+  var LED_CARDINALS = ["NORTH", "NE", "EAST", "SE", "SOUTH", "SW", "WEST", "NW"];
+  function formatLedHeading(headingDeg) {
+    var _a;
+    if (headingDeg == null || Number.isNaN(headingDeg)) return "";
+    const normalized = (headingDeg % 360 + 360) % 360;
+    return (_a = LED_CARDINALS[Math.round(normalized / 45) % 8]) != null ? _a : "";
+  }
+  var LED_VERTICAL_THRESHOLD = 250;
+  function formatLedVerticalArrow(verticalRateFpm) {
+    if (verticalRateFpm == null || Number.isNaN(verticalRateFpm)) return "";
+    if (verticalRateFpm > LED_VERTICAL_THRESHOLD) return "\u2191";
+    if (verticalRateFpm < -LED_VERTICAL_THRESHOLD) return "\u2193";
+    return "";
+  }
   function ledTelemetryFields(ac) {
-    return [
+    const fields = [
       { value: formatLedAircraftType(ac) },
       { value: formatLedSpeedMph(ac.groundSpeedKt) }
     ];
+    const motion = [
+      formatLedVerticalArrow(ac.verticalRateFpm),
+      formatLedHeading(ac.headingDeg)
+    ].filter(Boolean).join(" ");
+    if (motion) fields.push({ value: motion });
+    return fields;
   }
 
   // lib/ledFont.ts
@@ -303,6 +1059,8 @@ var LegacyLedWall = (() => {
     "\xB7": [0, 0, 4, 0, 0, 0, 0],
     "\xB0": [6, 9, 9, 6, 0, 0, 0],
     "\u2192": [8, 4, 2, 31, 2, 4, 8],
+    "\u2191": [4, 14, 21, 4, 4, 4, 4],
+    "\u2193": [4, 4, 4, 4, 21, 14, 4],
     ">": [8, 4, 2, 4, 8, 0, 0],
     ".": [0, 0, 0, 0, 0, 4, 4],
     "/": [1, 1, 2, 4, 8, 16, 16],
@@ -350,9 +1108,6 @@ var LegacyLedWall = (() => {
     gapX: 2,
     gapY: 2
   };
-  function ledCharCellW() {
-    return LED_FONT.glyphW + LED_FONT.gapX;
-  }
   function ledCharCellH() {
     return LED_FONT.glyphH + LED_FONT.gapY;
   }
@@ -360,18 +1115,6 @@ var LegacyLedWall = (() => {
     var _a;
     const key = ch.toUpperCase();
     return (_a = GLYPHS[key]) != null ? _a : GLYPHS[" "];
-  }
-  function measureLedText(text) {
-    if (!text) return 0;
-    return text.length * ledCharCellW() - LED_FONT.gapX;
-  }
-  function truncateLedText(text, maxDots) {
-    if (maxDots <= 0 || !text) return "";
-    const cell = ledCharCellW();
-    const maxChars = Math.max(1, Math.floor((maxDots + LED_FONT.gapX) / cell));
-    if (text.length <= maxChars) return text;
-    if (maxChars <= 1) return text.slice(0, 1);
-    return `${text.slice(0, maxChars - 1)}.`;
   }
   function ledScaledCellW(scaleX) {
     return scaleX * LED_FONT.glyphW + LED_FONT.gapX;
@@ -399,6 +1142,24 @@ var LegacyLedWall = (() => {
       }
     }
     return { scaleX: 1, scaleY: 1 };
+  }
+  function pickWallFlightIdScale(text, bandW, bandH) {
+    for (const scale of [2, 1.5, 1]) {
+      const { width, height } = ledScaledTextMetrics(text, scale, scale);
+      if (width <= bandW && height + 2 <= bandH) {
+        return { scaleX: scale, scaleY: scale };
+      }
+    }
+    return { scaleX: 1, scaleY: 1 };
+  }
+  function pickTelemetryScale(text, bandW, bandH) {
+    for (const scale of [1, 0.85, 0.75, 0.65]) {
+      const { width, height } = ledScaledTextMetrics(text, scale, scale);
+      if (width <= bandW && height + 1 <= bandH) {
+        return { scaleX: scale, scaleY: scale };
+      }
+    }
+    return { scaleX: 0.65, scaleY: 0.65 };
   }
   function drawGlyphPixels(ctx, glyph, ox, y, scaleX, scaleY, bold) {
     var _a;
@@ -435,12 +1196,6 @@ var LegacyLedWall = (() => {
   }
   function drawLedText(ctx, text, x, y, color, maxDots, bold = false) {
     drawLedTextScaled(ctx, text, x, y, color, maxDots, 1, 1, bold);
-  }
-  function drawLedTextRight(ctx, text, rightX, y, color, maxDots, bold = false) {
-    const display = truncateLedText(text, maxDots);
-    const width = measureLedText(display);
-    const x = Math.max(0, rightX - width);
-    drawLedText(ctx, display, x, y, color, rightX - x + 1, bold);
   }
   var COMPACT_GLYPHS = {
     " ": [0, 0, 0, 0, 0],
@@ -563,56 +1318,93 @@ var LegacyLedWall = (() => {
     }
     return rows.join("");
   }
+  function buildShamrockMark(size, fill) {
+    const r = size * 0.185;
+    const lobes = [
+      { cx: size * 0.5, cy: size * 0.27, r },
+      { cx: size * 0.27, cy: size * 0.5, r },
+      { cx: size * 0.73, cy: size * 0.5, r }
+    ];
+    const stemTop = size * 0.5;
+    const stemBottom = size * 0.92;
+    const rows = [];
+    for (let y = 0; y < size; y += 1) {
+      let row = "";
+      for (let x = 0; x < size; x += 1) {
+        const px = x + 0.5;
+        const py = y + 0.5;
+        let on = false;
+        for (const lobe of lobes) {
+          const dx = px - lobe.cx;
+          const dy = py - lobe.cy;
+          if (dx * dx + dy * dy <= lobe.r * lobe.r) {
+            on = true;
+            break;
+          }
+        }
+        if (!on && py >= stemTop && py <= stemBottom) {
+          const t = (py - stemTop) / (stemBottom - stemTop);
+          const stemCx = size * 0.5 + size * 0.1 * t * t;
+          const halfW = (1 - t) * (size * 0.045) + size * 0.022;
+          if (Math.abs(px - stemCx) <= halfW) on = true;
+        }
+        row += on ? fill : ".";
+      }
+      rows.push(row);
+    }
+    return rows.join("");
+  }
   var SWA_MARK = {
     w: LED_MARK_NATIVE_SIZE,
     h: LED_MARK_NATIVE_SIZE,
     palette: {
       B: "#304CB2",
-      Y: "#FFB612",
-      R: "#C8102E"
+      R: "#D5152E",
+      Y: "#FFBF27",
+      S: "#CCCCCC"
     },
     pixels: [
       ".........................................",
       ".........................................",
-      "..........RRRR........RRRRRR.............",
-      "..........RRRR........RRRRRR.............",
-      "........RRRRRRRRRR..RRRRRRRR.............",
-      "........RRRRRRRRRR..RRRRRRRR.............",
-      "......RRRRRRRRRRRRRRRRRRRRRRRR...........",
-      "......RRRRRRRRRRRRRRRRRRRRRRRR...........",
-      "....RRRRRRRRRRRRRRRRBBBBBBBBBBBBBB.......",
-      "....RRRRRRRRRRRRRRRRBBBBBBBBBBBBBB.......",
-      "....RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBB.....",
-      "....RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBB.....",
-      "..RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBB.....",
-      "..RRRRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBB.....",
-      "..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYY...",
-      "..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYY...",
-      "..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYY.",
-      "..RRRRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYY.",
-      "..RRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYY.",
-      "..RRRRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYY.",
-      "..RRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYY.",
-      "..RRRRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYY.",
-      "..RRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYYYY.",
-      "..RRRRRRBBBBBBBBBBBBBBBBBBBBBBYYYYYYYYYY.",
-      "..RRRRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYY...",
-      "..RRRRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYY...",
-      "..RRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYY...",
-      "..RRBBBBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYY...",
-      "....BBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYYYY...",
-      "....BBBBBBBBBBBBBBBBBBYYYYYYYYYYYYYYYY...",
-      "......BBBBBBBBBBBBBBYYYYYYYYYYYYYYYY.....",
-      "......BBBBBBBBBBBBBBYYYYYYYYYYYYYYYY.....",
-      "........BBBBBBBBBBBBYYYYYYYYYYYYYY.......",
-      "........BBBBBBBBBBBBYYYYYYYYYYYYYY.......",
-      "..........BBBBBBBBBBYYYYYYYYYYYY.........",
-      "..........BBBBBBBBBBYYYYYYYYYYYY.........",
-      "............BBBBBBBBYYYYYYYYYY...........",
-      "............BBBBBBBBYYYYYYYYYY...........",
-      "..............BBBBYYYYYYYYYY.............",
-      "..............BBBBYYYYYYYYYY.............",
-      "................YYYYYYYYYY..............."
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".............SSSS.......SSSS.............",
+      "...........SSSRSSSS...SSSYYSSS...........",
+      "..........SSRRRRSSSS.SSYYYYYYSS..........",
+      ".........SSRRRRRRSSSSSYYYYYYYYSS.........",
+      ".........SSSRRRRRRSSYYYYYYYYYYYS.........",
+      "........SSBSSRRRRRRSSYYYYYYYYYYSS........",
+      "........SBBBSSRRRRRRSSYYYYYYYYYYS........",
+      "........SBBBBSSRRRRRRSSYYYYYYYYYS........",
+      "........SBBBBBSSRRRRRRSSYYYYYYYYS........",
+      "........SBBBBBBSSRRRRRRSSYYYYYYYS........",
+      "........SBBBBBBBSSRRRRRRSSYYYYYYS........",
+      "........SBBBBBBBBSSRRRRRRSSYYYYYS........",
+      "........SSBBBBBBBBSSRRRRRRSSYYYSS........",
+      ".........SBBBBBBBBBSSRRRRRRSSYYS.........",
+      ".........SSBBBBBBBBBSSRRRRRRSSSS.........",
+      "..........SBBBBBBBBBBSSRRRRRRSS..........",
+      "..........SSBBBBBBBBBBSSRRRRRSS..........",
+      "...........SBBBBBBBBBBBSSRRRRS...........",
+      "...........SSBBBBBBBBBBBSSRRSS...........",
+      "............SSBBBBBBBBBBBSSSS............",
+      ".............SSBBBBBBBBBBBSS.............",
+      "..............SSBBBBBBBBBSS..............",
+      "...............SSBBBBBBBSS...............",
+      "................SSBBBBBSS................",
+      ".................SSSBSSS.................",
+      "...................SSS...................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      "........................................."
     ].join("")
   };
   var DAL_MARK = {
@@ -633,42 +1425,42 @@ var LegacyLedWall = (() => {
     pixels: [
       ".........................................",
       ".........................................",
-      ".........................................",
-      ".........................................",
-      "...BBBB..................................",
+      "..BBBBBB.................................",
       "...BBBBBBB...............................",
-      "....BBBBBBB..............................",
-      ".....BBBBBBB.............................",
-      "......BBBBBBB............................",
-      "......BBBBBBBB...........................",
+      "...BBBBBBBB..............................",
+      "....BBBBBBBB.............................",
+      ".....BBBBBBBB............................",
+      ".....BBBBBBBBB...........................",
+      "......BBBBBBBBB..........................",
       ".......BBBBBBBB..........................",
       ".......BBBBBBBBB.........................",
-      "........BBBBBBBB.........................",
-      ".........BBBBBBBB........................",
-      ".........BBBBBBBBB.......................",
+      "........BBBBBBBBB........................",
+      "........BBBBBBBBBB.......................",
+      ".........BBBBBBBBBB......................",
       "..........BBBBBBBBB......................",
       "...........BBBBBBBBB.....................",
+      ".............BBBBBBBB....................",
       ".........................................",
-      "....................BBBB.................",
-      ".....................BBBBB...............",
-      ".......................BBBB..............",
-      ".....................RRRRR...............",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".....................RRRR................",
       "....................RRRRRR...............",
       "...................RRRRRRRR..............",
       "..................RRRRRRRRRR.............",
-      ".................RRRRRRRRRRRR............",
-      "................RRRRRRRRRRRRR............",
-      "................RRRRRRRRRRRRRR...........",
-      "...............RRRRRRRRRRRRRRR...........",
-      "...............RRRRRRRRRRRRRRR...........",
-      "..............RRRRRRRRRRRRRRRR...........",
-      ".............RRRRRRRRRRRRRRRRR...........",
-      ".............RRRRRRRRRRRRRRRRRR..........",
-      "............RRRRRRRRRRRRRRRRRRR..........",
-      "............RRRRRRRRRRRRRRRRRRRR.........",
-      "...........RRRRRRRRRRRRRRRRRRRRR.........",
-      "..........RRRRRRRRRRRRRRRRRRRRRR.........",
-      "...........RRRRRRRRRRRRRRRRRRRR..........",
+      "..................RRRRRRRRRR.............",
+      "..................RRRRRRRRRRR............",
+      "..................RRRRRRRRRRRR...........",
+      "..................RRRRRRRRRRRRR..........",
+      "...................RRRRRRRRRRRRR.........",
+      "...................RRRRRRRRRRRRRR........",
+      "....................RRRRRRRRRRRRRR.......",
+      ".....................RRRRRRRRRRRRR.......",
+      ".....................RRRRRRRRRRRRRR......",
+      "......................RRRRRRRRRRRRRR.....",
+      ".......................RRRRRRRRRRRRRR....",
+      "........................RRRRRRRRRRRRRR...",
+      "..........................RRRRRRRRRRRRR..",
       ".........................................",
       ".........................................",
       "........................................."
@@ -724,11 +1516,216 @@ var LegacyLedWall = (() => {
       "........................................."
     ].join("")
   };
+  var MIL_MARK = {
+    w: LED_MARK_NATIVE_SIZE,
+    h: LED_MARK_NATIVE_SIZE,
+    palette: { G: "#3D4F2F", D: "#2C1810", Y: "#C5A572" },
+    pixels: [
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      "....................D....................",
+      "...............DDDDDYDDDDD...............",
+      "..............DDDGGGYGGGDDD..............",
+      "............DDDGGGGYGYGGGGDDD............",
+      "...........DDGGGGGGYGYGGGGGGDD...........",
+      "..........DDGGGGGGGYGYGGGGGGGDD..........",
+      "..........DGGGGGGGYGGGYGGGGGGGD..........",
+      ".........DDGGGGGGGYGGGYGGGGGGGDD.........",
+      "........DDGGGGGGGGYGGGYGGGGGGGGDD........",
+      "........DDGGGGGGGGGGGGGGGGGGGGGDD........",
+      ".......YYYYYYYYYGGGGGGGGGYYYYYYYYY.......",
+      "........YYGGGGGGGGGGGGGGGGGGGGGYY........",
+      "........DGYYGGGGGGGGGGGGGGGGGYYGD........",
+      ".......DDGGYYGGGGGGGGGGGGGGGYYGGDD.......",
+      "........DGGGGYYGGGGGGGGGGGYYGGGGD........",
+      "........DGGGGGYYGGGGGGGGGYYGGGGGD........",
+      "........DGGGGGGYGGGGGGGGGYGGGGGGD........",
+      "........DDGGGGYGGGGGGGGGGGYGGGGDD........",
+      "........DDGGGGYGGGGGGGGGGGYGGGGDD........",
+      ".........DDGGGYGGGGYYYGGGGYGGGDD.........",
+      "..........DGGYGGGGYYGYYGGGGYGGD..........",
+      "..........DDGYGGYYGGGGGYYGGYGDD..........",
+      "...........DDYGYYGGGGGGGYYGYDD...........",
+      "............YYYGGGGGGGGGGGYYY............",
+      "............YYDDDGGGGGGGDDDYY............",
+      "...............DDDDDDDDDDD...............",
+      "....................D....................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      "........................................."
+    ].join("")
+  };
+  var PVT_MARK = {
+    w: LED_MARK_NATIVE_SIZE,
+    h: LED_MARK_NATIVE_SIZE,
+    palette: { S: "#1E293B", G: "#D4AF37", D: "#64748B" },
+    pixels: [
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........SSSSSSSSS.......................",
+      ".........SSSSSSSSS.......................",
+      ".........SSSSSSSSS.......................",
+      ".........SSSSSSSSS.......................",
+      ".........SSSSS.......S...................",
+      ".........SSSSSSSSSSSSSSSSSSSS............",
+      ".........SSSSSSSSSSSSSSSSSSSSSSS.........",
+      ".........SSSSSSSSSSSSSSSSSSSSSSSSS.......",
+      ".........SSSSSSSSSSSSSSSSSSSSSSSSSSSSS...",
+      ".........SSSSSSSSSSSSSSSSSSSSSSSSSSSSS...",
+      ".........SSSSSSGGGGGGGGGGGGGGSSSSSSSSS...",
+      ".........SSSSSSGGGGGGGGGGGGGGSSSSSSSSS...",
+      ".........SSSSSSSSSSSSSSSSSSSSSSSSS.......",
+      "............SSSSSSSSSSSSSSSSSSS..........",
+      "..............SSSSSDDDDDSSSS.............",
+      "..............SSSSSDDDDDSSSS.............",
+      "...................DDDDD.................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      "........................................."
+    ].join("")
+  };
+  var GA_MARK = {
+    w: LED_MARK_NATIVE_SIZE,
+    h: LED_MARK_NATIVE_SIZE,
+    palette: { W: "#FFFFFF", B: "#166534", R: "#DC2626", D: "#64748B" },
+    pixels: [
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      "...................RRR...................",
+      "...................RRR...................",
+      "...................RRR...................",
+      "...................RRR...................",
+      "...................RRR...................",
+      ".........................................",
+      "........BBBBBBBBBBBBBBBBBBBBBBBBB........",
+      "........BBBBBBBBBBBBBBBBBBBBBBBBB........",
+      "..................WWWWW..................",
+      "..................WWWWW..................",
+      "..................WWWWW..................",
+      "..................WWWWW..................",
+      "..................WWWWW..................",
+      "...........WWWWWWWWWWWWWWWWWWW...........",
+      "...........WWWWWWWWWWWWWWWWWWWWWWW.......",
+      "...........WWWWWWWWWWWWWWWWWWWWWWW.......",
+      "...........WWWWWWWWWWWWWWWWWWW...........",
+      "..................DDDDD..................",
+      "..................DDDDD..................",
+      "..................DDDDD..................",
+      "..................DDDDD..................",
+      ".................DDDDDDD.................",
+      ".................DDDDDDD.................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      "........................................."
+    ].join("")
+  };
+  var VIP_MARK = {
+    w: LED_MARK_NATIVE_SIZE,
+    h: LED_MARK_NATIVE_SIZE,
+    palette: { P: "#581C87", Y: "#FBBF24" },
+    pixels: [
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      "....................P....................",
+      "...............PPPPPYPPPPP...............",
+      ".............PPPPPPYYYPPPPPP.............",
+      "............PPPPPPPYYYPPPPPPP............",
+      "...........PPPPPPPPYYYPPPPPPPP...........",
+      "..........PPPPPPPPYYYPYPPPPPPPP..........",
+      ".........PPPPPPPPPYYYPYPPPPPPPPP.........",
+      "........PPPPPPPPPYPYYYPYPPPPPPPPP........",
+      "........PPPPPPPPPYPYPYYYPPPPPPPPP........",
+      ".......PPPPPPPPPYYPYPPYYYPPPPPPPPP.......",
+      "......YYYYYYYYYYYPYPPPPYYYYYYYYYYYY......",
+      ".......YYYYYPPYYPYYPPPPYYPYYYYYYYY.......",
+      ".......PYYYYYYYPPPYPPPYYYYPYYYPYYP.......",
+      ".......PPPYPYYPPPPPPPPPPPPPYPPYPPP.......",
+      "......PPPPPYYPYYPPPPPPPPPPYYYYPPPPP......",
+      ".......PPPPPYYPPYYPPPPPYYPYYYPPPPP.......",
+      ".......PPPPPPPYYYPPPPPPYYYYPPPPPPP.......",
+      ".......PPPPPPPYPPPPPYPPPYPYPPPPPPP.......",
+      ".......PPPPPPYYYPPPYYPPPPYYYPPPPPP.......",
+      ".......PPPPPPYPYPPYPYPPPPYPYPPPPPP.......",
+      "........PPPPPYPYPYPPYPPYYYYYPPPPP........",
+      "........PPPPPYYYYPPPYYYYPYYYYPPPP........",
+      ".........PPPYYYYYPYYPYYPPPYYYPPP.........",
+      "..........PPYYYPYYPPPPPYYPPYYPP..........",
+      "...........PYYYYYPPPPPPPPYYYYP...........",
+      "...........YYYYPPPPPPPPPPPYYYY...........",
+      "...........YYPPPPPPPPPPPPPPPYY...........",
+      "...............PPPPPPPPPPP...............",
+      "....................P....................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      ".........................................",
+      "........................................."
+    ].join("")
+  };
+  var EIN_MARK = {
+    w: LED_MARK_NATIVE_SIZE,
+    h: LED_MARK_NATIVE_SIZE,
+    palette: {
+      G: "#4FB748"
+    },
+    pixels: buildShamrockMark(LED_MARK_NATIVE_SIZE, "G")
+  };
   var MARKS = {
     AAL: AAL_MARK,
+    EIN: EIN_MARK,
     SWA: SWA_MARK,
     DAL: DAL_MARK,
-    SKW: SKW_MARK
+    SKW: SKW_MARK,
+    MIL: MIL_MARK,
+    PVT: PVT_MARK,
+    GA: GA_MARK,
+    VIP: VIP_MARK
   };
   function markBounds(mark) {
     let minX = mark.w;
@@ -748,7 +1745,8 @@ var LegacyLedWall = (() => {
     if (maxX < 0) return null;
     return { minX, minY, maxX, maxY };
   }
-  function drawLedAirlineMark(ctx, icao, x, y, w, h) {
+  function drawLedAirlineMark(ctx, icao, x, y, w, h, options) {
+    var _a;
     const mark = MARKS[icao];
     if (!mark) return false;
     const bounds = markBounds(mark);
@@ -759,7 +1757,8 @@ var LegacyLedWall = (() => {
     const availW = Math.max(1, w - margin * 2);
     const availH = Math.max(1, h - margin * 2);
     const fitScale = Math.min(availW / contentW, availH / contentH);
-    const scale = Math.min(1, Math.floor(fitScale)) || 1;
+    const maxScale = (_a = options == null ? void 0 : options.maxScale) != null ? _a : 1;
+    const scale = Math.max(1, Math.min(maxScale, Math.floor(fitScale)) || 1);
     const drawW = contentW * scale;
     const drawH = contentH * scale;
     const ox = x + Math.floor((w - drawW) / 2);
@@ -818,18 +1817,30 @@ var LegacyLedWall = (() => {
   var RIGHT_COL_PAD = 3;
   var RIGHT_BAND_INSET = 3;
   var LOGO_WIDTH_FRACTION = 0.4;
+  var WALL_LOGO_WIDTH_FRACTION = 0.48;
+  var WALL_LOGO_SIZE_SCALE = 1;
+  var WALL_FLIGHT_TOP_INSET = 4;
   var LOGO_SIZE_SCALE = 0.92;
+  function isWallDisplay(rows) {
+    return rows > LED_GRID.landscape.rows + 4;
+  }
   var ROUTE_ZONE_RATIO = 0.58;
-  function computeLogoColumnWidth(cols) {
-    return Math.max(12, Math.floor(cols * LOGO_WIDTH_FRACTION));
+  var DESK_ROUTE_ZONE_RATIO = 0.4;
+  function computeLogoColumnWidth(cols, widthFraction = LOGO_WIDTH_FRACTION) {
+    return Math.max(12, Math.floor(cols * widthFraction));
   }
   function computeLogoColumn(cols, rows) {
-    const columnW = computeLogoColumnWidth(cols);
+    const wall = isWallDisplay(rows);
+    const columnW = computeLogoColumnWidth(
+      cols,
+      wall ? WALL_LOGO_WIDTH_FRACTION : LOGO_WIDTH_FRACTION
+    );
     const maxFlightH = 2 * LED_FONT.glyphH + LED_FONT.gapY;
     const flightBandMin = maxFlightH + 2;
-    const logoTopMin = flightBandMin + LOGO_TOP_INSET;
     const logoBandW = columnW - LOGO_LEFT_INSET - LOGO_RIGHT_INSET;
-    const sizeScale = Math.min(1.1, LOGO_SIZE_SCALE);
+    const sizeScale = wall ? WALL_LOGO_SIZE_SCALE : Math.min(1.1, LOGO_SIZE_SCALE);
+    const flightHeaderRows = maxFlightH + 4;
+    const logoTopMin = wall ? flightHeaderRows + LOGO_TOP_INSET + 2 : flightBandMin + LOGO_TOP_INSET;
     const maxSide = Math.min(
       logoBandW,
       rows - LOGO_TOP_INSET - LOGO_BOTTOM_GAP
@@ -852,8 +1863,9 @@ var LegacyLedWall = (() => {
       logoX: LOGO_LEFT_INSET,
       logoY,
       flightX: LOGO_LEFT_INSET,
-      flightBandH: logoY,
-      flightW: logoW
+      flightBandH: wall ? flightHeaderRows : logoY,
+      flightW: wall ? logoBandW : logoW,
+      flightTopInset: wall ? WALL_FLIGHT_TOP_INSET : 1
     };
   }
   function centerLedTextXScaled(text, bandX, bandW, scaleX) {
@@ -871,16 +1883,26 @@ var LegacyLedWall = (() => {
     }
     return { origin: hero.trim(), dest: "" };
   }
-  function buildRightContentLayout(rows, logoY, logoH) {
-    const bandTop = logoY + RIGHT_BAND_INSET;
-    const bandBottom = Math.min(rows - 1, logoY + logoH - RIGHT_BAND_INSET);
+  function buildRightContentLayout(rows, logoY, logoH, options) {
+    var _a, _b;
+    const wall = (_a = options == null ? void 0 : options.wall) != null ? _a : false;
+    let bandTop;
+    let bandBottom;
+    if (wall) {
+      bandTop = (_b = options == null ? void 0 : options.rightBandTop) != null ? _b : WALL_FLIGHT_TOP_INSET;
+      bandBottom = rows - 2;
+    } else {
+      bandTop = logoY + RIGHT_BAND_INSET;
+      bandBottom = rows - 2;
+    }
     const bandH = Math.max(ledCompactCellH() * 2, bandBottom - bandTop);
-    const routeZoneH = Math.max(ledCharCellH(), Math.floor(bandH * ROUTE_ZONE_RATIO));
+    const routeRatio = wall ? ROUTE_ZONE_RATIO : DESK_ROUTE_ZONE_RATIO;
+    const routeZoneH = Math.max(ledCharCellH(), Math.floor(bandH * routeRatio));
     const statsZoneH = bandH - routeZoneH;
     const routeZoneTop = bandTop;
     const statsZoneTop = bandTop + routeZoneH;
-    const useStackedRoute = routeZoneH >= ledCharCellH() * 2 + 6;
-    const statsUseFullFont = statsZoneH >= ledCharCellH() + 1;
+    const useStackedRoute = wall || routeZoneH >= ledCharCellH() * 2 + 6;
+    const statsUseFullFont = wall || statsZoneH >= ledCharCellH() + 1;
     return {
       bandTop,
       bandH,
@@ -889,16 +1911,21 @@ var LegacyLedWall = (() => {
       statsZoneTop,
       statsZoneH,
       useStackedRoute,
-      statsUseFullFont
+      statsUseFullFont,
+      wall
     };
   }
   function buildLandscapeLayout(cols, rows) {
     const pad = 1;
     const logo = computeLogoColumn(cols, rows);
+    const wall = isWallDisplay(rows);
     const dividerX = logo.columnW + 1;
     const mainX = logo.columnW + RIGHT_COL_GAP + RIGHT_COL_PAD;
     const mainW = cols - mainX - pad - RIGHT_COL_PAD;
-    const rightLayout = buildRightContentLayout(rows, logo.logoY, logo.logoH);
+    const rightLayout = buildRightContentLayout(rows, logo.logoY, logo.logoH, {
+      wall,
+      rightBandTop: wall ? logo.flightTopInset : void 0
+    });
     return __spreadValues({
       pad,
       logoW: logo.logoW,
@@ -912,6 +1939,7 @@ var LegacyLedWall = (() => {
       flightX: logo.flightX,
       flightBandH: logo.flightBandH,
       flightW: logo.flightW,
+      flightTopInset: logo.flightTopInset,
       dividerX
     }, rightLayout);
   }
@@ -1082,34 +2110,34 @@ var LegacyLedWall = (() => {
     return logoRect;
   }
   function drawPanelChrome(ctx, layout) {
-    const { dividerX, bandTop, bandH, statsZoneTop, mainX, mainW } = layout;
-    ctx.fillStyle = LED_COLORS.muted;
-    ctx.fillRect(dividerX, bandTop, 1, bandH);
+    const { statsZoneTop, mainX, mainW } = layout;
     if (layout.statsZoneH > 2) {
       ctx.fillStyle = LED_COLORS.unlit;
       ctx.fillRect(mainX, statsZoneTop - 1, mainW, 1);
     }
   }
   function drawRouteBlock(ctx, layout, routeHero) {
-    const { mainX, mainW, routeZoneTop, routeZoneH, useStackedRoute } = layout;
+    const { mainX, mainW, routeZoneTop, routeZoneH, useStackedRoute, wall } = layout;
     const textX = mainX + 2;
     const textW = mainW - 4;
     const { origin, dest } = parseLedRouteHero(routeHero);
+    const pickRouteScale = wall ? pickWallFlightIdScale : pickFlightIdScale;
     if (useStackedRoute && dest) {
-      const arrowH = ledCharCellH();
-      const gap = 2;
+      const arrowScale = wall ? 2 : 1;
+      const arrowH = wall ? ledScaledTextMetrics("\u2192", arrowScale, arrowScale).height : ledCharCellH();
+      const gap = wall ? 4 : 2;
       const endSlotH = Math.max(
         ledCharCellH(),
         Math.floor((routeZoneH - arrowH - gap * 2) / 2)
       );
-      const endScale = pickFlightIdScale(origin, textW, endSlotH);
+      const endScale = pickRouteScale(origin, textW, endSlotH);
       const endMetrics = ledScaledTextMetrics(
         origin,
         endScale.scaleX,
         endScale.scaleY
       );
       const blockH = endMetrics.height * 2 + arrowH + gap * 2;
-      let y2 = routeZoneTop + Math.round((routeZoneH - blockH) / 2);
+      let y2 = wall ? routeZoneTop : routeZoneTop + Math.round((routeZoneH - blockH) / 2);
       drawLedTextScaled(
         ctx,
         origin,
@@ -1125,12 +2153,12 @@ var LegacyLedWall = (() => {
       drawLedTextScaled(
         ctx,
         "\u2192",
-        centerLedTextXScaled("\u2192", textX, textW, 1),
+        centerLedTextXScaled("\u2192", textX, textW, arrowScale),
         y2,
         LED_COLORS.phosphor,
         textW,
-        1,
-        1,
+        arrowScale,
+        arrowScale,
         false
       );
       y2 += arrowH + gap;
@@ -1147,13 +2175,13 @@ var LegacyLedWall = (() => {
       );
       return;
     }
-    const scale = pickFlightIdScale(routeHero, textW, routeZoneH);
+    const scale = pickRouteScale(routeHero, textW, routeZoneH);
     const metrics = ledScaledTextMetrics(
       routeHero,
       scale.scaleX,
       scale.scaleY
     );
-    const y = routeZoneTop + Math.round((routeZoneH - metrics.height) / 2);
+    const y = wall ? routeZoneTop : routeZoneTop + Math.round((routeZoneH - metrics.height) / 2);
     drawLedTextScaled(
       ctx,
       routeHero,
@@ -1167,36 +2195,73 @@ var LegacyLedWall = (() => {
     );
   }
   function drawStatsRow(ctx, layout, telemetry) {
-    var _a, _b, _c, _d;
-    const { mainX, mainW, statsZoneTop, statsZoneH, statsUseFullFont } = layout;
-    const textX = mainX + 2;
-    const textW = mainW - 4;
+    var _a, _b, _c, _d, _e, _f;
+    const { mainX, mainW, statsZoneTop, statsZoneH, wall } = layout;
+    const textX = mainX + 1;
+    const textW = mainW - 2;
     const aircraft = (_b = (_a = telemetry[0]) == null ? void 0 : _a.value) != null ? _b : "";
     const speed = (_d = (_c = telemetry[1]) == null ? void 0 : _c.value) != null ? _d : "";
-    const rowH = statsUseFullFont ? ledCharCellH() : ledCompactCellH();
-    const rowY = statsZoneTop + Math.round((statsZoneH - rowH) / 2);
-    const split = Math.floor(textW * 0.52);
-    if (statsUseFullFont) {
-      drawLedText(ctx, aircraft, textX, rowY, LED_COLORS.telemetry, split);
-      drawLedTextRight(
-        ctx,
-        speed,
-        textX + textW,
-        rowY,
-        LED_COLORS.telemetry,
-        textW - split - 1
-      );
-    } else {
-      drawLedTextCompact(ctx, aircraft, textX, rowY, LED_COLORS.telemetry, textW);
-      drawLedTextCompactRight(
-        ctx,
-        speed,
-        textX + textW,
-        rowY,
-        LED_COLORS.telemetry,
-        textW
-      );
+    const motion = (_f = (_e = telemetry[2]) == null ? void 0 : _e.value) != null ? _f : "";
+    const gap = wall ? 3 : 2;
+    const maxLines = Math.max(
+      1,
+      Math.floor((statsZoneH + gap) / (LED_FONT.glyphH + gap))
+    );
+    let lines = motion ? [aircraft, motion, speed] : [aircraft, speed];
+    if (lines.length > maxLines) {
+      lines = [aircraft, speed].slice(0, Math.max(1, maxLines));
     }
+    if (lines.length >= 2) {
+      const count = lines.length;
+      const slotH = Math.floor((statsZoneH - gap * (count - 1)) / count);
+      const pickScale = wall ? pickWallFlightIdScale : pickTelemetryScale;
+      lines.forEach((text, i) => {
+        const scale = pickScale(text, textW, slotH);
+        const metrics = ledScaledTextMetrics(text, scale.scaleX, scale.scaleY);
+        const slotTop = statsZoneTop + i * (slotH + gap);
+        const y = slotTop + Math.round((slotH - metrics.height) / 2);
+        drawLedTextScaled(
+          ctx,
+          text,
+          centerLedTextXScaled(text, textX, textW, scale.scaleX),
+          y,
+          LED_COLORS.telemetry,
+          textW,
+          scale.scaleX,
+          scale.scaleY,
+          scale.scaleX === 1
+        );
+      });
+      return;
+    }
+    const rowH = ledCompactCellH();
+    const rowY = statsZoneTop + Math.round((statsZoneH - rowH) / 2);
+    const aircraftScale = pickTelemetryScale(aircraft, textW, statsZoneH);
+    const aircraftMetrics = ledScaledTextMetrics(
+      aircraft,
+      aircraftScale.scaleX,
+      aircraftScale.scaleY
+    );
+    const aircraftY = rowY + Math.round((rowH - aircraftMetrics.height) / 2);
+    drawLedTextScaled(
+      ctx,
+      aircraft,
+      textX,
+      aircraftY,
+      LED_COLORS.telemetry,
+      textW,
+      aircraftScale.scaleX,
+      aircraftScale.scaleY,
+      aircraftScale.scaleX === 1
+    );
+    drawLedTextCompactRight(
+      ctx,
+      speed,
+      textX + textW,
+      rowY,
+      LED_COLORS.telemetry,
+      textW
+    );
   }
   function renderLandscapeLayout(ctx, cols, rows, content, logo) {
     const layout = buildLandscapeLayout(cols, rows);
@@ -1206,18 +2271,18 @@ var LegacyLedWall = (() => {
     return { logoRect };
   }
   function drawLandscapeFlightPanel(ctx, layout, content, rows) {
-    const flightScale = pickFlightIdScale(
-      content.flightId,
-      layout.flightW,
-      layout.flightBandH
-    );
+    var _a, _b;
+    const wall = isWallDisplay(rows);
+    const operator = (_b = (_a = content.operatorTag) == null ? void 0 : _a.trim()) != null ? _b : "";
+    const showOperator = operator.length > 0 && layout.flightBandH >= LED_FONT.glyphH + ledCompactCellH() + 2;
+    const idBandH = showOperator ? layout.flightBandH - ledCompactCellH() - 1 : layout.flightBandH;
+    const flightScale = wall ? pickWallFlightIdScale(content.flightId, layout.flightW, idBandH) : pickFlightIdScale(content.flightId, layout.flightW, idBandH);
     const flightMetrics = ledScaledTextMetrics(
       content.flightId,
       flightScale.scaleX,
       flightScale.scaleY
     );
-    const compactFlightBandH = 2 * LED_FONT.glyphH + LED_FONT.gapY + 2;
-    const flightY = layout.flightBandH > compactFlightBandH + 4 ? 1 : Math.max(1, Math.floor((layout.flightBandH - flightMetrics.height) / 2));
+    const flightY = wall ? layout.flightTopInset : Math.max(1, Math.floor((idBandH - flightMetrics.height) / 2));
     drawLedTextScaled(
       ctx,
       content.flightId,
@@ -1229,6 +2294,16 @@ var LegacyLedWall = (() => {
       flightScale.scaleY,
       true
     );
+    if (showOperator) {
+      drawLedTextCompact(
+        ctx,
+        `- ${operator}`,
+        layout.flightX + 1,
+        flightY + flightMetrics.height + 1,
+        LED_COLORS.telemetry,
+        layout.flightW - 2
+      );
+    }
     drawPanelChrome(ctx, layout);
     drawRouteBlock(ctx, layout, content.routeHero);
     drawStatsRow(ctx, layout, content.telemetry);
@@ -1423,15 +2498,16 @@ var LegacyLedWall = (() => {
 
   // lib/legacyLedWallRuntime.ts
   function aircraftToLedContent(ac) {
-    const brand = getAirlineBrand(ac.callsign);
+    const brand = getAircraftDisplayBrand(ac);
     const wallStyle = getAirlineLedWallStyle(brand);
     const routeLine = ledRouteLabel(ac);
     return {
       airlineName: brand.name,
       flightId: formatLedFlightId(ac, brand),
+      operatorTag: formatLedOperatorTag(ac),
       routeHero: formatLedRouteHero(routeLine),
       telemetry: ledTelemetryFields(ac),
-      logoUrl: airlineLedLogoUrl(brand, 128),
+      logoUrl: airlineLedLogoUrl(brand),
       logoIcao: brand.icao,
       logoFallback: brand.iata,
       logoBackground: wallStyle.logoBackground,

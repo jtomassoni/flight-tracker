@@ -2,9 +2,14 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import type { DisplayLayoutProps } from '@/types/display';
-import { airlineLedLogoUrl, getAirlineBrand, getAirlineLedWallStyle } from '@/lib/airlines';
+import {
+  airlineLedLogoUrl,
+  getAircraftDisplayBrand,
+  getAirlineLedWallStyle,
+} from '@/lib/airlines';
 import {
   formatLedFlightId,
+  formatLedOperatorTag,
   formatLedRouteHero,
   ledRouteLabel,
   ledTelemetryFields,
@@ -39,15 +44,16 @@ export default function FlightWallMiniLayout({
 
   const ledContent = useMemo(() => {
     if (!aircraft) return null;
-    const brand = getAirlineBrand(aircraft.callsign);
+    const brand = getAircraftDisplayBrand(aircraft);
     const wallStyle = getAirlineLedWallStyle(brand);
     const routeLine = ledRouteLabel(aircraft);
     return {
       airlineName: brand.name,
       flightId: formatLedFlightId(aircraft, brand),
+      operatorTag: formatLedOperatorTag(aircraft),
       routeHero: formatLedRouteHero(routeLine),
       telemetry: ledTelemetryFields(aircraft),
-      logoUrl: airlineLedLogoUrl(brand, 128),
+      logoUrl: airlineLedLogoUrl(brand),
       logoIcao: brand.icao,
       logoFallback: brand.iata,
       logoBackground: wallStyle.logoBackground,

@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { useMemo } from 'react';
 import { useLayoutDensity } from '@/hooks/useLayoutDensity';
 import type { DisplayLayoutProps } from '@/types/display';
@@ -12,7 +11,8 @@ import {
   fidsGate,
   fidsStatus,
 } from '@/lib/denFids';
-import { airlineLogoUrl, getAirlineBrand } from '@/lib/airlines';
+import AirlineLogoImage from '@/components/display/shared/AirlineLogoImage';
+import { getAircraftDisplayBrand } from '@/lib/airlines';
 import { getVerticalTrend } from '@/lib/aircraftUtils';
 import FlightListState from '../shared/FlightListState';
 import KioskScrollRegion from '../shared/KioskScrollRegion';
@@ -77,7 +77,7 @@ function FidsPanel({
       <KioskScrollRegion className="den-fids__rows min-h-0 flex-1" durationSec={32}>
         {flights.map((ac, rowIndex) => {
           const rowNum = globalOffset + rowIndex;
-          const brand = getAirlineBrand(ac.callsign);
+          const brand = getAircraftDisplayBrand(ac);
           const trend = getVerticalTrend(ac.verticalRateFpm);
           const status = fidsStatus(trend, rowNum, lastUpdated);
 
@@ -86,13 +86,13 @@ function FidsPanel({
               <span className="den-fids__dest">{fidsDestination(rowNum)}</span>
               <div className="den-fids__airline">
                 <div className="den-fids__logo-wrap">
-                  <Image
-                    src={airlineLogoUrl(brand, 128)}
+                  <AirlineLogoImage
+                    brand={brand}
+                    size={128}
                     alt={brand.name}
                     width={72}
                     height={28}
                     className="den-fids__logo-img"
-                    unoptimized
                   />
                 </div>
               </div>

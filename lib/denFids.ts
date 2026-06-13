@@ -1,5 +1,7 @@
 import type { NormalizedAircraft } from '@/types/aircraft';
 import { displayIdentifier } from './aircraftUtils';
+import { getAirlineFromCallsign } from './airlines';
+import { formatBrandedCarrierLabel } from './regionalCarriers';
 import type { VerticalTrend } from '@/types/aircraft';
 
 /** Common DEN departure destinations for FIDS-style display */
@@ -54,13 +56,14 @@ export function fidsDepartureTime(index: number, lastUpdated: Date | null): stri
 }
 
 export function fidsFlightNumber(ac: NormalizedAircraft): string {
-  const id = displayIdentifier(ac);
-  if (id.length >= 3 && /^[A-Z]{2,3}/.test(id)) {
-    const airline = id.slice(0, 2);
-    const num = id.slice(2).replace(/^0+/, '') || id.slice(2);
-    return `${airline} ${num}`.trim();
+  const brand = getAirlineFromCallsign(ac.callsign);
+  const callsign = ac.callsign?.trim().toUpperCase();
+  if (brand && callsign && callsign.length > 3) {
+    const num = callsign.slice(3).replace(/^0+/, '') || callsign.slice(3);
+    const carrier = formatBrandedCarrierLabel(callsign, brand.icao, brand.iata);
+    return `${carrier} ${num}`.trim();
   }
-  return id;
+  return displayIdentifier(ac);
 }
 
 export function fidsStatus(

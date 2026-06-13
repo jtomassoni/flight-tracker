@@ -2,6 +2,8 @@
   var shared = window.LegacyDisplayShared;
   if (!shared) return;
 
+  if (window.LegacyScreen) window.LegacyScreen.start();
+
   function bootLed() {
     if (!window.LegacyLedWall || !window.LegacyLedDisplay) {
       var app = document.getElementById('app');

@@ -4,14 +4,16 @@ import {
   getAirlineLedWallStyle,
   type AirlineBrand,
 } from '@/lib/airlines';
+import { formatAircraftTypeDisplay } from '@/lib/aircraftTypes';
 import { hasLedAirlineMark } from '@/lib/ledAirlineMarks';
+import { hasApprovedLogo } from '@/lib/approvedLogos';
 import type { LedFlightContent } from '@/lib/ledMatrix';
 
-export type AirlineLogoSource = 'native-mark' | 'cdn-raster' | 'iata-fallback';
+export type AirlineLogoSource = 'native-mark' | 'approved' | 'iata-fallback';
 
 export function airlineLogoSource(brand: AirlineBrand): AirlineLogoSource {
   if (hasLedAirlineMark(brand.icao)) return 'native-mark';
-  if (airlineLedLogoUrl(brand, 128)) return 'cdn-raster';
+  if (hasApprovedLogo(brand.icao)) return 'approved';
   return 'iata-fallback';
 }
 
@@ -24,8 +26,8 @@ export function buildAirlineLedPreview(icao: string): LedFlightContent | null {
     airlineName: brand.name,
     flightId: `${brand.iata} 000`,
     routeHero: 'DEN→PHX',
-    telemetry: [{ value: 'B737' }, { value: '425 mph' }],
-    logoUrl: airlineLedLogoUrl(brand, 128),
+    telemetry: [{ value: formatAircraftTypeDisplay('B738') }, { value: '425 mph' }],
+    logoUrl: airlineLedLogoUrl(brand),
     logoIcao: brand.icao,
     logoFallback: brand.iata,
     logoBackground: wallStyle.logoBackground,

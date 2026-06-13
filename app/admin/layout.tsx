@@ -1,5 +1,8 @@
 import { ADMIN_BROWSER_GUARD_SCRIPT } from '@/lib/adminBrowserGuardScript';
+import AdminChrome from '@/components/admin/AdminChrome';
 import AdminPageShell from '@/components/admin/AdminPageShell';
+import { AdminSettingsProvider } from '@/components/admin/AdminSettingsProvider';
+import './admin.css';
 import './admin-unsupported.css';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -24,7 +27,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </div>
 
       <div id="admin-app">
-        <AdminPageShell>{children}</AdminPageShell>
+        <AdminPageShell>
+          <AdminSettingsProvider>
+            <AdminChrome>{children}</AdminChrome>
+          </AdminSettingsProvider>
+        </AdminPageShell>
       </div>
 
       <script dangerouslySetInnerHTML={{ __html: ADMIN_BROWSER_GUARD_SCRIPT }} />

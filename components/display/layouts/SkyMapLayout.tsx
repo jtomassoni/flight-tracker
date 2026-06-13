@@ -9,7 +9,9 @@ import {
   formatSpeed,
   getVerticalTrend,
 } from '@/lib/aircraftUtils';
+import { getAircraftDisplayBrand } from '@/lib/airlines';
 import { useLayoutDensity } from '@/hooks/useLayoutDensity';
+import AirlineLogoImage from '../shared/AirlineLogoImage';
 import KioskTicker from '../shared/KioskTicker';
 
 const FlightMap = dynamic(() => import('../maps/FlightMap'), { ssr: false });
@@ -75,23 +77,42 @@ export default function SkyMapLayout({
             <KioskTicker durationSec={30}>
               {displayedAircraft.map((ac) => {
                 const trend = getVerticalTrend(ac.verticalRateFpm);
+                const brand = getAircraftDisplayBrand(ac);
                 return (
                   <div
                     key={ac.hex}
-                    className={`shrink-0 rounded-lg border border-white/10 bg-slate-900/70 px-2.5 py-2 sm:px-3 ${
-                      viewport === 'desk' ? 'min-w-[7.5rem]' : 'min-w-[8.5rem] sm:min-w-[9.5rem]'
+                    className={`flex shrink-0 items-center gap-2.5 rounded-lg border border-white/10 bg-slate-900/70 py-1.5 pl-1.5 pr-3 ${
+                      viewport === 'desk' ? 'min-w-[11rem]' : 'min-w-[12rem] sm:min-w-[13rem]'
                     }`}
+                    style={{ borderLeft: `3px solid ${brand.primaryColor}` }}
                   >
-                    <p className="truncate font-mono text-sm font-bold text-white">
-                      {displayIdentifier(ac)}
-                    </p>
-                    <p className={`text-[10px] capitalize ${TREND_COLOR[trend] ?? 'text-slate-300'}`}>
-                      {trend}
-                    </p>
-                    <p className="font-mono text-[10px] text-slate-400">
-                      {formatAltitude(ac.altitudeFt)} · {formatSpeed(ac.groundSpeedKt)} ·{' '}
-                      {formatDistance(ac.distanceMi)}
-                    </p>
+                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-md bg-white">
+                      <AirlineLogoImage
+                        brand={brand}
+                        size={64}
+                        background="#ffffff"
+                        alt={brand.name}
+                        fill
+                        className="object-contain p-1"
+                      />
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-baseline gap-1.5">
+                        <p className="truncate font-mono text-sm font-bold text-white">
+                          {displayIdentifier(ac)}
+                        </p>
+                        <span
+                          className={`shrink-0 text-[9px] capitalize ${TREND_COLOR[trend] ?? 'text-slate-300'}`}
+                        >
+                          {trend}
+                        </span>
+                      </div>
+                      <p className="truncate text-[10px] font-medium text-slate-300">{brand.name}</p>
+                      <p className="font-mono text-[10px] text-slate-400">
+                        {formatAltitude(ac.altitudeFt)} · {formatSpeed(ac.groundSpeedKt)} ·{' '}
+                        {formatDistance(ac.distanceMi)}
+                      </p>
+                    </div>
                   </div>
                 );
               })}

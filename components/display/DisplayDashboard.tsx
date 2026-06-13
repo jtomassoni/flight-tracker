@@ -10,6 +10,7 @@ import { loadSettings, saveSettings, type ThemeId } from '@/lib/settings';
 import { getTheme, THEME_IDS, type LayoutId } from '@/lib/themes';
 import ThemeProvider from '@/components/ThemeProvider';
 import IpadPreviewFrame from './IpadPreviewFrame';
+import ScreenManager from './ScreenManager';
 import AdminLink from './shared/AdminLink';
 import ThemeDebugPanel from './ThemeDebugPanel';
 import ThemeLayout from './layouts';
@@ -78,6 +79,7 @@ export default function DisplayDashboard() {
 
   return (
     <>
+      <ScreenManager settings={settings} />
       <ThemeProvider key={activeThemeId} themeId={activeThemeId}>
         <KioskPreviewProvider enabled={ipadPreview} orientation={ipadOrientation}>
           <div className="h-full w-full">

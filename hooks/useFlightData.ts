@@ -74,6 +74,7 @@ export function useFlightData(pollLayout?: LayoutId) {
         lat: String(current.lat),
         lon: String(current.lon),
         radiusMi: String(current.radiusMi),
+        mock: current.useMockData ? '1' : '0',
       });
 
       const res = await fetchWithTimeout(`/api/flights?${params.toString()}`);
@@ -159,10 +160,12 @@ export function useFlightData(pollLayout?: LayoutId) {
     settings.maxAircraft,
     settings.altitudeFilter,
     settings.hideNoCallsign,
+    settings.cargoOnly,
     settings.mode,
     settings.lat,
     settings.lon,
     settings.zipCode,
+    settings.useMockData,
   ]);
 
   // Re-apply client filters when settings change without waiting for next poll
