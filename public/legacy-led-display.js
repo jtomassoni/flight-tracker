@@ -83,8 +83,7 @@
     var params =
       'lat=' + encodeURIComponent(String(settings.lat)) +
       '&lon=' + encodeURIComponent(String(settings.lon)) +
-      '&radiusMi=' + encodeURIComponent(String(settings.radiusMi)) +
-      '&mock=' + encodeURIComponent(settings.useMockData === false ? '0' : '1');
+      '&radiusMi=' + encodeURIComponent(String(settings.radiusMi));
 
     shared.requestJson('/api/flights?' + params, 25000, function (err, data) {
       if (err) {

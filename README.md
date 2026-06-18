@@ -21,7 +21,7 @@ A personal FlightWall-style dashboard showing aircraft near Denver (ZIP 80219). 
 | Sky Map | Google Maps hybrid overlay with live aircraft markers |
 | FlightWall | TheFlightWall-style LED panel — logo, route, aircraft type, cyan telemetry (routes are synthetic placeholders) |
 
-Themes auto-rotate every 30 seconds on `/display` by default (toggle in admin).
+Pick the active theme in `/admin`; it stays fixed until you change it.
 
 ## Quick start
 
@@ -33,7 +33,7 @@ npm run dev
 
 Open [http://localhost:3000/display](http://localhost:3000/display) for the board, or [http://localhost:3000/admin](http://localhost:3000/admin) to configure.
 
-Dev uses **mock flight data** automatically — no adsb.fi calls while you iterate. Production uses live data from `lib/flightProvider.ts`.
+Both dev and production pull **live ADS-B data** from `lib/flightProvider.ts` (adsb.fi — free, no key). The synthetic fleet only appears as a fallback if the upstream feed is unreachable.
 
 Dev server binds to `0.0.0.0` (same pattern as other local Next apps) so you can open it from another device on your LAN.
 
@@ -45,7 +45,7 @@ Copy `.env.example` → `.env.local` only if you use the **Sky Map** theme — t
 
 | What | Key needed? | Where to get it |
 | --- | --- | --- |
-| **Flight data (adsb.fi)** | **No** | Hardcoded in `lib/flightProvider.ts`. Mock data in dev; live in prod. |
+| **Flight data (adsb.fi)** | **No** | Hardcoded in `lib/flightProvider.ts`. Live in every environment. |
 | **ZIP → lat/lon (US)** | **No** | Uses Zippopotam.us server-side |
 | **Sky Map theme** | **Yes** (for that theme only) | [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → enable Maps JavaScript API → `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` |
 
@@ -100,7 +100,7 @@ Configure settings on your Mac at `/admin`, then open **`/display`** on the iPad
 
 ### airplanes.live
 
-- Alternative provider — switch by changing `PRODUCTION_FLIGHT_PROVIDER` in `lib/flightProvider.ts`
+- Alternative provider — switch by changing `FLIGHT_PROVIDER` in `lib/flightProvider.ts`
 - Optional `FLIGHT_API_KEY` env var via `api-auth` header if your endpoint requires auth
 
 ### Limitations
@@ -123,7 +123,7 @@ components/
   display/          # Theme layouts + dev theme tester (dev only)
   admin/            # Admin panel
 lib/
-  flightProvider.ts # adsb.fi in prod, mock in dev
+  flightProvider.ts # live adsb.fi (synthetic fleet only as fallback)
   ledMatrix.ts      # FlightWall LED renderer
   ledFlightWall.ts  # Route/telemetry formatters
   themes.ts         # Preset theme definitions

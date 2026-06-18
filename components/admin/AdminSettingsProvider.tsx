@@ -10,7 +10,9 @@ import {
   type ReactNode,
 } from 'react';
 import {
+  cacheSettingsLocal,
   DEFAULT_SETTINGS,
+  fetchServerSettings,
   loadSettings,
   saveSettings,
   type DisplaySettings,
@@ -43,6 +45,17 @@ export function AdminSettingsProvider({ children }: { children: ReactNode }) {
     const loaded = loadSettings();
     setSettings(loaded);
     setZipInput(loaded.zipCode);
+
+    // Prefer the server-stored config so edits start from the synced source.
+    const controller = new AbortController();
+    void fetchServerSettings(controller.signal).then((serverSettings) => {
+      if (serverSettings) {
+        cacheSettingsLocal(serverSettings);
+        setSettings(serverSettings);
+        setZipInput(serverSettings.zipCode);
+      }
+    });
+    return () => controller.abort();
   }, []);
 
   const setZipInputValue = useCallback((value: string) => {

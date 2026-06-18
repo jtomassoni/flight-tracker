@@ -260,3 +260,17 @@ export async function deleteCandidate(
   const target = safeCandidatePath(icao, candidateFile);
   await fs.rm(target, { force: true });
 }
+
+/** Full reset for a carrier — wipe every candidate and the approved logo. */
+export async function clearCarrier(rawIcao: string): Promise<void> {
+  assertEditable();
+  const icao = normalizeIcao(rawIcao);
+  if (!isKnownIcao(icao)) throw new Error(`Unknown carrier: ${icao}`);
+
+  const candidates = await listCandidates(icao);
+  for (const candidate of candidates) {
+    await fs.rm(path.join(CANDIDATES_DIR, candidate.file), { force: true });
+  }
+
+  await unapprove(icao);
+}

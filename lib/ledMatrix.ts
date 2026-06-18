@@ -23,10 +23,16 @@ import {
 } from '@/lib/ledAircraftIcons';
 import type { LedTelemetryField } from '@/lib/ledFlightWall';
 
-/** Classic FlightWall desk panel — 128 cols; rows expand on wall displays to fill height. */
+/**
+ * FlightWall desk panel resolution — scaled up 15% in BOTH axes (128×32→147×37,
+ * 64×64→74×74) for finer letter/number/logo rendering. Keeping both dimensions in
+ * step preserves the panel aspect ratio (4:1 landscape, 1:1 portrait) so logos and
+ * text hold the same screen real estate. On true wall displays rows auto-expand past
+ * this minimum to keep LED cells square.
+ */
 export const LED_GRID = {
-  landscape: { cols: 128, rows: 32 },
-  portrait: { cols: 64, rows: 64 },
+  landscape: { cols: 147, rows: 37 },
+  portrait: { cols: 74, rows: 74 },
 } as const;
 
 export const LED_COLORS = {
@@ -72,7 +78,7 @@ export function ledGridForOrientation(orientation: IpadOrientation) {
 
 /**
  * Wall displays add rows so each LED stays square (cell = viewport width / cols).
- * e.g. 128×32 on 16:9 → 128×72 — no vertical stretch.
+ * e.g. 147×37 on 16:9 → 147×83 — no vertical stretch.
  */
 export function ledWallRowCount(
   cols: number,

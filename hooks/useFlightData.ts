@@ -10,8 +10,9 @@ import {
 import { applyClientFilters } from '@/lib/filters';
 import { limitAircraft, sortByInterestingness } from '@/lib/sorting';
 import {
+  cacheSettingsLocal,
   clampRefreshInterval,
-  DEFAULT_SETTINGS,
+  fetchServerSettings,
   loadSettings,
   type DisplaySettings,
 } from '@/lib/settings';
@@ -38,7 +39,7 @@ export type FlightDataState = {
 };
 
 export function useFlightData(pollLayout?: LayoutId) {
-  const [settings, setSettings] = useState<DisplaySettings>(DEFAULT_SETTINGS);
+  const [settings, setSettings] = useState<DisplaySettings>(() => loadSettings());
   const [state, setState] = useState<Omit<FlightDataState, 'settings'>>({
     aircraft: [],
     filteredAircraft: [],
@@ -74,7 +75,6 @@ export function useFlightData(pollLayout?: LayoutId) {
         lat: String(current.lat),
         lon: String(current.lon),
         radiusMi: String(current.radiusMi),
-        mock: current.useMockData ? '1' : '0',
       });
 
       const res = await fetchWithTimeout(`/api/flights?${params.toString()}`);
@@ -115,12 +115,23 @@ export function useFlightData(pollLayout?: LayoutId) {
     const reloadSettings = () => setSettings(loadSettings());
     reloadSettings();
 
+    // Server is the source of truth across devices; apply it once on mount and
+    // refresh the local cache so the saved layout shows even on a fresh device.
+    const controller = new AbortController();
+    void fetchServerSettings(controller.signal).then((serverSettings) => {
+      if (serverSettings) {
+        cacheSettingsLocal(serverSettings);
+        setSettings(serverSettings);
+      }
+    });
+
     const onStorage = (e: StorageEvent) => {
       if (e.key === SETTINGS_STORAGE_KEY) reloadSettings();
     };
     window.addEventListener('storage', onStorage);
     window.addEventListener(SETTINGS_CHANGED_EVENT, reloadSettings);
     return () => {
+      controller.abort();
       window.removeEventListener('storage', onStorage);
       window.removeEventListener(SETTINGS_CHANGED_EVENT, reloadSettings);
     };
@@ -165,7 +176,6 @@ export function useFlightData(pollLayout?: LayoutId) {
     settings.lat,
     settings.lon,
     settings.zipCode,
-    settings.useMockData,
   ]);
 
   // Re-apply client filters when settings change without waiting for next poll

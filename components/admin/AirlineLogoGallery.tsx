@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import {
   AIRLINE_ICAO_LIST,
-  getAirlineByIcao,
+  CATEGORY_ICAO_LIST,
+  LOGO_BRAND_ICAO_LIST,
+  getLogoBrandByIcao,
 } from '@/lib/airlines';
 import {
   airlineLogoSource,
@@ -21,7 +23,7 @@ export function AirlineLogoSourceBadge({
   icao: string;
   compact?: boolean;
 }) {
-  const brand = getAirlineByIcao(icao);
+  const brand = getLogoBrandByIcao(icao);
   if (!brand) return null;
 
   const source = airlineLogoSource(brand);
@@ -53,7 +55,7 @@ function ExpandedAirlineCard({
   content,
 }: {
   icao: string;
-  brand: NonNullable<ReturnType<typeof getAirlineByIcao>>;
+  brand: NonNullable<ReturnType<typeof getLogoBrandByIcao>>;
   content: NonNullable<ReturnType<typeof buildAirlineLedPreview>>;
 }) {
   return (
@@ -108,7 +110,7 @@ function CompactAirlineCard({
   content,
 }: {
   icao: string;
-  brand: NonNullable<ReturnType<typeof getAirlineByIcao>>;
+  brand: NonNullable<ReturnType<typeof getLogoBrandByIcao>>;
   content: NonNullable<ReturnType<typeof buildAirlineLedPreview>>;
 }) {
   return (
@@ -142,7 +144,9 @@ export default function AirlineLogoGallery({
   linkToTester = false,
 }: AirlineLogoGalleryProps) {
   const isCompact = variant === 'compact';
+  const brandList = isCompact ? AIRLINE_ICAO_LIST : LOGO_BRAND_ICAO_LIST;
   const carrierCount = AIRLINE_ICAO_LIST.length;
+  const categoryCount = CATEGORY_ICAO_LIST.length;
 
   return (
     <div
@@ -152,16 +156,17 @@ export default function AirlineLogoGallery({
       {!isCompact && (
         <header className="airline-logo-gallery__summary">
           <p className="airline-logo-gallery__summary-text">
-            Side-by-side CDN source and FlightWall LED render for every carrier.
+            Side-by-side CDN source and FlightWall LED render for every carrier and
+            traffic category.
           </p>
           <span className="airline-logo-gallery__summary-count admin-mono">
-            {carrierCount} carriers
+            {carrierCount} carriers · {categoryCount} categories
           </span>
         </header>
       )}
       <div className="airline-logo-gallery__grid">
-      {AIRLINE_ICAO_LIST.map((icao) => {
-        const brand = getAirlineByIcao(icao);
+      {brandList.map((icao) => {
+        const brand = getLogoBrandByIcao(icao);
         const content = buildAirlineLedPreview(icao);
         if (!brand || !content) return null;
 

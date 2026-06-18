@@ -1,9 +1,9 @@
 /**
  * Flight data provider.
  *
- * Production uses adsb.fi (free, no key). In development, mock data is the default;
- * pass `useMock: false` (or `mock=0` on the API) for live ADS-B while iterating locally.
- * To switch providers, change PRODUCTION_FLIGHT_PROVIDER below.
+ * Always uses live ADS-B (adsb.fi — free, no key) in every environment. The synthetic
+ * fleet is only used as a fallback when the upstream feed is unreachable.
+ * To switch providers, change FLIGHT_PROVIDER below.
  */
 
 import type { NormalizedAircraft } from '@/types/aircraft';
@@ -11,17 +11,15 @@ import { DEFAULT_LAT, DEFAULT_LON } from './constants';
 import { distanceMi, milesToNauticalMiles } from './geo';
 import { getMockAircraft } from './mockFlights';
 
-export type ProviderName = 'adsb.fi' | 'airplanes.live' | 'mock';
+export type ProviderName = 'adsb.fi' | 'airplanes.live';
 
-/** Production ADS-B feed — change here if you switch providers. */
-const PRODUCTION_FLIGHT_PROVIDER: Exclude<ProviderName, 'mock'> = 'adsb.fi';
+/** Live ADS-B feed — change here if you switch providers. */
+const FLIGHT_PROVIDER: ProviderName = 'adsb.fi';
 
 export type FetchFlightsParams = {
   lat?: number;
   lon?: number;
   radiusMi: number;
-  /** Dev only — when true, serve mock fleet; when false, hit live ADS-B. Ignored in production. */
-  useMock?: boolean;
 };
 
 export type FetchFlightsResult = {
@@ -82,16 +80,6 @@ const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<FetchFlightsResult>>();
 let rateLimitedUntil = 0;
 
-/** Demo mode pulls real nearby flights once per location, then reuses them so the board is relevant to the entered ZIP. */
-const DEMO_CACHE_TTL_MS = 5 * 60_000;
-/** Keep demo snappy — fall back to the synthetic fleet rather than wait on a slow upstream. */
-const DEMO_FETCH_TIMEOUT_MS = 6_000;
-const DEMO_MAX_FLIGHTS = 10;
-
-type DemoEntry = { aircraft: NormalizedAircraft[]; fetchedAt: number };
-const demoCache = new Map<string, DemoEntry>();
-const demoInflight = new Map<string, Promise<NormalizedAircraft[]>>();
-
 const UPSTREAM_FETCH_TIMEOUT_MS = 15_000;
 
 async function fetchWithServerTimeout(
@@ -106,13 +94,6 @@ async function fetchWithServerTimeout(
   } finally {
     clearTimeout(timer);
   }
-}
-
-function getProviderName(useMock?: boolean): ProviderName {
-  if (process.env.NODE_ENV === 'development') {
-    return useMock === false ? PRODUCTION_FLIGHT_PROVIDER : 'mock';
-  }
-  return PRODUCTION_FLIGHT_PROVIDER;
 }
 
 function cacheKey(lat: number, lon: number, radiusMi: number, provider: ProviderName): string {
@@ -242,7 +223,7 @@ function serveStaleIfAvailable(key: string, now: number, reason: string): FetchF
 
 async function fetchLiveWithCache(
   key: string,
-  provider: Exclude<ProviderName, 'mock'>,
+  provider: ProviderName,
   lat: number,
   lon: number,
   radiusMi: number
@@ -302,72 +283,10 @@ async function fetchLiveWithCache(
   return request;
 }
 
-/**
- * Demo dataset: one quick live lookup near the requested point, capped to the closest
- * DEMO_MAX_FLIGHTS and cached per location. Returns [] when upstream is unavailable so
- * the caller can fall back to the synthetic fleet.
- */
-async function fetchDemoFlights(
-  lat: number,
-  lon: number,
-  radiusMi: number
-): Promise<NormalizedAircraft[]> {
-  const key = `${lat.toFixed(4)}:${lon.toFixed(4)}:${radiusMi}`;
-  const now = Date.now();
-
-  const cached = demoCache.get(key);
-  if (cached && now - cached.fetchedAt < DEMO_CACHE_TTL_MS) {
-    return cached.aircraft;
-  }
-
-  const pending = demoInflight.get(key);
-  if (pending) return pending;
-
-  const request = (async (): Promise<NormalizedAircraft[]> => {
-    try {
-      const aircraft =
-        PRODUCTION_FLIGHT_PROVIDER === 'airplanes.live'
-          ? await fetchFromAirplanesLive(lat, lon, radiusMi, DEMO_FETCH_TIMEOUT_MS)
-          : await fetchFromAdsbFi(lat, lon, radiusMi, DEMO_FETCH_TIMEOUT_MS);
-
-      const trimmed = [...aircraft]
-        .sort((a, b) => a.distanceMi - b.distanceMi)
-        .slice(0, DEMO_MAX_FLIGHTS);
-
-      if (trimmed.length > 0) {
-        demoCache.set(key, { aircraft: trimmed, fetchedAt: Date.now() });
-      }
-      return trimmed;
-    } catch (error) {
-      console.warn(
-        '[flightProvider] Demo live fetch failed; using synthetic mock fleet:',
-        error
-      );
-      return [];
-    } finally {
-      demoInflight.delete(key);
-    }
-  })();
-
-  demoInflight.set(key, request);
-  return request;
-}
-
 export async function fetchFlights(params: FetchFlightsParams): Promise<FetchFlightsResult> {
   const lat = params.lat ?? DEFAULT_LAT;
   const lon = params.lon ?? DEFAULT_LON;
-  const provider = getProviderName(params.useMock);
-
-  if (provider === 'mock') {
-    const demo = await fetchDemoFlights(lat, lon, params.radiusMi);
-    return {
-      aircraft: demo.length > 0 ? demo : getMockAircraft(lat, lon),
-      provider: 'mock',
-      source: 'mock',
-      fetchedAt: new Date().toISOString(),
-    };
-  }
-
+  const provider = FLIGHT_PROVIDER;
   const key = cacheKey(lat, lon, params.radiusMi, provider);
 
   try {

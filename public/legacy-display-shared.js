@@ -62,7 +62,6 @@
       altitudeFilter: 'all',
       hideNoCallsign: false,
       mode: 'nearby',
-      useMockData: true,
     };
 
     var stored = null;
@@ -88,7 +87,6 @@
       altitudeFilter: (stored && stored.altitudeFilter) || defaults.altitudeFilter,
       hideNoCallsign: !!(stored && stored.hideNoCallsign),
       mode: (stored && stored.mode) || defaults.mode,
-      useMockData: stored && stored.useMockData === false ? false : defaults.useMockData,
     };
 
     var fromUrl = settingsFromQuery(parseQuery());

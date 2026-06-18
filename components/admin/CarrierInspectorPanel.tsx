@@ -7,7 +7,9 @@ import AirlineLogoImage from '@/components/display/shared/AirlineLogoImage';
 import AirlineLogoGallery, { AirlineLogoSourceBadge } from '@/components/admin/AirlineLogoGallery';
 import {
   AIRLINE_ICAO_LIST,
-  getAirlineByIcao,
+  CATEGORY_ICAO_LIST,
+  LOGO_BRAND_ICAO_LIST,
+  getLogoBrandByIcao,
   getAirlineTileStyle,
 } from '@/lib/airlines';
 import { buildAirlineLedPreview } from '@/lib/airlineThemePreview';
@@ -22,7 +24,7 @@ function SourceAssetsPanel({
   brand,
   tileBackground,
 }: {
-  brand: NonNullable<ReturnType<typeof getAirlineByIcao>>;
+  brand: NonNullable<ReturnType<typeof getLogoBrandByIcao>>;
   tileBackground: string;
 }) {
   const useNative = hasLedAirlineMark(brand.icao);
@@ -142,7 +144,7 @@ function SourceAssetsPanel({
 }
 
 function GalleryLogoPreview({ icao }: { icao: string }) {
-  const brand = getAirlineByIcao(icao);
+  const brand = getLogoBrandByIcao(icao);
   if (!brand) return null;
 
   const tile = getAirlineTileStyle(brand);
@@ -189,14 +191,17 @@ function GalleryLogoPreview({ icao }: { icao: string }) {
 }
 
 function AirlinePreviewPanel({ icao }: { icao: string }) {
-  const brand = getAirlineByIcao(icao);
+  const brand = getLogoBrandByIcao(icao);
   const ledContent = useMemo(() => buildAirlineLedPreview(icao), [icao]);
 
   if (!brand || !ledContent) {
     return (
       <div className="theme-tester__empty">
-        <p>Unknown airline ICAO: <span className="admin-mono">{icao}</span></p>
-        <p className="theme-tester__hint">Use a 3-letter code from the registry (e.g. SWA, DAL).</p>
+        <p>Unknown brand code: <span className="admin-mono">{icao}</span></p>
+        <p className="theme-tester__hint">
+          Use a code from the registry — an airline (e.g. SWA, DAL) or a category
+          (MIL, PVT, GA, VIP, CGO).
+        </p>
       </div>
     );
   }
@@ -262,14 +267,15 @@ export default function CarrierInspectorPanel() {
   const initialIcao = normalizeIcao(searchParams.get('icao') ?? 'SWA');
   const [icaoInput, setIcaoInput] = useState(initialIcao);
   const [activeIcao, setActiveIcao] = useState(
-    getAirlineByIcao(initialIcao) ? initialIcao : 'SWA'
+    getLogoBrandByIcao(initialIcao) ? initialIcao : 'SWA'
   );
   const [viewAll, setViewAll] = useState(false);
 
   const applyIcao = useCallback((raw: string) => {
     const next = normalizeIcao(raw);
     setIcaoInput(next);
-    if (next.length === 3) {
+    // Apply once we have a full 3-letter code or an exact match (e.g. 2-letter GA).
+    if (next.length === 3 || getLogoBrandByIcao(next)) {
       setActiveIcao(next);
       const url = new URL(window.location.href);
       url.searchParams.set('icao', next);
@@ -279,7 +285,7 @@ export default function CarrierInspectorPanel() {
 
   const stepAirline = useCallback(
     (delta: number) => {
-      const list = AIRLINE_ICAO_LIST;
+      const list = LOGO_BRAND_ICAO_LIST;
       if (list.length === 0) return;
       const current = list.indexOf(activeIcao);
       const start = current === -1 ? 0 : current;
@@ -303,28 +309,40 @@ export default function CarrierInspectorPanel() {
     return () => window.removeEventListener('keydown', onKey);
   }, [viewAll, stepAirline]);
 
-  const brand = getAirlineByIcao(activeIcao);
+  const brand = getLogoBrandByIcao(activeIcao);
 
   return (
     <div className="theme-tester__inspector">
       <section className="admin-surface theme-tester__controls">
         <div className="theme-tester__control-row">
           <label className="block min-w-0 flex-1">
-            <span className="admin-label mb-2 block">Airline (ICAO)</span>
+            <span className="admin-label mb-2 block">Brand (ICAO)</span>
             <div className="theme-tester__icao-row">
               <select
                 value={activeIcao}
                 onChange={(e) => applyIcao(e.target.value)}
                 className="admin-select theme-tester__select"
               >
-                {AIRLINE_ICAO_LIST.map((code) => {
-                  const item = getAirlineByIcao(code);
-                  return (
-                    <option key={code} value={code}>
-                      {code} — {item?.name ?? 'Unknown'}
-                    </option>
-                  );
-                })}
+                <optgroup label="Airlines">
+                  {AIRLINE_ICAO_LIST.map((code) => {
+                    const item = getLogoBrandByIcao(code);
+                    return (
+                      <option key={code} value={code}>
+                        {code} — {item?.name ?? 'Unknown'}
+                      </option>
+                    );
+                  })}
+                </optgroup>
+                <optgroup label="Other traffic">
+                  {CATEGORY_ICAO_LIST.map((code) => {
+                    const item = getLogoBrandByIcao(code);
+                    return (
+                      <option key={code} value={code}>
+                        {code} — {item?.name ?? 'Unknown'}
+                      </option>
+                    );
+                  })}
+                </optgroup>
               </select>
               <input
                 type="text"
@@ -345,7 +363,7 @@ export default function CarrierInspectorPanel() {
             onClick={() => setViewAll((on) => !on)}
             className="theme-tester__view-toggle"
           >
-            <span className="admin-label">View all airlines</span>
+            <span className="admin-label">View all brands</span>
             <span
               data-checked={viewAll ? 'true' : 'false'}
               className="admin-toggle__track relative h-5 w-9 shrink-0 rounded-full border border-white/10 bg-slate-800 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-slate-300 after:transition-transform"
@@ -359,8 +377,8 @@ export default function CarrierInspectorPanel() {
               <button
                 type="button"
                 className="theme-tester__step"
-                aria-label="Previous airline"
-                title="Previous airline (←)"
+                aria-label="Previous brand"
+                title="Previous brand (←)"
                 onClick={() => stepAirline(-1)}
               >
                 ‹
@@ -374,8 +392,8 @@ export default function CarrierInspectorPanel() {
               <button
                 type="button"
                 className="theme-tester__step"
-                aria-label="Next airline"
-                title="Next airline (→)"
+                aria-label="Next brand"
+                title="Next brand (→)"
                 onClick={() => stepAirline(1)}
               >
                 ›

@@ -165,6 +165,31 @@ var LegacyLedWall = (() => {
       file: "WJA.png",
       source: "WJA-up1781311668416.png",
       approvedAt: "2026-06-13T00:47:49.102Z"
+    },
+    PVT: {
+      file: "PVT.png",
+      source: "PVT-up1781817174361.png",
+      approvedAt: "2026-06-18T21:12:55.555Z"
+    },
+    MIL: {
+      file: "MIL.png",
+      source: "MIL-up1781817452838.png",
+      approvedAt: "2026-06-18T21:17:33.596Z"
+    },
+    VIP: {
+      file: "VIP.png",
+      source: "VIP-up1781818951988.png",
+      approvedAt: "2026-06-18T21:42:58.665Z"
+    },
+    CGO: {
+      file: "CGO.png",
+      source: "CGO-up1781817463289.png",
+      approvedAt: "2026-06-18T21:43:00.148Z"
+    },
+    GA: {
+      file: "GA.png",
+      source: "GA-up1781819124604.png",
+      approvedAt: "2026-06-18T21:45:25.249Z"
     }
   };
 
@@ -972,6 +997,167 @@ var LegacyLedWall = (() => {
     return (_a = BOARD_TYPE_NAMES[code]) != null ? _a : formatAircraftTypeDisplay(raw);
   }
 
+  // lib/ledAircraftIcons.ts
+  var ICONS = {
+    // Widebody — full-height swept wings read as the biggest airframe.
+    heavy: {
+      w: 11,
+      h: 7,
+      rows: [
+        "  XX       ",
+        "  XXX      ",
+        " XXXXX     ",
+        "XXXXXXXXXXX",
+        " XXXXX     ",
+        "  XXX      ",
+        "  XX       "
+      ]
+    },
+    // Mainline narrowbody — medium swept wings + tail stabilizers.
+    jet: {
+      w: 11,
+      h: 7,
+      rows: [
+        "   XX      ",
+        "   XXX     ",
+        " X  XXX    ",
+        "XXXXXXXXXXX",
+        " X  XXX    ",
+        "   XXX     ",
+        "   XX      "
+      ]
+    },
+    // Regional jet — compact wing block, shorter fuselage.
+    regional: {
+      w: 11,
+      h: 7,
+      rows: [
+        "    X      ",
+        "   XXX     ",
+        "   XXX     ",
+        "XXXXXXXXX  ",
+        "   XXX     ",
+        "   XXX     ",
+        "    X      "
+      ]
+    },
+    // Turboprop / GA — straight (unswept) wing crossing the fuselage, nose prop.
+    prop: {
+      w: 11,
+      h: 7,
+      rows: [
+        "    X      ",
+        "    X      ",
+        "   XXX    X",
+        "XXXXXXXXXXX",
+        "   XXX    X",
+        "    X      ",
+        "    X      "
+      ]
+    }
+  };
+  var HEAVY_TYPE_PREFIXES = ["B74", "B76", "B77", "B78"];
+  var HEAVY_TYPE_CODES = /* @__PURE__ */ new Set([
+    "A306",
+    "A30B",
+    "A310",
+    "A332",
+    "A333",
+    "A338",
+    "A339",
+    "A342",
+    "A343",
+    "A345",
+    "A346",
+    "A359",
+    "A35K",
+    "A388",
+    "MD11",
+    "IL96"
+  ]);
+  var REGIONAL_TYPE_PREFIXES = [
+    "CRJ",
+    "E13",
+    "E14",
+    "E17",
+    "E19",
+    "E29",
+    "E45",
+    "E75",
+    "ERJ",
+    "SU9",
+    "RJ"
+  ];
+  var PROP_TYPE_PREFIXES = [
+    "DH8",
+    "DHC",
+    "AT4",
+    "AT5",
+    "AT7",
+    "SF3",
+    "SW4",
+    "SB20",
+    "D328",
+    "JS3",
+    "JS4",
+    "E11",
+    "E12",
+    "B19",
+    "C20",
+    "C172",
+    "C182",
+    "C150",
+    "C152",
+    "C206",
+    "C210",
+    "C77",
+    "PA2",
+    "PA3",
+    "PA4",
+    "P28",
+    "SR2",
+    "DA4",
+    "BE3",
+    "M20",
+    "TBM",
+    "PC12",
+    "PC6"
+  ];
+  function startsWithAny(code, prefixes) {
+    return prefixes.some((prefix) => code.startsWith(prefix));
+  }
+  function classifyLedAircraftIcon(rawType, category) {
+    const code = (rawType != null ? rawType : "").trim().toUpperCase();
+    if (code) {
+      if (HEAVY_TYPE_CODES.has(code) || startsWithAny(code, HEAVY_TYPE_PREFIXES)) return "heavy";
+      if (startsWithAny(code, REGIONAL_TYPE_PREFIXES)) return "regional";
+      if (startsWithAny(code, PROP_TYPE_PREFIXES)) return "prop";
+      return "jet";
+    }
+    const cat = (category != null ? category : "").trim().toUpperCase();
+    if (cat === "A1" || cat === "A2") return "prop";
+    return "jet";
+  }
+  function ledAircraftIconAspect(kind) {
+    const art = ICONS[kind];
+    return art.w / art.h;
+  }
+  function drawLedAircraftIcon(ctx, kind, x, yTop, targetH, color) {
+    var _a, _b;
+    const art = ICONS[kind];
+    if (targetH <= 0) return 0;
+    const scale = targetH / art.h;
+    ctx.fillStyle = color;
+    for (let row = 0; row < art.h; row += 1) {
+      const line = (_a = art.rows[row]) != null ? _a : "";
+      for (let col = 0; col < art.w; col += 1) {
+        if (((_b = line[col]) != null ? _b : " ") === " ") continue;
+        ctx.fillRect(x + col * scale, yTop + row * scale, scale, scale);
+      }
+    }
+    return art.w * scale;
+  }
+
   // lib/ledFlightWall.ts
   var ROUTE_PAIRS = [
     "ORD-LAX",
@@ -1039,7 +1225,10 @@ var LegacyLedWall = (() => {
   }
   function ledTelemetryFields(ac) {
     const fields = [
-      { value: formatLedAircraftType(ac) },
+      {
+        value: formatLedAircraftType(ac),
+        icon: classifyLedAircraftIcon(ac.aircraftType, ac.category)
+      },
       { value: formatLedSpeedMph(ac.groundSpeedKt) }
     ];
     const motion = [
@@ -1784,8 +1973,8 @@ var LegacyLedWall = (() => {
 
   // lib/ledMatrix.ts
   var LED_GRID = {
-    landscape: { cols: 128, rows: 32 },
-    portrait: { cols: 64, rows: 64 }
+    landscape: { cols: 147, rows: 37 },
+    portrait: { cols: 74, rows: 74 }
   };
   var LED_COLORS = {
     phosphor: "#ececec",
@@ -2194,14 +2383,53 @@ var LegacyLedWall = (() => {
       scale.scaleX === 1
     );
   }
+  var ICON_GAP_RATIO = 0.35;
+  function drawTypeLineWithIcon(ctx, text, icon, textX, textW, y, scale) {
+    const metrics = ledScaledTextMetrics(text, scale.scaleX, scale.scaleY);
+    const iconH = metrics.height;
+    const iconW = icon ? ledAircraftIconAspect(icon) * iconH : 0;
+    const iconGap = icon ? Math.max(1, Math.round(iconH * ICON_GAP_RATIO)) : 0;
+    const labelMaxW = Math.max(0, textW - iconW - iconGap);
+    if (!icon || labelMaxW < ledScaledCellW(scale.scaleX)) {
+      drawLedTextScaled(
+        ctx,
+        text,
+        centerLedTextXScaled(text, textX, textW, scale.scaleX),
+        y,
+        LED_COLORS.telemetry,
+        textW,
+        scale.scaleX,
+        scale.scaleY,
+        scale.scaleX === 1
+      );
+      return;
+    }
+    const label = truncateLedTextScaled(text, labelMaxW, scale.scaleX);
+    const labelW = ledScaledTextMetrics(label, scale.scaleX, scale.scaleY).width;
+    const groupW = iconW + iconGap + labelW;
+    const groupX = textX + Math.max(0, Math.floor((textW - groupW) / 2));
+    drawLedAircraftIcon(ctx, icon, groupX, y, iconH, LED_COLORS.telemetry);
+    drawLedTextScaled(
+      ctx,
+      label,
+      groupX + iconW + iconGap,
+      y,
+      LED_COLORS.telemetry,
+      labelMaxW,
+      scale.scaleX,
+      scale.scaleY,
+      scale.scaleX === 1
+    );
+  }
   function drawStatsRow(ctx, layout, telemetry) {
-    var _a, _b, _c, _d, _e, _f;
+    var _a, _b, _c, _d, _e, _f, _g;
     const { mainX, mainW, statsZoneTop, statsZoneH, wall } = layout;
     const textX = mainX + 1;
     const textW = mainW - 2;
     const aircraft = (_b = (_a = telemetry[0]) == null ? void 0 : _a.value) != null ? _b : "";
-    const speed = (_d = (_c = telemetry[1]) == null ? void 0 : _c.value) != null ? _d : "";
-    const motion = (_f = (_e = telemetry[2]) == null ? void 0 : _e.value) != null ? _f : "";
+    const aircraftIcon = (_c = telemetry[0]) == null ? void 0 : _c.icon;
+    const speed = (_e = (_d = telemetry[1]) == null ? void 0 : _d.value) != null ? _e : "";
+    const motion = (_g = (_f = telemetry[2]) == null ? void 0 : _f.value) != null ? _g : "";
     const gap = wall ? 3 : 2;
     const maxLines = Math.max(
       1,
@@ -2220,6 +2448,10 @@ var LegacyLedWall = (() => {
         const metrics = ledScaledTextMetrics(text, scale.scaleX, scale.scaleY);
         const slotTop = statsZoneTop + i * (slotH + gap);
         const y = slotTop + Math.round((slotH - metrics.height) / 2);
+        if (i === 0) {
+          drawTypeLineWithIcon(ctx, text, aircraftIcon, textX, textW, y, scale);
+          return;
+        }
         drawLedTextScaled(
           ctx,
           text,
@@ -2243,13 +2475,25 @@ var LegacyLedWall = (() => {
       aircraftScale.scaleY
     );
     const aircraftY = rowY + Math.round((rowH - aircraftMetrics.height) / 2);
+    let aircraftX = textX;
+    let aircraftMaxW = textW;
+    if (aircraftIcon) {
+      const iconH = aircraftMetrics.height;
+      const iconW = ledAircraftIconAspect(aircraftIcon) * iconH;
+      const iconGap = Math.max(1, Math.round(iconH * ICON_GAP_RATIO));
+      if (textW - iconW - iconGap >= ledScaledCellW(aircraftScale.scaleX)) {
+        drawLedAircraftIcon(ctx, aircraftIcon, textX, aircraftY, iconH, LED_COLORS.telemetry);
+        aircraftX = textX + iconW + iconGap;
+        aircraftMaxW = Math.max(0, textW - iconW - iconGap);
+      }
+    }
     drawLedTextScaled(
       ctx,
       aircraft,
-      textX,
+      aircraftX,
       aircraftY,
       LED_COLORS.telemetry,
-      textW,
+      aircraftMaxW,
       aircraftScale.scaleX,
       aircraftScale.scaleY,
       aircraftScale.scaleX === 1

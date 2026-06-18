@@ -47,7 +47,6 @@ export interface DisplaySettings {
   cargoOnly: boolean;
   mode: DisplayMode;
   theme: ThemeId;
-  rotateThemes: boolean;
   skyMapZoom: SkyMapZoomMode;
   /** Keep the screen awake on the kiosk via the Screen Wake Lock API (iOS 16.4+). */
   keepAwake: boolean;
@@ -59,8 +58,6 @@ export interface DisplaySettings {
   nightDimEnd: string;
   /** How dark to go during the window, 0–95 (percent of black overlay). */
   nightDimLevel: number;
-  /** Dev only — use deterministic mock fleet instead of live ADS-B (ignored in production). */
-  useMockData: boolean;
 }
 
 export const DEFAULT_SETTINGS: DisplaySettings = {
@@ -76,14 +73,12 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   cargoOnly: false,
   mode: 'nearby',
   theme: 'airport-led',
-  rotateThemes: true,
   skyMapZoom: DEFAULT_SKY_MAP_ZOOM,
   keepAwake: true,
   nightDimEnabled: false,
   nightDimStart: '22:00',
   nightDimEnd: '06:00',
   nightDimLevel: 60,
-  useMockData: process.env.NODE_ENV === 'development',
 };
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -127,41 +122,79 @@ function normalizeThemeId(theme?: string): ThemeId {
   return DEFAULT_SETTINGS.theme;
 }
 
+/** Merge an untrusted partial (localStorage, API body, server file) onto the defaults. */
+export function normalizeSettings(parsed: Partial<DisplaySettings> | null | undefined): DisplaySettings {
+  if (!parsed || typeof parsed !== 'object') return DEFAULT_SETTINGS;
+  return {
+    ...DEFAULT_SETTINGS,
+    ...parsed,
+    theme: normalizeThemeId(parsed.theme),
+    zipCode: normalizeZip(parsed.zipCode),
+    lat: typeof parsed.lat === 'number' ? parsed.lat : DEFAULT_SETTINGS.lat,
+    lon: typeof parsed.lon === 'number' ? parsed.lon : DEFAULT_SETTINGS.lon,
+    locationLabel: parsed.locationLabel?.trim() || DEFAULT_SETTINGS.locationLabel,
+    refreshIntervalSec: clampRefreshInterval(
+      parsed.refreshIntervalSec ?? DEFAULT_SETTINGS.refreshIntervalSec
+    ),
+    cargoOnly: parsed.cargoOnly ?? DEFAULT_SETTINGS.cargoOnly,
+    skyMapZoom: normalizeSkyMapZoom(parsed.skyMapZoom),
+    keepAwake: parsed.keepAwake ?? DEFAULT_SETTINGS.keepAwake,
+    nightDimEnabled: parsed.nightDimEnabled ?? DEFAULT_SETTINGS.nightDimEnabled,
+    nightDimStart: normalizeTimeOfDay(parsed.nightDimStart, DEFAULT_SETTINGS.nightDimStart),
+    nightDimEnd: normalizeTimeOfDay(parsed.nightDimEnd, DEFAULT_SETTINGS.nightDimEnd),
+    nightDimLevel: clampDimLevel(parsed.nightDimLevel),
+  };
+}
+
 export function loadSettings(): DisplaySettings {
   if (typeof window === 'undefined') return DEFAULT_SETTINGS;
 
   try {
     const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
     if (!raw) return DEFAULT_SETTINGS;
-    const parsed = JSON.parse(raw) as Partial<DisplaySettings>;
-    return {
-      ...DEFAULT_SETTINGS,
-      ...parsed,
-      theme: normalizeThemeId(parsed.theme),
-      zipCode: normalizeZip(parsed.zipCode),
-      lat: typeof parsed.lat === 'number' ? parsed.lat : DEFAULT_SETTINGS.lat,
-      lon: typeof parsed.lon === 'number' ? parsed.lon : DEFAULT_SETTINGS.lon,
-      locationLabel: parsed.locationLabel?.trim() || DEFAULT_SETTINGS.locationLabel,
-      refreshIntervalSec: clampRefreshInterval(
-        parsed.refreshIntervalSec ?? DEFAULT_SETTINGS.refreshIntervalSec
-      ),
-      cargoOnly: parsed.cargoOnly ?? DEFAULT_SETTINGS.cargoOnly,
-      rotateThemes: parsed.rotateThemes ?? DEFAULT_SETTINGS.rotateThemes,
-      skyMapZoom: normalizeSkyMapZoom(parsed.skyMapZoom),
-      keepAwake: parsed.keepAwake ?? DEFAULT_SETTINGS.keepAwake,
-      nightDimEnabled: parsed.nightDimEnabled ?? DEFAULT_SETTINGS.nightDimEnabled,
-      nightDimStart: normalizeTimeOfDay(parsed.nightDimStart, DEFAULT_SETTINGS.nightDimStart),
-      nightDimEnd: normalizeTimeOfDay(parsed.nightDimEnd, DEFAULT_SETTINGS.nightDimEnd),
-      nightDimLevel: clampDimLevel(parsed.nightDimLevel),
-      useMockData: parsed.useMockData ?? DEFAULT_SETTINGS.useMockData,
-    };
+    return normalizeSettings(JSON.parse(raw) as Partial<DisplaySettings>);
   } catch {
     return DEFAULT_SETTINGS;
   }
 }
 
+/** Write to the local cache only (no server sync, no change event). */
+export function cacheSettingsLocal(settings: DisplaySettings): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  } catch {
+    /* storage full / disabled — ignore */
+  }
+}
+
 export function saveSettings(settings: DisplaySettings): void {
   if (typeof window === 'undefined') return;
-  localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(settings));
+  cacheSettingsLocal(settings);
   window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT));
+  // Best-effort server sync so other devices load the same config.
+  void fetch(SETTINGS_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(settings),
+    keepalive: true,
+  }).catch(() => {
+    /* offline or read-only host — local cache still applies */
+  });
+}
+
+const SETTINGS_ENDPOINT = '/api/settings';
+
+/** Read the server-stored settings (source of truth across devices). Null if none/unavailable. */
+export async function fetchServerSettings(signal?: AbortSignal): Promise<DisplaySettings | null> {
+  if (typeof window === 'undefined') return null;
+  try {
+    const res = await fetch(SETTINGS_ENDPOINT, { cache: 'no-store', signal });
+    if (!res.ok) return null;
+    const data = (await res.json()) as { settings?: Partial<DisplaySettings> | null };
+    if (!data?.settings) return null;
+    return normalizeSettings(data.settings);
+  } catch {
+    return null;
+  }
 }

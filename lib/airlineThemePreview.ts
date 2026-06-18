@@ -1,6 +1,6 @@
 import {
   airlineLedLogoUrl,
-  getAirlineByIcao,
+  getLogoBrandByIcao,
   getAirlineLedWallStyle,
   type AirlineBrand,
 } from '@/lib/airlines';
@@ -18,7 +18,7 @@ export function airlineLogoSource(brand: AirlineBrand): AirlineLogoSource {
 }
 
 export function buildAirlineLedPreview(icao: string): LedFlightContent | null {
-  const brand = getAirlineByIcao(icao);
+  const brand = getLogoBrandByIcao(icao);
   if (!brand) return null;
 
   const wallStyle = getAirlineLedWallStyle(brand);

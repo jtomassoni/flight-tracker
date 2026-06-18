@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   approveCandidate,
+  clearCarrier,
   deleteCandidate,
   getCatalog,
   saveUpload,
@@ -30,6 +31,12 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case 'upload': {
         const file = await saveUpload(icao, String(body.dataUrl ?? ''));
+        // Auto-process for the LED wall: promote the paste straight to the
+        // approved source of truth so it goes live without a manual approve.
+        if (body.autoApprove === true) {
+          const approved = await approveCandidate(icao, file);
+          return NextResponse.json({ ok: true, file, approved });
+        }
         return NextResponse.json({ ok: true, file });
       }
       case 'approve': {
@@ -42,6 +49,10 @@ export async function POST(request: NextRequest) {
       }
       case 'delete': {
         await deleteCandidate(icao, String(body.file ?? ''));
+        return NextResponse.json({ ok: true });
+      }
+      case 'clear': {
+        await clearCarrier(icao);
         return NextResponse.json({ ok: true });
       }
       default:

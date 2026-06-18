@@ -102,10 +102,10 @@ function PasteZone({
       onPaste={handlePaste}
     >
       <span className="logo-approve__paste-title">
-        {busy ? 'Saving…' : 'Paste screenshot'}
+        {busy ? 'Processing…' : 'Paste logo → goes live'}
       </span>
       <span className="logo-approve__paste-hint">
-        {hint ?? 'Click to grab from clipboard, or focus and press ⌘V'}
+        {hint ?? 'Click to grab from clipboard or press ⌘V — applied to the LED wall instantly'}
       </span>
     </div>
   );
@@ -118,6 +118,7 @@ function CarrierCard({
   onUnapprove,
   onPasteImage,
   onDelete,
+  onClear,
 }: {
   entry: CatalogEntry;
   busy: boolean;
@@ -125,8 +126,10 @@ function CarrierCard({
   onUnapprove: () => void;
   onPasteImage: (dataUrl: string) => Promise<void> | void;
   onDelete: (file: string) => void;
+  onClear: () => void;
 }) {
   const approvedSource = entry.approved?.source;
+  const hasImages = entry.candidates.length > 0 || entry.approved !== null;
 
   return (
     <article className="logo-approve__card" data-approved={entry.approved ? 'true' : 'false'}>
@@ -215,6 +218,20 @@ function CarrierCard({
           <PasteZone busy={busy} onImage={onPasteImage} />
         </div>
       </div>
+
+      {hasImages && (
+        <div className="logo-approve__card-actions">
+          <button
+            type="button"
+            className="admin-btn admin-btn--ghost logo-approve__btn-sm logo-approve__btn-danger"
+            onClick={onClear}
+            disabled={busy}
+            title="Delete every candidate and the approved logo for this carrier"
+          >
+            Clear all images
+          </button>
+        </div>
+      )}
     </article>
   );
 }
@@ -269,7 +286,8 @@ export default function LogoApprovalPanel() {
         const res = await fetch('/api/airline-logos', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'upload', icao, dataUrl }),
+          // autoApprove: the paste goes live on the LED wall immediately.
+          body: JSON.stringify({ action: 'upload', icao, dataUrl, autoApprove: true }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error ?? `Paste failed (${res.status})`);
@@ -291,8 +309,10 @@ export default function LogoApprovalPanel() {
     <div className="logo-approve">
       <div className="logo-approve__toolbar">
         <p className="logo-approve__tip">
-          Paste a logo screenshot onto a carrier, then approve one as its source of
-          truth (saved to <code className="admin-mono">public/airline-logos/</code>).
+          Paste a logo screenshot onto a carrier — it&apos;s auto-processed and goes
+          live on the LED wall instantly (saved to{' '}
+          <code className="admin-mono">public/airline-logos/</code>). Use{' '}
+          <strong>Clear all images</strong> to wipe a carrier and start fresh.
         </p>
         <div className="logo-approve__toolbar-controls">
           <span className="logo-approve__progress admin-mono">
@@ -344,6 +364,15 @@ export default function LogoApprovalPanel() {
               onUnapprove={() => runAction(entry.icao, { action: 'unapprove' })}
               onDelete={(file) => runAction(entry.icao, { action: 'delete', file })}
               onPasteImage={(dataUrl) => handlePasteImage(entry.icao, dataUrl)}
+              onClear={() => {
+                if (
+                  window.confirm(
+                    `Clear all images for ${entry.name} (${entry.icao})? This deletes every candidate and the approved logo.`
+                  )
+                ) {
+                  runAction(entry.icao, { action: 'clear' });
+                }
+              }}
             />
           ))}
         </div>

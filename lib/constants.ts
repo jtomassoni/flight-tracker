@@ -9,7 +9,6 @@ export const DEN_LON = -104.6737;
 export const MIN_POLL_INTERVAL_SEC = 30;
 /** Radar scope + sky map poll faster so blips/markers feel live (upstream is cached server-side). */
 export const LIVE_LAYOUT_POLL_INTERVAL_SEC = 10;
-export const THEME_ROTATION_SEC = 30;
 
 export const DEFAULT_ZIP = '80219';
 export const DEFAULT_LOCATION_LABEL = 'Denver, CO';

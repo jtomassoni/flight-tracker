@@ -2,7 +2,6 @@
 
 import { useAdminSettings } from '@/components/admin/AdminSettingsProvider';
 import FlightMap from '@/components/display/maps/FlightMap';
-import { THEME_ROTATION_SEC } from '@/lib/constants';
 import { getTheme, getThemeSwatches, THEME_LIST } from '@/lib/themes';
 import { clampDimLevel, type DisplayMode, type ThemeId } from '@/lib/settings';
 
@@ -69,13 +68,11 @@ function ThemeChip({
   id,
   name,
   selected,
-  rotating,
   onSelect,
 }: {
   id: ThemeId;
   name: string;
   selected: boolean;
-  rotating: boolean;
   onSelect: () => void;
 }) {
   const theme = getTheme(id);
@@ -97,7 +94,7 @@ function ThemeChip({
       <span className="admin-theme-module__name">{name}</span>
       {selected && (
         <span className="admin-theme-module__mark admin-mono" aria-hidden>
-          {rotating ? '↻ LIVE' : '● ARM'}
+          ● ON
         </span>
       )}
     </button>
@@ -163,8 +160,6 @@ function Panel({
   );
 }
 
-const isDev = process.env.NODE_ENV === 'development';
-
 export default function AdminSettingsSection({ section }: { section: AdminSettingsSection }) {
   const {
     settings,
@@ -183,18 +178,7 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
     <div className="admin-page">
       <div className="admin-page__content">
         {section === 'themes' && (
-          <Panel
-            title={copy.panelTitle}
-            headerAction={
-              <Toggle
-                compact
-                inline
-                checked={settings.rotateThemes}
-                onChange={(v) => updateAndSave('rotateThemes', v)}
-                label={`Auto-rotate ${THEME_ROTATION_SEC}s`}
-              />
-            }
-          >
+          <Panel title={copy.panelTitle}>
             <div className="admin-theme-matrix">
               {THEME_LIST.map((t) => (
                 <ThemeChip
@@ -202,7 +186,6 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
                   id={t.id}
                   name={t.name}
                   selected={settings.theme === t.id}
-                  rotating={settings.rotateThemes}
                   onSelect={() => update('theme', t.id)}
                 />
               ))}
@@ -343,15 +326,6 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
               hint="FedEx, UPS, Atlas, DHL and other freight operators"
             />
 
-            {isDev && (
-              <Toggle
-                checked={settings.useMockData}
-                onChange={(v) => updateAndSave('useMockData', v)}
-                label="Use mock flight data"
-                hint="Sample United, Southwest, Delta, etc. — turn off for live ADS-B while developing locally"
-              />
-            )}
-
             <div className="admin-config-summary">
               <span className="admin-stat-pill rounded-md px-2 py-1">{settings.refreshIntervalSec}s refresh</span>
               <span className="admin-stat-pill rounded-md px-2 py-1">{settings.radiusMi} mi radius</span>
@@ -451,7 +425,8 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
                 {settings.nightDimEnabled ? '1' : '0'}&amp;dimStart={settings.nightDimStart}
                 &amp;dimEnd={settings.nightDimEnd}&amp;dimLevel={settings.nightDimLevel}
               </code>{' '}
-              — it remembers after that.
+              — it remembers after that. If the iPad is old, you may need to remake the home screen
+              icon for the new dim settings to take effect.
             </p>
 
             <div className="admin-config-summary">
