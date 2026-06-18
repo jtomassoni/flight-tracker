@@ -43,6 +43,25 @@ export type LogoCatalogEntry = {
   approved: (CandidateAsset & { source?: string; approvedAt?: string }) | null;
 };
 
+/**
+ * The approval tool mutates files under `public/`, which only works on a
+ * writable disk (i.e. local dev). On serverless hosts like Vercel the bundle
+ * lives on a read-only filesystem (`EROFS`), so editing is disabled there and
+ * approved logos ship as committed static assets instead. Set
+ * `ALLOW_LOGO_EDITS=1` to force-enable (e.g. a self-hosted writable deploy).
+ */
+const LOGO_EDITING_ENABLED =
+  process.env.ALLOW_LOGO_EDITS === '1' || process.env.NODE_ENV === 'development';
+
+function assertEditable(): void {
+  if (LOGO_EDITING_ENABLED) return;
+  throw new Error(
+    'Logo editing is only available when running locally. Approved logos are ' +
+      'committed to the repo and deployed as static files — paste/approve a ' +
+      'logo on your machine, then commit and deploy.'
+  );
+}
+
 export function isKnownIcao(icao: string): boolean {
   return LOGO_BRAND_ICAO_LIST.includes(icao);
 }
@@ -52,7 +71,15 @@ function normalizeIcao(raw: string): string {
 }
 
 async function ensureDirs(): Promise<void> {
-  await fs.mkdir(CANDIDATES_DIR, { recursive: true });
+  try {
+    await fs.mkdir(CANDIDATES_DIR, { recursive: true });
+  } catch (err) {
+    // Read-only deploy (e.g. Vercel): the dir is part of the committed bundle,
+    // so reads still work. Only surface the error if writes will actually run.
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === 'EROFS' || code === 'EACCES' || code === 'EEXIST') return;
+    throw err;
+  }
 }
 
 async function readApproved(): Promise<Record<string, ApprovedEntry>> {
@@ -156,6 +183,7 @@ export async function saveUpload(
   rawIcao: string,
   dataUrl: string
 ): Promise<string> {
+  assertEditable();
   const icao = normalizeIcao(rawIcao);
   if (!isKnownIcao(icao)) throw new Error(`Unknown carrier: ${icao}`);
 
@@ -180,6 +208,7 @@ export async function approveCandidate(
   rawIcao: string,
   candidateFile: string
 ): Promise<LogoCatalogEntry['approved']> {
+  assertEditable();
   const icao = normalizeIcao(rawIcao);
   if (!isKnownIcao(icao)) throw new Error(`Unknown carrier: ${icao}`);
 
@@ -209,6 +238,7 @@ export async function approveCandidate(
 }
 
 export async function unapprove(rawIcao: string): Promise<void> {
+  assertEditable();
   const icao = normalizeIcao(rawIcao);
   if (!isKnownIcao(icao)) throw new Error(`Unknown carrier: ${icao}`);
   const approved = await readApproved();
@@ -224,6 +254,7 @@ export async function deleteCandidate(
   rawIcao: string,
   candidateFile: string
 ): Promise<void> {
+  assertEditable();
   const icao = normalizeIcao(rawIcao);
   if (!isKnownIcao(icao)) throw new Error(`Unknown carrier: ${icao}`);
   const target = safeCandidatePath(icao, candidateFile);

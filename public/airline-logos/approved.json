@@ -118,5 +118,30 @@
     "file": "WJA.png",
     "source": "WJA-up1781311668416.png",
     "approvedAt": "2026-06-13T00:47:49.102Z"
+  },
+  "PVT": {
+    "file": "PVT.png",
+    "source": "PVT-up1781817174361.png",
+    "approvedAt": "2026-06-18T21:12:55.555Z"
+  },
+  "MIL": {
+    "file": "MIL.png",
+    "source": "MIL-up1781817452838.png",
+    "approvedAt": "2026-06-18T21:17:33.596Z"
+  },
+  "VIP": {
+    "file": "VIP.png",
+    "source": "VIP-up1781818951988.png",
+    "approvedAt": "2026-06-18T21:42:58.665Z"
+  },
+  "CGO": {
+    "file": "CGO.png",
+    "source": "CGO-up1781817463289.png",
+    "approvedAt": "2026-06-18T21:43:00.148Z"
+  },
+  "GA": {
+    "file": "GA.png",
+    "source": "GA-up1781819124604.png",
+    "approvedAt": "2026-06-18T21:45:25.249Z"
   }
 }
