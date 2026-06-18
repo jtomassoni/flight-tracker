@@ -401,6 +401,32 @@ html.admin-page body {
   font-size: 0.72rem;
 }
 
+.admin-url-copy {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.admin-url-copy__text {
+  flex: 1;
+  min-width: 0;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid var(--line);
+  border-radius: 0.35rem;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-dim);
+  font-size: 0.68rem;
+  line-height: 1.45;
+  word-break: break-all;
+  user-select: all;
+}
+
+.admin-url-copy__btn {
+  flex-shrink: 0;
+  align-self: stretch;
+}
+
 /* ── Inputs ── */
 
 .admin-input,

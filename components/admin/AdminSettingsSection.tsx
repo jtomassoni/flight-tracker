@@ -1,5 +1,6 @@
 'use client';
 
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAdminSettings } from '@/components/admin/AdminSettingsProvider';
 import FlightMap from '@/components/display/maps/FlightMap';
 import { getTheme, getThemeSwatches, THEME_LIST } from '@/lib/themes';
@@ -26,6 +27,80 @@ const SECTION_COPY: Record<AdminSettingsSection, { panelTitle: string }> = {
   filters: { panelTitle: 'Radar & traffic' },
   screen: { panelTitle: 'Screen & power' },
 };
+
+function buildOldIpadDisplayPath(
+  keepAwake: boolean,
+  nightDimEnabled: boolean,
+  nightDimStart: string,
+  nightDimEnd: string,
+  nightDimLevel: number
+): string {
+  const params = new URLSearchParams({
+    awake: keepAwake ? '1' : '0',
+    dim: nightDimEnabled ? '1' : '0',
+    dimStart: nightDimStart,
+    dimEnd: nightDimEnd,
+    dimLevel: String(nightDimLevel),
+  });
+  return `/old-ipad-display?${params.toString()}`;
+}
+
+function OldIpadDisplayUrlCopy({
+  keepAwake,
+  nightDimEnabled,
+  nightDimStart,
+  nightDimEnd,
+  nightDimLevel,
+}: {
+  keepAwake: boolean;
+  nightDimEnabled: boolean;
+  nightDimStart: string;
+  nightDimEnd: string;
+  nightDimLevel: number;
+}) {
+  const path = useMemo(
+    () =>
+      buildOldIpadDisplayPath(
+        keepAwake,
+        nightDimEnabled,
+        nightDimStart,
+        nightDimEnd,
+        nightDimLevel
+      ),
+    [keepAwake, nightDimEnabled, nightDimStart, nightDimEnd, nightDimLevel]
+  );
+  const [fullUrl, setFullUrl] = useState('');
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setFullUrl(`${window.location.origin}${path}`);
+  }, [path]);
+
+  const copyUrl = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(fullUrl);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* clipboard blocked — user can still select the URL below */
+    }
+  }, [fullUrl]);
+
+  return (
+    <div className="admin-url-copy">
+      <code className="admin-url-copy__text admin-mono">{fullUrl || path}</code>
+      <button
+        type="button"
+        className="admin-btn admin-btn--ghost admin-btn--compact admin-url-copy__btn"
+        onClick={() => void copyUrl()}
+        disabled={!fullUrl}
+        aria-label="Copy iPad display URL"
+      >
+        {copied ? 'Copied' : 'Copy'}
+      </button>
+    </div>
+  );
+}
 
 type Option<T extends string | number> = { value: T; label: string };
 
@@ -419,15 +494,18 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
 
             <p className="text-[11px] leading-relaxed text-slate-500">
               These dim settings save to this browser. To apply them on the old iPad, open it once
-              with{' '}
-              <code className="admin-mono text-slate-400">
-                /old-ipad-display?awake={settings.keepAwake ? '1' : '0'}&amp;dim=
-                {settings.nightDimEnabled ? '1' : '0'}&amp;dimStart={settings.nightDimStart}
-                &amp;dimEnd={settings.nightDimEnd}&amp;dimLevel={settings.nightDimLevel}
-              </code>{' '}
-              — it remembers after that. If the iPad is old, you may need to remake the home screen
-              icon for the new dim settings to take effect.
+              with the URL below — it remembers after that. Tap <strong>Copy</strong> and paste into
+              Safari on the iPad. If the iPad is old, you may need to remake the home screen icon for
+              the new dim settings to take effect.
             </p>
+
+            <OldIpadDisplayUrlCopy
+              keepAwake={settings.keepAwake}
+              nightDimEnabled={settings.nightDimEnabled}
+              nightDimStart={settings.nightDimStart}
+              nightDimEnd={settings.nightDimEnd}
+              nightDimLevel={settings.nightDimLevel}
+            />
 
             <div className="admin-config-summary">
               <span className="admin-stat-pill rounded-md px-2 py-1">
