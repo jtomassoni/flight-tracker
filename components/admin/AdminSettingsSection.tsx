@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAdminSettings } from '@/components/admin/AdminSettingsProvider';
 import FlightMap from '@/components/display/maps/FlightMap';
 import { getTheme, getThemeSwatches, THEME_LIST } from '@/lib/themes';
-import { clampDimLevel, type DisplayMode, type ThemeId } from '@/lib/settings';
+import { clampDimLevel, saveSettings, type DisplayMode, type ThemeId } from '@/lib/settings';
+import { buildTrackTarget } from '@/lib/callsignMatch';
 
 export type AdminSettingsSection = 'themes' | 'location' | 'filters' | 'screen';
 
@@ -169,7 +170,7 @@ function ThemeChip({
       <span className="admin-theme-module__name">{name}</span>
       {selected && (
         <span className="admin-theme-module__mark admin-mono" aria-hidden>
-          ● ON
+          Selected
         </span>
       )}
     </button>
@@ -197,17 +198,17 @@ function Toggle({
       role="switch"
       aria-checked={checked}
       onClick={() => onChange(!checked)}
-      className={`admin-toggle flex cursor-pointer items-center gap-3 rounded-lg border border-white/5 bg-black/20 text-left ${
+      className={`admin-toggle flex cursor-pointer items-center gap-2.5 text-left ${
         inline ? 'w-auto' : 'w-full'
-      } ${compact ? 'min-h-[36px] px-3 py-2' : 'min-h-[44px] px-4 py-3'}`}
+      } ${compact ? 'min-h-[2rem] px-2.5 py-1.5' : 'min-h-[2.5rem] px-3 py-2'}`}
     >
       <span
         data-checked={checked ? 'true' : 'false'}
-        className="admin-toggle__track relative h-5 w-9 shrink-0 rounded-full border border-white/10 bg-slate-800 transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:bg-slate-300 after:transition-transform"
+        className="admin-toggle__track relative h-5 w-9 shrink-0 rounded-full transition-colors after:absolute after:left-0.5 after:top-0.5 after:h-4 after:w-4 after:rounded-full after:transition-transform"
       />
       <div className="min-w-0">
-        <span className={`block text-slate-200 ${compact ? 'text-xs' : 'text-sm'}`}>{label}</span>
-        {hint && !compact && <p className="text-[10px] text-slate-500">{hint}</p>}
+        <span className={`block text-[var(--text)] ${compact ? 'text-xs' : 'text-sm'}`}>{label}</span>
+        {hint && !compact && <p className="text-[11px] text-[var(--muted)]">{hint}</p>}
       </div>
     </button>
   );
@@ -309,8 +310,8 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
             </div>
 
             <div className="admin-location-summary">
-              <p className="truncate text-sm font-medium text-slate-200">{settings.locationLabel}</p>
-              <p className="admin-mono truncate text-[10px] text-slate-500">
+              <p className="truncate text-sm font-medium">{settings.locationLabel}</p>
+              <p className="admin-mono truncate text-[11px] text-[var(--muted)]">
                 {settings.lat.toFixed(4)}°N · {Math.abs(settings.lon).toFixed(4)}°W ·{' '}
                 {settings.radiusMi} mi · {settings.refreshIntervalSec}s
               </p>
@@ -319,7 +320,90 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
         )}
 
         {section === 'filters' && (
-          <Panel title={copy.panelTitle}>
+          <div className="admin-page__split">
+          <Panel title="Watch a flight">
+            <p className="admin-surface__hint">
+              Track one flight by airline and number. The display shows only that aircraft when airborne.
+            </p>
+            <div className="admin-field-grid admin-field-grid--page">
+              <label className="block min-w-0">
+                <span className="admin-label mb-1 block">Airline</span>
+                <input
+                  type="text"
+                  value={settings.trackAirline ?? ''}
+                  onChange={(e) =>
+                    update('trackAirline', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3))
+                  }
+                  placeholder="UA"
+                  className="admin-input admin-input--compact admin-mono uppercase"
+                />
+              </label>
+              <label className="block min-w-0">
+                <span className="admin-label mb-1 block">Flight #</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={settings.trackFlightNumber ?? ''}
+                  onChange={(e) =>
+                    update('trackFlightNumber', e.target.value.replace(/\D/g, '').slice(0, 5))
+                  }
+                  placeholder="1234"
+                  className="admin-input admin-input--compact admin-mono"
+                />
+              </label>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="admin-btn admin-btn--ghost admin-btn--compact"
+                onClick={() => {
+                  const next = {
+                    ...settings,
+                    trackAirline: settings.trackAirline ?? '',
+                    trackFlightNumber: settings.trackFlightNumber ?? '',
+                  };
+                  saveSettings(next);
+                  update('trackAirline', next.trackAirline);
+                  update('trackFlightNumber', next.trackFlightNumber);
+                }}
+                disabled={
+                  !buildTrackTarget(settings.trackAirline ?? '', settings.trackFlightNumber ?? '')
+                }
+              >
+                Save watch
+              </button>
+              <button
+                type="button"
+                className="admin-btn admin-btn--ghost admin-btn--compact"
+                onClick={() => {
+                  const next = { ...settings, trackAirline: '', trackFlightNumber: '' };
+                  saveSettings(next);
+                  update('trackAirline', '');
+                  update('trackFlightNumber', '');
+                }}
+                disabled={!settings.trackAirline && !settings.trackFlightNumber}
+              >
+                Clear
+              </button>
+            </div>
+            {buildTrackTarget(settings.trackAirline ?? '', settings.trackFlightNumber ?? '') && (
+              <p className="admin-surface__hint">
+                Watching{' '}
+                <span className="admin-mono text-[var(--text)]">
+                  {
+                    buildTrackTarget(settings.trackAirline ?? '', settings.trackFlightNumber ?? '')!
+                      .displayLabel
+                  }
+                </span>
+                {' '}·{' '}
+                <span className="admin-mono">
+                  /display?airline={settings.trackAirline}&amp;flight={settings.trackFlightNumber}
+                </span>
+              </p>
+            )}
+          </Panel>
+
+          <Panel title={copy.panelTitle} className="admin-panel-card--fill">
             <div className="admin-field-grid admin-field-grid--page">
               <SelectField
                 compact
@@ -401,30 +485,8 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
               hint="FedEx, UPS, Atlas, DHL and other freight operators"
             />
 
-            <div className="admin-config-summary">
-              <span className="admin-stat-pill rounded-md px-2 py-1">{settings.refreshIntervalSec}s refresh</span>
-              <span className="admin-stat-pill rounded-md px-2 py-1">{settings.radiusMi} mi radius</span>
-              <span className="admin-stat-pill rounded-md px-2 py-1">{settings.maxAircraft} aircraft</span>
-              <span className="admin-stat-pill rounded-md px-2 py-1">
-                {settings.altitudeFilter === 'all'
-                  ? 'All altitudes'
-                  : settings.altitudeFilter === 'below10k'
-                    ? 'Below 10k'
-                    : settings.altitudeFilter === '10k-25k'
-                      ? '10k–25k'
-                      : 'Above 25k'}
-              </span>
-              <span className="admin-stat-pill rounded-md px-2 py-1">
-                {MODE_LABELS[settings.mode]}
-              </span>
-              {settings.cargoOnly && (
-                <span className="admin-stat-pill rounded-md px-2 py-1">Cargo only</span>
-              )}
-              <span className="admin-stat-pill rounded-md px-2 py-1">
-                {settings.skyMapZoom === 'close' ? 'Close zoom' : 'Normal zoom'}
-              </span>
-            </div>
           </Panel>
+          </div>
         )}
 
         {section === 'screen' && (
@@ -437,11 +499,8 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
               hint="Wake lock for the modern (React) display only — iOS 16.4+"
             />
 
-            <p className="text-[11px] leading-relaxed text-amber-300/80">
-              The old iPad 4 (iOS 10) has no wake-lock API, so it plays a hidden muted video to stay
-              awake — iOS needs <strong>one tap on the display</strong> to start it. As a guaranteed
-              backup, set <strong>Settings → Display &amp; Brightness → Auto-Lock → Never</strong> on
-              that iPad.
+            <p className="admin-surface__hint">
+              Legacy iPad (iOS 10): tap the display once to start keep-awake, or set Auto-Lock to Never.
             </p>
 
             <Toggle
@@ -492,11 +551,8 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
               />
             </label>
 
-            <p className="text-[11px] leading-relaxed text-slate-500">
-              These dim settings save to this browser. To apply them on the old iPad, open it once
-              with the URL below — it remembers after that. Tap <strong>Copy</strong> and paste into
-              Safari on the iPad. If the iPad is old, you may need to remake the home screen icon for
-              the new dim settings to take effect.
+            <p className="admin-surface__hint">
+              Copy the URL below and open it once on the legacy iPad to apply dim settings there.
             </p>
 
             <OldIpadDisplayUrlCopy
@@ -507,16 +563,6 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
               nightDimLevel={settings.nightDimLevel}
             />
 
-            <div className="admin-config-summary">
-              <span className="admin-stat-pill rounded-md px-2 py-1">
-                {settings.keepAwake ? 'Stays awake' : 'Auto-lock allowed'}
-              </span>
-              <span className="admin-stat-pill rounded-md px-2 py-1">
-                {settings.nightDimEnabled
-                  ? `Dim ${settings.nightDimStart}–${settings.nightDimEnd} · ${settings.nightDimLevel}%`
-                  : 'No night dimming'}
-              </span>
-            </div>
           </Panel>
         )}
       </div>

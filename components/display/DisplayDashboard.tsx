@@ -1,20 +1,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { KioskPreviewProvider } from '@/contexts/KioskPreviewContext';
 import { useFlightData } from '@/hooks/useFlightData';
-import type { IpadOrientation } from '@/lib/kiosk';
-import { loadSettings, type ThemeId } from '@/lib/settings';
+import { DEFAULT_SETTINGS, loadSettings, saveSettings, type ThemeId } from '@/lib/settings';
+import { parseTrackQuery } from '@/lib/callsignMatch';
 import { getTheme, THEME_IDS, type LayoutId } from '@/lib/themes';
 import ThemeProvider from '@/components/ThemeProvider';
-import IpadPreviewFrame from './IpadPreviewFrame';
 import ScreenManager from './ScreenManager';
 import AdminLink from './shared/AdminLink';
 import ThemeDebugPanel from './ThemeDebugPanel';
 import ThemeLayout from './layouts';
-import './ipad-preview.css';
 
 const isDev = process.env.NODE_ENV === 'development';
+
+/** Stable empty list reference for the dev error-preview toggle. */
+const EMPTY_AIRCRAFT: [] = [];
 
 function stepTheme(current: ThemeId, direction: -1 | 1): ThemeId {
   const index = THEME_IDS.indexOf(current);
@@ -24,10 +24,9 @@ function stepTheme(current: ThemeId, direction: -1 | 1): ThemeId {
 
 export default function DisplayDashboard() {
   const [manualTheme, setManualTheme] = useState<ThemeId | null>(null);
-  const [ipadPreview, setIpadPreview] = useState(false);
-  const [ipadOrientation, setIpadOrientation] = useState<IpadOrientation>('landscape');
+  const [previewError, setPreviewError] = useState(false);
   const [pollLayout, setPollLayout] = useState<LayoutId>(
-    () => getTheme(loadSettings().theme).layout
+    () => getTheme(DEFAULT_SETTINGS.theme).layout
   );
 
   const {
@@ -41,7 +40,27 @@ export default function DisplayDashboard() {
     errorMessage,
     settings,
     refresh,
+    trackLabel,
+    trackStatus,
   } = useFlightData(pollLayout);
+
+  // Shareable links: /display?airline=UA&flight=1234 or /display?track=UA1234
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const airline = params.get('airline');
+    const flight = params.get('flight');
+    const track = params.get('track');
+    const parsed = track ? parseTrackQuery(track) : null;
+
+    if ((airline && flight) || parsed) {
+      const current = loadSettings();
+      saveSettings({
+        ...current,
+        trackAirline: parsed?.airline ?? airline ?? '',
+        trackFlightNumber: parsed?.flightNumber ?? flight ?? '',
+      });
+    }
+  }, []);
 
   const activeThemeId = manualTheme ?? settings.theme;
   const theme = getTheme(activeThemeId);
@@ -50,22 +69,34 @@ export default function DisplayDashboard() {
     setPollLayout(theme.layout);
   }, [theme.layout]);
 
-  const featured = displayedAircraft[0] ?? null;
+  // `previewError` is a dev-only toggle that forces every theme into its own
+  // embedded "feed unavailable" state so it can be reviewed per theme. It mimics
+  // a real outage: error status, no data, and a sample message.
+  const effectiveStatus = previewError ? 'error' : status;
+  const effectiveError = previewError
+    ? 'Preview — this is how a live-feed outage looks in this theme.'
+    : errorMessage;
+  const effectiveDisplayed = previewError ? EMPTY_AIRCRAFT : displayedAircraft;
+  const effectiveFiltered = previewError ? EMPTY_AIRCRAFT : filteredAircraft;
+  const effectiveAll = previewError ? EMPTY_AIRCRAFT : aircraft;
+  const featured = effectiveDisplayed[0] ?? null;
 
   const layout = (
     <ThemeLayout
-      displayedAircraft={displayedAircraft}
-      filteredAircraft={filteredAircraft}
-      allAircraft={aircraft}
+      displayedAircraft={effectiveDisplayed}
+      filteredAircraft={effectiveFiltered}
+      allAircraft={effectiveAll}
       featured={featured}
       settings={settings}
-      status={status}
+      status={effectiveStatus}
       lastUpdated={lastUpdated}
       source={source}
       provider={provider}
-      errorMessage={errorMessage}
+      errorMessage={effectiveError}
       onRefresh={refresh}
       theme={theme}
+      trackLabel={previewError ? null : trackLabel}
+      trackStatus={previewError ? 'off' : trackStatus}
     />
   );
 
@@ -73,28 +104,16 @@ export default function DisplayDashboard() {
     <>
       <ScreenManager settings={settings} />
       <ThemeProvider key={activeThemeId} themeId={activeThemeId}>
-        <KioskPreviewProvider enabled={ipadPreview} orientation={ipadOrientation}>
-          <div className="h-full w-full">
-            {ipadPreview ? (
-              <IpadPreviewFrame orientation={ipadOrientation}>{layout}</IpadPreviewFrame>
-            ) : (
-              layout
-            )}
-          </div>
-          <AdminLink />
-        </KioskPreviewProvider>
+        <div className="h-full w-full">{layout}</div>
+        <AdminLink />
       </ThemeProvider>
 
       {isDev && (
         <ThemeDebugPanel
           activeThemeId={activeThemeId}
           isManual={manualTheme !== null}
-          ipadPreview={ipadPreview}
-          ipadOrientation={ipadOrientation}
-          onToggleIpadPreview={() => setIpadPreview((on) => !on)}
-          onRotateIpad={() =>
-            setIpadOrientation((o) => (o === 'landscape' ? 'portrait' : 'landscape'))
-          }
+          previewError={previewError}
+          onTogglePreviewError={() => setPreviewError((on) => !on)}
           onPrev={() => setManualTheme((prev) => stepTheme(prev ?? activeThemeId, -1))}
           onNext={() => setManualTheme((prev) => stepTheme(prev ?? activeThemeId, 1))}
         />

@@ -2,56 +2,70 @@
 
 import SplitFlapText from '@/components/SplitFlapText';
 import type { DisplayLayoutProps } from '@/types/display';
-import { displayIdentifier } from '@/lib/aircraftUtils';
-import FlightListState from '../shared/FlightListState';
+import { displayIdentifier, formatAltitude } from '@/lib/aircraftUtils';
+import { getDisplayEmptyState } from '@/lib/displayEmptyState';
+import { fidsDestination } from '@/lib/denFids';
 import KioskScrollRegion from '../shared/KioskScrollRegion';
 import './split-flap-board.css';
 
-/** 2-digit platform / row numbers like classic departure boards */
-function flapRowId(index: number): string {
-  return String(index + 1).padStart(2, '0');
-}
-
-/** 24h departure-style time derived from row index + last sync */
-function flapDepartureTime(index: number, lastUpdated: Date | null): string {
-  const base = lastUpdated ?? new Date();
-  const totalMin = base.getHours() * 60 + base.getMinutes() + index * 4;
-  const h = Math.floor(totalMin / 60) % 24;
-  const m = totalMin % 60;
-  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
-}
-
-function flapDestination(callsign?: string, hex?: string): string {
-  const raw = displayIdentifier({ hex: hex ?? '', callsign, lat: 0, lon: 0, distanceMi: 0 });
-  if (raw === '—' && hex) return hex.slice(0, 6).toUpperCase();
-  return raw.replace(/[^A-Z0-9 ]/gi, '').toUpperCase();
+function flapDestination(ac: DisplayLayoutProps['displayedAircraft'][number]): string {
+  const dest = fidsDestination(ac);
+  if (dest !== '—') {
+    return dest.replace(/[^A-Z0-9 ]/gi, '').toUpperCase().slice(0, 12);
+  }
+  const id = displayIdentifier(ac).replace(/[^A-Z0-9 ]/gi, '').toUpperCase();
+  return id.slice(0, 12) || '—';
 }
 
 export default function SplitFlapBoardLayout({
   displayedAircraft,
   settings,
   status,
-  lastUpdated,
+  errorMessage,
+  trackLabel,
+  trackStatus,
 }: DisplayLayoutProps) {
   const locationLine = settings.locationLabel.replace(/,/g, '').trim().toUpperCase().slice(0, 14);
   const countLine = `${displayedAircraft.length} FLIGHTS`;
+  const feedDown = status === 'error' || status === 'offline';
+  const emptyState = getDisplayEmptyState({
+    status,
+    trackLabel,
+    trackStatus,
+    feedDown,
+    errorMessage,
+    locationLabel: settings.locationLabel,
+    radiusMi: settings.radiusMi,
+  });
 
   return (
     <div className="solari-board flex h-full flex-col overflow-hidden">
       <KioskScrollRegion className="min-h-0 flex-1 py-2 md:py-4" durationSec={40}>
-        <FlightListState status={status} count={displayedAircraft.length} />
-        {displayedAircraft.map((ac, i) => {
-          const dest = flapDestination(ac.callsign, ac.hex);
+        {displayedAircraft.length === 0 && (
+          <div className="solari-board__empty">
+            <SplitFlapText
+              value={emptyState.title.toUpperCase().slice(0, 12)}
+              maxChars={12}
+            />
+            <p className="solari-board__empty-sub">{emptyState.subtitle}</p>
+          </div>
+        )}
+        {displayedAircraft.map((ac) => {
+          const dest = flapDestination(ac);
+          const alt = formatAltitude(ac.altitudeFt).replace(/\s+/g, '');
           return (
             <div key={ac.hex} className="solari-board__row">
               <div className="solari-board__col-id">
-                <SplitFlapText value={flapRowId(i)} minChars={2} />
+                <SplitFlapText
+                  value={displayIdentifier(ac).replace(/[^A-Z0-9 ]/gi, '').slice(0, 8)}
+                  maxChars={8}
+                />
               </div>
               <div className="solari-board__col-dest">
                 <SplitFlapText value={dest} maxChars={12} />
               </div>
               <div className="solari-board__col-time">
-                <SplitFlapText value={flapDepartureTime(i, lastUpdated)} minChars={5} />
+                <SplitFlapText value={alt} maxChars={6} />
               </div>
             </div>
           );

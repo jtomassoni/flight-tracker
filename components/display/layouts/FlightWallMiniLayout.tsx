@@ -8,14 +8,16 @@ import {
   getAirlineLedWallStyle,
 } from '@/lib/airlines';
 import {
+  computeFlightProgress,
   formatLedFlightId,
   formatLedOperatorTag,
   formatLedRouteHero,
   ledRouteLabel,
   ledTelemetryFields,
+  resolveLedLogoMarkIcao,
 } from '@/lib/ledFlightWall';
+import { getDisplayEmptyState } from '@/lib/displayEmptyState';
 import { useKioskOrientation } from '@/hooks/useKioskOrientation';
-import FlightListState from '../shared/FlightListState';
 import LedMatrixCanvas from '../shared/LedMatrixCanvas';
 import './flight-wall-mini.css';
 
@@ -23,38 +25,66 @@ const ROTATE_MS = 10_000;
 
 export default function FlightWallMiniLayout({
   displayedAircraft,
+  settings,
   status,
+  errorMessage,
+  trackLabel,
+  trackStatus,
 }: DisplayLayoutProps) {
   const [index, setIndex] = useState(0);
   const orientation = useKioskOrientation();
+  const feedDown = status === 'error' || status === 'offline';
+  const emptyState = getDisplayEmptyState({
+    status,
+    trackLabel,
+    trackStatus,
+    feedDown,
+    errorMessage,
+    locationLabel: settings.locationLabel,
+    radiusMi: settings.radiusMi,
+  });
+
+  /** Prefer flights with a validated route so the top header isn't blank. */
+  const carouselAircraft = useMemo(() => {
+    const withRoute = displayedAircraft.filter((ac) => ledRouteLabel(ac));
+    const withoutRoute = displayedAircraft.filter((ac) => !ledRouteLabel(ac));
+    return withRoute.length > 0 ? [...withRoute, ...withoutRoute] : displayedAircraft;
+  }, [displayedAircraft]);
 
   useEffect(() => {
     setIndex(0);
-  }, [displayedAircraft.length, displayedAircraft[0]?.hex]);
+  }, [carouselAircraft.length, carouselAircraft[0]?.hex]);
 
-  useEffect(() => {
-    if (displayedAircraft.length <= 1) return undefined;
-    const timer = window.setInterval(() => {
-      setIndex((prev) => (prev + 1) % displayedAircraft.length);
-    }, ROTATE_MS);
-    return () => window.clearInterval(timer);
+  const carouselLength = useMemo(() => {
+    const withRoute = displayedAircraft.filter((ac) => ledRouteLabel(ac));
+    return withRoute.length > 0 ? withRoute.length : displayedAircraft.length;
   }, [displayedAircraft]);
 
-  const aircraft = displayedAircraft[index] ?? null;
+  useEffect(() => {
+    if (carouselLength <= 1) return undefined;
+    const timer = window.setInterval(() => {
+      setIndex((prev) => (prev + 1) % carouselLength);
+    }, ROTATE_MS);
+    return () => window.clearInterval(timer);
+  }, [carouselLength]);
+
+  const aircraft = carouselAircraft[index] ?? null;
 
   const ledContent = useMemo(() => {
     if (!aircraft) return null;
     const brand = getAircraftDisplayBrand(aircraft);
     const wallStyle = getAirlineLedWallStyle(brand);
     const routeLine = ledRouteLabel(aircraft);
+    const operatorTag = formatLedOperatorTag(aircraft);
     return {
       airlineName: brand.name,
       flightId: formatLedFlightId(aircraft, brand),
-      operatorTag: formatLedOperatorTag(aircraft),
+      operatorTag,
       routeHero: formatLedRouteHero(routeLine),
+      routeProgress: computeFlightProgress(aircraft),
       telemetry: ledTelemetryFields(aircraft),
       logoUrl: airlineLedLogoUrl(brand),
-      logoIcao: brand.icao,
+      logoIcao: resolveLedLogoMarkIcao(brand, operatorTag),
       logoFallback: brand.iata,
       logoBackground: wallStyle.logoBackground,
       logoBorder: wallStyle.logoBorder,
@@ -68,8 +98,13 @@ export default function FlightWallMiniLayout({
     <div className="flight-wall-mini h-full w-full">
       <div className="flight-wall-mini__screen h-full w-full">
         {!ledContent ? (
-          <div className="flight-wall-mini__empty flex h-full items-center justify-center">
-            <FlightListState status={status} count={0} />
+          <div className="flight-wall-mini__empty flex h-full flex-col items-center justify-center gap-2 text-center">
+            <p className="flight-wall-mini__empty-title">
+              {emptyState.title.toUpperCase()}
+            </p>
+            <p className="flight-wall-mini__empty-sub">
+              {emptyState.subtitle.toUpperCase()}
+            </p>
           </div>
         ) : (
           <>

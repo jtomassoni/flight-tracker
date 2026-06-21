@@ -12,8 +12,8 @@ import {
   formatVerticalRate,
   getVerticalTrend,
 } from '@/lib/aircraftUtils';
+import { getDisplayEmptyState } from '@/lib/displayEmptyState';
 import { useLayoutDensity } from '@/hooks/useLayoutDensity';
-import FlightListState from '../shared/FlightListState';
 import KioskScrollRegion from '../shared/KioskScrollRegion';
 
 export default function FirstClassHeroLayout({
@@ -22,11 +22,24 @@ export default function FirstClassHeroLayout({
   settings,
   status,
   lastUpdated,
+  errorMessage,
+  trackLabel,
+  trackStatus,
 }: DisplayLayoutProps) {
   const { trafficCols: gridClass, viewport } = useLayoutDensity();
   const hero = featured;
   const rest = displayedAircraft.slice(1);
   const brand = hero ? getAircraftDisplayBrand(hero) : null;
+  const feedDown = status === 'error' || status === 'offline';
+  const emptyState = getDisplayEmptyState({
+    status,
+    trackLabel,
+    trackStatus,
+    feedDown,
+    errorMessage,
+    locationLabel: settings.locationLabel,
+    radiusMi: settings.radiusMi,
+  });
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background font-serif text-foreground">
@@ -44,7 +57,21 @@ export default function FirstClassHeroLayout({
       </header>
 
       {!hero ? (
-        <FlightListState status={status} count={0} />
+        <section className="flex flex-1 flex-col items-center justify-center gap-3 px-6 py-12 text-center">
+          <p className="text-[10px] uppercase tracking-[0.45em] text-accent" style={{ textShadow: 'var(--glow)' }}>
+            {emptyState.kicker ?? (feedDown ? 'Signal Lost' : status === 'loading' ? 'Preparing Cabin' : 'Clear Skies')}
+          </p>
+          <h2
+            className="text-3xl font-bold italic text-foreground md:text-5xl"
+            style={{ textShadow: 'var(--glow)' }}
+          >
+            {emptyState.title}
+          </h2>
+          <p className="max-w-md text-sm text-muted md:text-base">
+            {emptyState.subtitle}
+          </p>
+          <span className="mt-2 h-px w-24 bg-accent/40" aria-hidden />
+        </section>
       ) : (
         <section className="shrink-0 border-b border-border bg-panel/40 px-4 py-4 md:px-6">
           <div
@@ -112,6 +139,7 @@ export default function FirstClassHeroLayout({
         </section>
       )}
 
+      {hero && (
       <section className="flex min-h-0 flex-1 flex-col px-4 py-3 md:px-6">
         <p className="mb-2 shrink-0 text-[10px] uppercase tracking-[0.3em] text-muted">
           Traffic ({displayedAircraft.length})
@@ -148,6 +176,7 @@ export default function FirstClassHeroLayout({
           </KioskScrollRegion>
         )}
       </section>
+      )}
     </div>
   );
 }

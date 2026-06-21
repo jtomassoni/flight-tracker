@@ -79,13 +79,58 @@ export function measureLedText(text: string): number {
   return text.length * ledCharCellW() - LED_FONT.gapX;
 }
 
+/** Longest first so NORTHEAST matches before NORTH. */
+const LED_CARDINAL_WORDS = [
+  'NORTHEAST',
+  'NORTHWEST',
+  'SOUTHEAST',
+  'SOUTHWEST',
+  'NORTH',
+  'SOUTH',
+  'EAST',
+  'WEST',
+] as const;
+
+function trailingCardinal(text: string): { prefix: string; cardinal: string } | null {
+  const upper = text.toUpperCase();
+  for (const cardinal of LED_CARDINAL_WORDS) {
+    if (upper === cardinal) return { prefix: '', cardinal };
+    const suffix = ` ${cardinal}`;
+    if (upper.endsWith(suffix)) {
+      return { prefix: text.slice(0, text.length - suffix.length), cardinal };
+    }
+  }
+  return null;
+}
+
+/** Never abbreviate a trailing cardinal — drop the prefix or clip instead. */
+function truncateLedChars(text: string, maxChars: number): string {
+  if (maxChars <= 0 || !text) return '';
+  if (text.length <= maxChars) return text;
+  if (maxChars <= 1) return text.slice(0, 1);
+
+  const card = trailingCardinal(text);
+  if (card) {
+    const { prefix, cardinal } = card;
+    if (cardinal.length <= maxChars) {
+      if (!prefix) return cardinal;
+      const combined = `${prefix} ${cardinal}`;
+      if (combined.length <= maxChars) return combined;
+      const prefixRoom = maxChars - cardinal.length - 1;
+      if (prefixRoom <= 0 || prefix.length > prefixRoom) return cardinal;
+      return `${prefix.slice(0, prefixRoom)} ${cardinal}`;
+    }
+    return cardinal;
+  }
+
+  return `${text.slice(0, maxChars - 1)}.`;
+}
+
 export function truncateLedText(text: string, maxDots: number): string {
   if (maxDots <= 0 || !text) return '';
   const cell = ledCharCellW();
   const maxChars = Math.max(1, Math.floor((maxDots + LED_FONT.gapX) / cell));
-  if (text.length <= maxChars) return text;
-  if (maxChars <= 1) return text.slice(0, 1);
-  return `${text.slice(0, maxChars - 1)}.`;
+  return truncateLedChars(text, maxChars);
 }
 
 export function ledScaledCellW(scaleX: number): number {
@@ -108,9 +153,7 @@ export function truncateLedTextScaled(text: string, maxDots: number, scaleX: num
   if (maxDots <= 0 || !text) return '';
   const cell = ledScaledCellW(scaleX);
   const maxChars = Math.max(1, Math.floor((maxDots + LED_FONT.gapX) / cell));
-  if (text.length <= maxChars) return text;
-  if (maxChars <= 1) return text.slice(0, 1);
-  return `${text.slice(0, maxChars - 1)}.`;
+  return truncateLedChars(text, maxChars);
 }
 
 /** Largest uniform scale that fits — no vertical-only stretch. */
@@ -177,9 +220,18 @@ function drawGlyphPixels(
     const bits = glyph[row] ?? 0;
     for (let col = 0; col < LED_FONT.glyphW; col += 1) {
       if ((bits >> (LED_FONT.glyphW - 1 - col)) & 1) {
-        ctx.fillRect(ox + col * scaleX, y + row * scaleY, scaleX, scaleY);
+        /**
+         * Snap each glyph pixel to the integer LED grid. Fractional scales (e.g.
+         * 1.5× hero flight IDs on wall displays) otherwise anti-alias the fillRect
+         * edges, leaving partially-lit LEDs that read as dimmer gray dots.
+         */
+        const x0 = Math.round(ox + col * scaleX);
+        const x1 = Math.round(ox + (col + 1) * scaleX);
+        const y0 = Math.round(y + row * scaleY);
+        const y1 = Math.round(y + (row + 1) * scaleY);
+        ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
         if (thicken && row + 1 < LED_FONT.glyphH) {
-          ctx.fillRect(ox + col * scaleX, y + (row + 1) * scaleY, scaleX, scaleY);
+          ctx.fillRect(x0, Math.round(y + (row + 1) * scaleY), x1 - x0, y1 - y0);
         }
       }
     }
@@ -321,9 +373,7 @@ export function truncateLedTextCompact(text: string, maxDots: number): string {
   if (maxDots <= 0 || !text) return '';
   const cell = ledCompactCellW();
   const maxChars = Math.max(1, Math.floor((maxDots + LED_FONT_COMPACT.gapX) / cell));
-  if (text.length <= maxChars) return text;
-  if (maxChars <= 1) return text.slice(0, 1);
-  return `${text.slice(0, maxChars - 1)}.`;
+  return truncateLedChars(text, maxChars);
 }
 
 export function drawLedTextCompact(

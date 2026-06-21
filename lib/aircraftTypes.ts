@@ -33,9 +33,9 @@ const ICAO_TYPE_NAMES: Record<string, string> = {
   A319: 'A319',
   A320: 'A320',
   A321: 'A321',
-  A19N: 'A319neo',
-  A20N: 'A320neo',
-  A21N: 'A321neo',
+  A19N: 'A319 neo',
+  A20N: 'A320 neo',
+  A21N: 'A321 neo',
   A332: 'A330-200',
   A333: 'A330-300',
   A339: 'A330-900',
@@ -89,6 +89,13 @@ function normalizeTypeCode(raw: string): string {
   return raw.trim().toUpperCase();
 }
 
+/** Insert a space before "neo" on A319/A320/A321 labels (feed often sends "A320NEO"). */
+function normalizeAirbusNeoLabel(label: string): string {
+  const match = label.match(/^(A319|A320|A321)\s*neo$/i);
+  if (match) return `${match[1]} neo`;
+  return label;
+}
+
 /** Resolve an ICAO designator or raw type string to a board-friendly label. */
 export function formatAircraftTypeDisplay(raw?: string): string {
   if (!raw?.trim()) return 'Unknown';
@@ -104,10 +111,10 @@ export function formatAircraftTypeDisplay(raw?: string): string {
     return trimmed.replace(/^boeing\s+/i, '').trim();
   }
   if (/^airbus\s+/i.test(trimmed)) {
-    return `A${trimmed.replace(/^airbus\s+/i, '').trim()}`;
+    return normalizeAirbusNeoLabel(`A${trimmed.replace(/^airbus\s+/i, '').trim()}`);
   }
 
-  return trimmed;
+  return normalizeAirbusNeoLabel(trimmed);
 }
 
 /** Board-friendly label tuned for the narrow LED column — short, but still a clear ID. */

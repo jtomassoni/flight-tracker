@@ -7,7 +7,7 @@ A personal FlightWall-style dashboard showing aircraft near Denver (ZIP 80219). 
 - **`/display`** — fullscreen flight board with preset themes
 - **`/admin`** — configure ZIP code, theme, refresh interval, radius, filters, and display mode
 - **Server-side flight API** — keys never exposed to the browser
-- **Mock fallback** — UI works when the external ADS-B API is down
+- **Live data only** — real ADS-B aircraft plus real origin→destination routes (adsbdb); never any synthetic/fake flights
 
 ### Themes
 
@@ -19,7 +19,7 @@ A personal FlightWall-style dashboard showing aircraft near Denver (ZIP 80219). 
 | Midnight First Class | Cinematic hero + horizontal filmstrip |
 | Radar Operations | Live radar scope with blips + target sidebar |
 | Sky Map | Google Maps hybrid overlay with live aircraft markers |
-| FlightWall | TheFlightWall-style LED panel — logo, route, aircraft type, cyan telemetry (routes are synthetic placeholders) |
+| FlightWall | TheFlightWall-style LED panel — logo, real route, aircraft type, cyan telemetry (route shown only when known) |
 
 Pick the active theme in `/admin`; it stays fixed until you change it.
 
@@ -33,7 +33,7 @@ npm run dev
 
 Open [http://localhost:3000/display](http://localhost:3000/display) for the board, or [http://localhost:3000/admin](http://localhost:3000/admin) to configure.
 
-Both dev and production pull **live ADS-B data** from `lib/flightProvider.ts` (adsb.fi — free, no key). The synthetic fleet only appears as a fallback if the upstream feed is unreachable.
+Both dev and production pull **live ADS-B data** from `lib/flightProvider.ts` (adsb.fi — free, no key) and resolve real routes via `lib/routeProvider.ts` (adsbdb — free, no key). There is no synthetic/mock fleet: if the upstream feed is unreachable and no recent live data is cached, the API returns an error rather than fabricating aircraft.
 
 Dev server binds to `0.0.0.0` (same pattern as other local Next apps) so you can open it from another device on your LAN.
 
@@ -123,7 +123,8 @@ components/
   display/          # Theme layouts + dev theme tester (dev only)
   admin/            # Admin panel
 lib/
-  flightProvider.ts # live adsb.fi (synthetic fleet only as fallback)
+  flightProvider.ts # live adsb.fi only (errors out if unreachable, no mock)
+  routeProvider.ts  # real origin/destination lookup (adsbdb, cached)
   ledMatrix.ts      # FlightWall LED renderer
   ledFlightWall.ts  # Route/telemetry formatters
   themes.ts         # Preset theme definitions

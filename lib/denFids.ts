@@ -3,56 +3,51 @@ import { displayIdentifier } from './aircraftUtils';
 import { getAirlineFromCallsign } from './airlines';
 import { formatBrandedCarrierLabel } from './regionalCarriers';
 import type { VerticalTrend } from '@/types/aircraft';
+import { getFiledRoute } from '@/lib/routePlausibility';
 
-/** Common DEN departure destinations for FIDS-style display */
-const DESTINATIONS = [
-  'Los Angeles',
-  'Montrose',
-  'Nashville',
-  'New York-LGA',
-  'Newark',
-  'Orlando',
-  'Phoenix',
-  'Las Vegas',
-  'Seattle',
-  'Dallas',
-  'Chicago',
-  'Salt Lake City',
-  'San Francisco',
-  'Atlanta',
-  'Houston',
-  'Minneapolis',
-  'Portland',
-  'San Diego',
-  'Boston',
-  'Washington-Dulles',
-  'Orange County',
-  'Tampa',
-  'Charlotte',
-  'Miami',
-];
+/** Placeholder shown when a real value is unavailable — never fabricated data. */
+export const FIDS_UNKNOWN = '—';
 
-const GATES = ['A', 'B', 'C'] as const;
-
-export function fidsDestination(index: number): string {
-  return DESTINATIONS[index % DESTINATIONS.length];
+/** Real airport label for a route endpoint, preferring city name then IATA code. */
+function airportLabel(
+  municipality?: string,
+  name?: string,
+  iata?: string,
+  icao?: string
+): string {
+  const city = municipality?.trim();
+  if (city) return city;
+  const fullName = name?.trim();
+  if (fullName) return fullName;
+  return (iata?.trim() || icao?.trim() || '').toUpperCase();
 }
 
-export function fidsGate(index: number, hex: string): string {
-  const concourse = GATES[parseInt(hex.slice(-1), 16) % GATES.length];
-  const num = 10 + (index * 7 + parseInt(hex.slice(0, 2), 16)) % 35;
-  return `${concourse}${num}`;
+/** Real origin city/airport for the flight, or the unknown placeholder. */
+export function fidsOrigin(ac: NormalizedAircraft): string {
+  const route = getFiledRoute(ac);
+  if (!route) return FIDS_UNKNOWN;
+  return (
+    airportLabel(
+      route.originMunicipality,
+      route.originName,
+      route.originIata,
+      route.originIcao
+    ) || FIDS_UNKNOWN
+  );
 }
 
-/** 12h departure time like real DEN boards: 3:55P */
-export function fidsDepartureTime(index: number, lastUpdated: Date | null): string {
-  const base = lastUpdated ?? new Date();
-  const totalMin = base.getHours() * 60 + base.getMinutes() + index * 6;
-  const h24 = Math.floor(totalMin / 60) % 24;
-  const m = totalMin % 60;
-  const suffix = h24 >= 12 ? 'P' : 'A';
-  const h12 = h24 % 12 || 12;
-  return `${h12}:${String(m).padStart(2, '0')}${suffix}`;
+/** Real destination city/airport for the flight, or the unknown placeholder. */
+export function fidsDestination(ac: NormalizedAircraft): string {
+  const route = getFiledRoute(ac);
+  if (!route) return FIDS_UNKNOWN;
+  return (
+    airportLabel(
+      route.destMunicipality,
+      route.destName,
+      route.destIata,
+      route.destIcao
+    ) || FIDS_UNKNOWN
+  );
 }
 
 export function fidsFlightNumber(ac: NormalizedAircraft): string {
@@ -66,17 +61,20 @@ export function fidsFlightNumber(ac: NormalizedAircraft): string {
   return displayIdentifier(ac);
 }
 
+/**
+ * Flight phase derived from the aircraft's real vertical trend — not a scheduled
+ * status (gates/scheduled times aren't available from ADS-B, so we report what
+ * the telemetry actually shows).
+ */
 export function fidsStatus(
-  trend: VerticalTrend,
-  index: number,
-  lastUpdated: Date | null
+  trend: VerticalTrend
 ): { label: string; tone: 'ontime' | 'delayed' | 'updated' } {
-  if (trend === 'descending') {
-    return { label: 'Delayed', tone: 'delayed' };
+  switch (trend) {
+    case 'climbing':
+      return { label: 'Departing', tone: 'updated' };
+    case 'descending':
+      return { label: 'Arriving', tone: 'delayed' };
+    default:
+      return { label: 'En Route', tone: 'ontime' };
   }
-  if (trend === 'climbing' && index % 5 === 0) {
-    const t = fidsDepartureTime(index, lastUpdated).replace(/([AP])$/, ' $1M');
-    return { label: `Now ${t}`, tone: 'updated' };
-  }
-  return { label: 'On Time', tone: 'ontime' };
 }

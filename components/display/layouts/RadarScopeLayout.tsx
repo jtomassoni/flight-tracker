@@ -10,8 +10,8 @@ import {
   formatSpeed,
   getVerticalTrend,
 } from '@/lib/aircraftUtils';
+import { getDisplayEmptyState } from '@/lib/displayEmptyState';
 import { useLayoutDensity } from '@/hooks/useLayoutDensity';
-import FlightListState from '../shared/FlightListState';
 import KioskScrollRegion from '../shared/KioskScrollRegion';
 
 function TargetList({
@@ -20,13 +20,30 @@ function TargetList({
   settings,
   featured,
   compact,
+  errorMessage,
+  trackLabel,
+  trackStatus,
 }: {
   displayedAircraft: DisplayLayoutProps['displayedAircraft'];
   status: DisplayLayoutProps['status'];
   settings: DisplayLayoutProps['settings'];
   featured: DisplayLayoutProps['featured'];
   compact: boolean;
+  errorMessage: DisplayLayoutProps['errorMessage'];
+  trackLabel: DisplayLayoutProps['trackLabel'];
+  trackStatus: DisplayLayoutProps['trackStatus'];
 }) {
+  const feedDown = status === 'error' || status === 'offline';
+  const emptyState = getDisplayEmptyState({
+    status,
+    trackLabel,
+    trackStatus,
+    feedDown,
+    errorMessage,
+    locationLabel: settings.locationLabel,
+    radiusMi: settings.radiusMi,
+  });
+
   return (
     <aside
       className={`flex min-h-0 flex-col ${
@@ -39,7 +56,20 @@ function TargetList({
         Targets · {displayedAircraft.length}
       </div>
       <KioskScrollRegion className="min-h-0 flex-1" durationSec={34}>
-        <FlightListState status={status} count={displayedAircraft.length} />
+        {displayedAircraft.length === 0 && (
+          <div className="flex h-full flex-col items-center justify-center gap-2 px-4 py-10 text-center">
+            <p
+              className="text-lg font-bold uppercase tracking-[0.25em] text-accent"
+              style={{ textShadow: 'var(--glow)' }}
+            >
+              {emptyState.title}
+              <span className="animate-pulse">_</span>
+            </p>
+            <p className="text-xs uppercase tracking-[0.2em] text-muted">
+              {emptyState.subtitle}
+            </p>
+          </div>
+        )}
         {displayedAircraft.map((ac) => {
           const isFeatured = featured?.hex === ac.hex;
           return (
@@ -78,6 +108,9 @@ export default function RadarScopeLayout({
   status,
   lastUpdated,
   featured,
+  errorMessage,
+  trackLabel,
+  trackStatus,
 }: DisplayLayoutProps) {
   const { viewport, isDeskPortrait } = useLayoutDensity();
   const stacked = viewport === 'compact' || isDeskPortrait;
@@ -95,6 +128,9 @@ export default function RadarScopeLayout({
       settings={settings}
       featured={featured}
       compact={stacked}
+      errorMessage={errorMessage}
+      trackLabel={trackLabel}
+      trackStatus={trackStatus}
     />
   );
 

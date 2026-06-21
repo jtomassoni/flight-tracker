@@ -3,20 +3,17 @@
 import Link from 'next/link';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { useIsTouchDevice } from '@/hooks/useMediaQuery';
-import type { IpadOrientation } from '@/lib/kiosk';
 import type { ThemeId } from '@/lib/settings';
 import { getTheme, THEME_IDS } from '@/lib/themes';
 import './theme-debug-bar.css';
 
-type MenuId = 'theme' | 'ipad';
+type MenuId = 'theme' | 'error';
 
 type ThemeDebugPanelProps = {
   activeThemeId: ThemeId;
   isManual: boolean;
-  ipadPreview: boolean;
-  ipadOrientation: IpadOrientation;
-  onToggleIpadPreview: () => void;
-  onRotateIpad: () => void;
+  previewError: boolean;
+  onTogglePreviewError: () => void;
   onPrev: () => void;
   onNext: () => void;
 };
@@ -36,19 +33,17 @@ function IconPalette() {
   );
 }
 
-function IconTablet() {
+function IconWarning() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden>
-      <rect
-        x="5"
-        y="3"
-        width="14"
-        height="18"
-        rx="2"
+      <path
+        d="M12 4 2.5 20h19L12 4Z"
         stroke="currentColor"
         strokeWidth="1.5"
+        strokeLinejoin="round"
       />
-      <circle cx="12" cy="18" r="0.75" fill="currentColor" />
+      <path d="M12 10v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="12" cy="17" r="0.9" fill="currentColor" />
     </svg>
   );
 }
@@ -107,10 +102,8 @@ function Flyout({ title, children }: { title: string; children: ReactNode }) {
 export default function ThemeDebugPanel({
   activeThemeId,
   isManual,
-  ipadPreview,
-  ipadOrientation,
-  onToggleIpadPreview,
-  onRotateIpad,
+  previewError,
+  onTogglePreviewError,
   onPrev,
   onNext,
 }: ThemeDebugPanelProps) {
@@ -186,34 +179,29 @@ export default function ThemeDebugPanel({
 
         <div className="relative">
           <BarButton
-            label="iPad preview"
-            active={ipadPreview}
-            open={openMenu === 'ipad'}
-            onClick={() => toggleMenu('ipad')}
+            label="Error screen preview"
+            active={previewError}
+            open={openMenu === 'error'}
+            onClick={() => toggleMenu('error')}
           >
-            <IconTablet />
+            <IconWarning />
           </BarButton>
-          {openMenu === 'ipad' && (
-            <Flyout title="iPad Preview">
+          {openMenu === 'error' && (
+            <Flyout title="Error Screen">
               <div className="theme-debug-bar__stack">
                 <button
                   type="button"
                   className={`theme-debug-bar__action ${
-                    ipadPreview ? 'theme-debug-bar__action--primary' : ''
+                    previewError ? 'theme-debug-bar__action--primary' : ''
                   }`}
-                  onClick={onToggleIpadPreview}
+                  onClick={onTogglePreviewError}
                 >
-                  {ipadPreview ? 'Preview ON' : 'Preview OFF'}
+                  {previewError ? 'Preview ON' : 'Preview OFF'}
                 </button>
-                {ipadPreview && (
-                  <button type="button" className="theme-debug-bar__action" onClick={onRotateIpad}>
-                    Rotate ↻ {ipadOrientation === 'landscape' ? 'Landscape' : 'Portrait'}
-                  </button>
-                )}
                 <p className="theme-debug-bar__hint">
-                  {ipadPreview
-                    ? 'Themes render at iPad size with reduced detail — same as a desk kiosk.'
-                    : 'Simulate a 10.9″ iPad in a device frame.'}
+                  {previewError
+                    ? 'Showing the live-feed error screen. Use Prev/Next to see it in each theme.'
+                    : 'Preview the “feed unavailable” screen against the current theme.'}
                 </p>
               </div>
             </Flyout>

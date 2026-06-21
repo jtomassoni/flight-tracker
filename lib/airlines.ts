@@ -1,6 +1,7 @@
 import type { NormalizedAircraft } from '@/types/aircraft';
 import { approvedLogoUrl } from './approvedLogos';
 import { CATEGORY_BRANDS, getNonAirlineDisplayBrand } from './aircraftCategories';
+import { hasLedAirlineMark } from './ledAirlineMarks';
 import {
   formatBrandedCallsign,
   getRegionalOperator,
@@ -238,6 +239,14 @@ export function getAirlineByIcao(icao: string): AirlineBrand | null {
   return AIRLINES[key] ?? null;
 }
 
+export function getAirlineByIata(iata: string): AirlineBrand | null {
+  const key = iata.trim().toUpperCase();
+  for (const brand of Object.values(AIRLINES)) {
+    if (brand.iata === key) return brand;
+  }
+  return null;
+}
+
 /** Resolve an airline OR category brand by ICAO — used by the logo approval tool. */
 export function getLogoBrandByIcao(icao: string): AirlineBrand | null {
   const key = icao.trim().toUpperCase();
@@ -422,19 +431,8 @@ export function airlineLogoCanvasUrl(brand: AirlineBrand): string | undefined {
 }
 
 /** FlightWall LED — prefer in-app pixel art; these marks render better than a raster at matrix scale. */
-const LED_NATIVE_MARK_ICAO = new Set([
-  'AAL',
-  'EIN',
-  'SWA',
-  'DAL',
-  'MIL',
-  'PVT',
-  'GA',
-  'VIP',
-]);
-
 export function airlineLedLogoUrl(brand: AirlineBrand): string | undefined {
-  if (LED_NATIVE_MARK_ICAO.has(brand.icao)) return undefined;
+  if (hasLedAirlineMark(brand.icao)) return undefined;
   return airlineLogoCanvasUrl(brand);
 }
 

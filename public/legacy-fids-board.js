@@ -89,6 +89,8 @@
   var pollTimer = null;
   var lastUpdated = null;
   var errorMessage = null;
+  var lastSettingsSyncMs = 0;
+  var SETTINGS_SYNC_MS = 5 * 60 * 1000;
 
   function pad2(n) { return n < 10 ? '0' + n : String(n); }
 
@@ -158,15 +160,11 @@
     pollTimer = setTimeout(poll, sec * 1000);
   }
 
-  function poll() {
+  function pollFlights() {
     var settings = shared.loadSettings();
     setStatus('Connecting…');
-    var params =
-      'lat=' + encodeURIComponent(String(settings.lat)) +
-      '&lon=' + encodeURIComponent(String(settings.lon)) +
-      '&radiusMi=' + encodeURIComponent(String(settings.radiusMi));
 
-    shared.requestJson('/api/flights?' + params, 25000, function (err, data) {
+    shared.requestJson('/api/flights?' + shared.flightsApiParams(settings), 25000, function (err, data) {
       if (err) {
         errorMessage = err.message;
         if (!lastUpdated) render([]);
@@ -175,11 +173,22 @@
       }
       errorMessage = null;
       lastUpdated = new Date(data.fetchedAt);
-      var displayed = shared.sortAircraft(shared.filterAircraft(data.aircraft || [], settings))
-        .slice(0, settings.maxAircraft);
+      var displayed = shared.applyDisplayedAircraft(data.aircraft || [], settings);
       render(displayed);
       schedulePoll(settings.refreshIntervalSec);
     });
+  }
+
+  function poll() {
+    var now = Date.now();
+    if (now - lastSettingsSyncMs >= SETTINGS_SYNC_MS) {
+      lastSettingsSyncMs = now;
+      shared.syncServerSettings(function () {
+        pollFlights();
+      });
+      return;
+    }
+    pollFlights();
   }
 
   function start() {

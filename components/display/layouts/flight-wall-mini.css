@@ -23,6 +23,43 @@
 .flight-wall-mini__empty {
   color: #787878;
   font-family: var(--font-barlow-condensed), 'Arial Narrow', Arial, sans-serif;
+  padding: 1.5rem;
+}
+
+.flight-wall-mini__empty-title {
+  font-size: clamp(1.5rem, 7vw, 3rem);
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #5ec8e8;
+  text-shadow:
+    0 0 6px rgba(94, 200, 232, 0.7),
+    0 0 18px rgba(94, 200, 232, 0.4);
+  animation: flight-wall-empty-pulse 2.4s ease-in-out infinite;
+}
+
+.flight-wall-mini__empty-sub {
+  font-size: clamp(0.65rem, 2.5vw, 0.9rem);
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: #6a6a6a;
+}
+
+@keyframes flight-wall-empty-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flight-wall-mini__empty-title {
+    animation: none;
+  }
 }
 
 .flight-wall-mini__overlay {

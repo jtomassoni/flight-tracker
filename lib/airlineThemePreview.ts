@@ -26,6 +26,7 @@ export function buildAirlineLedPreview(icao: string): LedFlightContent | null {
     airlineName: brand.name,
     flightId: `${brand.iata} 000`,
     routeHero: 'DEN→PHX',
+    routeProgress: 0.45,
     telemetry: [{ value: formatAircraftTypeDisplay('B738') }, { value: '425 mph' }],
     logoUrl: airlineLedLogoUrl(brand),
     logoIcao: brand.icao,

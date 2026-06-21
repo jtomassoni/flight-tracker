@@ -58,6 +58,10 @@ export interface DisplaySettings {
   nightDimEnd: string;
   /** How dark to go during the window, 0–95 (percent of black overlay). */
   nightDimLevel: number;
+  /** IATA or ICAO airline code for single-flight watch mode, e.g. "UA" or "UAL". */
+  trackAirline?: string;
+  /** Flight number for single-flight watch mode, e.g. "1234". */
+  trackFlightNumber?: string;
 }
 
 export const DEFAULT_SETTINGS: DisplaySettings = {
@@ -79,6 +83,8 @@ export const DEFAULT_SETTINGS: DisplaySettings = {
   nightDimStart: '22:00',
   nightDimEnd: '06:00',
   nightDimLevel: 60,
+  trackAirline: '',
+  trackFlightNumber: '',
 };
 
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)$/;
@@ -143,6 +149,11 @@ export function normalizeSettings(parsed: Partial<DisplaySettings> | null | unde
     nightDimStart: normalizeTimeOfDay(parsed.nightDimStart, DEFAULT_SETTINGS.nightDimStart),
     nightDimEnd: normalizeTimeOfDay(parsed.nightDimEnd, DEFAULT_SETTINGS.nightDimEnd),
     nightDimLevel: clampDimLevel(parsed.nightDimLevel),
+    trackAirline: typeof parsed.trackAirline === 'string' ? parsed.trackAirline.trim().toUpperCase() : '',
+    trackFlightNumber:
+      typeof parsed.trackFlightNumber === 'string'
+        ? parsed.trackFlightNumber.replace(/\D/g, '')
+        : '',
   };
 }
 

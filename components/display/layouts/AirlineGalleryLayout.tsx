@@ -12,7 +12,7 @@ import {
   formatSpeed,
   getVerticalTrend,
 } from '@/lib/aircraftUtils';
-import FlightListState from '../shared/FlightListState';
+import { getDisplayEmptyState } from '@/lib/displayEmptyState';
 import './airline-gallery.css';
 
 export default function AirlineGalleryLayout({
@@ -21,10 +21,23 @@ export default function AirlineGalleryLayout({
   status,
   lastUpdated,
   provider,
+  errorMessage,
+  trackLabel,
+  trackStatus,
 }: DisplayLayoutProps) {
   const { galleryCols: gridClass, galleryMaxCards, showGalleryStats, viewport } =
     useLayoutDensity();
   const visibleAircraft = displayedAircraft.slice(0, galleryMaxCards);
+  const feedDown = status === 'error' || status === 'offline';
+  const emptyState = getDisplayEmptyState({
+    status,
+    trackLabel,
+    trackStatus,
+    feedDown,
+    errorMessage,
+    locationLabel: settings.locationLabel,
+    radiusMi: settings.radiusMi,
+  });
 
   return (
     <div className="gallery-shell flex h-full flex-col overflow-hidden font-display text-foreground">
@@ -51,7 +64,32 @@ export default function AirlineGalleryLayout({
       </header>
 
       <div className="gallery-body min-h-0 flex-1 overflow-hidden p-[var(--kiosk-pad)]">
-        <FlightListState status={status} count={displayedAircraft.length} />
+        {displayedAircraft.length === 0 ? (
+          <div className="gallery-empty flex h-full flex-col items-center justify-center px-6 text-center">
+            <div className="gallery-empty__panel flex flex-col items-center gap-4 rounded-3xl px-10 py-12">
+              <span className="gallery-empty__icon" aria-hidden>
+                {feedDown ? (
+                  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M2 8.5C7.5 4 16.5 4 22 8.5" opacity="0.4" />
+                    <path d="M5.5 12C9 9.5 15 9.5 18.5 12" opacity="0.7" />
+                    <path d="M9 15.5c1.8-1.3 4.2-1.3 6 0" />
+                    <path d="M3 3 21 21" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M17.8 19.2 16 11l3.5-3.5a1.7 1.7 0 0 0-2.4-2.4L13.6 8.6 5.4 6.8a1 1 0 0 0-.9 1.7L9 11l-2 2-2.5-.5a.8.8 0 0 0-.7 1.3L6 17l2.2 2.5a.8.8 0 0 0 1.3-.7L9 16.3l2-2 2.6 4.4a1 1 0 0 0 1.7-.9z" />
+                  </svg>
+                )}
+              </span>
+              <h2 className="gallery-empty__title font-display text-2xl font-bold sm:text-3xl">
+                {emptyState.title}
+              </h2>
+              <p className="gallery-empty__sub max-w-sm text-sm text-muted sm:text-base">
+                {emptyState.subtitle}
+              </p>
+            </div>
+          </div>
+        ) : (
         <div className={`grid gap-3 sm:gap-4 ${gridClass}`}>
           {visibleAircraft.map((ac) => {
             const brand = getAircraftDisplayBrand(ac);
@@ -182,6 +220,7 @@ export default function AirlineGalleryLayout({
             );
           })}
         </div>
+        )}
       </div>
 
       <footer className="gallery-footer safe-bottom shrink-0 border-t border-border/60 px-4 py-2 sm:px-6">

@@ -5,11 +5,13 @@ import {
   getAirlineLedWallStyle,
 } from '@/lib/airlines';
 import {
+  computeFlightProgress,
   formatLedFlightId,
   formatLedOperatorTag,
   formatLedRouteHero,
   ledRouteLabel,
   ledTelemetryFields,
+  resolveLedLogoMarkIcao,
 } from '@/lib/ledFlightWall';
 import {
   ledGridForOrientation,
@@ -25,14 +27,16 @@ export function aircraftToLedContent(ac: NormalizedAircraft): LedFlightContent {
   const brand = getAircraftDisplayBrand(ac);
   const wallStyle = getAirlineLedWallStyle(brand);
   const routeLine = ledRouteLabel(ac);
+  const operatorTag = formatLedOperatorTag(ac);
   return {
     airlineName: brand.name,
     flightId: formatLedFlightId(ac, brand),
-    operatorTag: formatLedOperatorTag(ac),
+    operatorTag,
     routeHero: formatLedRouteHero(routeLine),
+    routeProgress: computeFlightProgress(ac),
     telemetry: ledTelemetryFields(ac),
     logoUrl: airlineLedLogoUrl(brand),
-    logoIcao: brand.icao,
+    logoIcao: resolveLedLogoMarkIcao(brand, operatorTag),
     logoFallback: brand.iata,
     logoBackground: wallStyle.logoBackground,
     logoBorder: wallStyle.logoBorder,

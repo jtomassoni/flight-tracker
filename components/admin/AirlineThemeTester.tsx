@@ -27,26 +27,20 @@ export default function AirlineThemeTester({ tab }: { tab: TesterTab }) {
   return (
     <div className="admin-page admin-page--tester">
       <div className="admin-page__content admin-page__content--tester">
-        <section className="theme-tester__bar">
-          <div className="theme-tester__bar-title">
-            <p className="admin-label">Validation rig</p>
-            <h2 className="admin-heading">Logos</h2>
-          </div>
-          <nav className="theme-tester__tabs" aria-label="Logo sections">
-            {TABS.map((t) => (
-              <Link
-                key={t.id}
-                href={t.href}
-                title={t.hint}
-                className="theme-tester__tab"
-                data-active={tab === t.id ? 'true' : 'false'}
-                aria-current={tab === t.id ? 'page' : undefined}
-              >
-                {t.label}
-              </Link>
-            ))}
-          </nav>
-        </section>
+        <nav className="theme-tester__tabs" aria-label="Logo sections">
+          {TABS.map((t) => (
+            <Link
+              key={t.id}
+              href={t.href}
+              title={t.hint}
+              className="theme-tester__tab"
+              data-active={tab === t.id ? 'true' : 'false'}
+              aria-current={tab === t.id ? 'page' : undefined}
+            >
+              {t.label}
+            </Link>
+          ))}
+        </nav>
 
         <div className="theme-tester__body">
           {tab === 'approve' ? <LogoApprovalPanel /> : <CarrierInspectorPanel />}

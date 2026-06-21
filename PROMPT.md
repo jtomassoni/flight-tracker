@@ -47,7 +47,8 @@ A fullscreen web dashboard that shows aircraft currently near ZIP 80219 / Denver
 - Abstraction in `lib/flightProvider.ts` (swappable providers)
 - `GET /api/flights?lat=39.7392&lon=-105.0333&radiusMi=10`
 - V1 providers: adsb.fi (default, no key), airplanes.live (optional key)
-- Mock fallback when API unavailable
+- Real routes resolved per-callsign via `lib/routeProvider.ts` (adsbdb, cached)
+- Live data only — no mock fallback; API errors out if upstream is unavailable
 - Normalized aircraft shape (see `types/aircraft.ts`)
 
 ## Filtering & sorting

@@ -37,3 +37,25 @@ export function headingDelta(a: number, b: number): number {
   const diff = Math.abs(a - b) % 360;
   return diff > 180 ? 360 - diff : diff;
 }
+
+/**
+ * Cross-track distance in statute miles from point P to the great-circle path
+ * from A to B. Used to reject filed routes that don't match live position.
+ */
+export function crossTrackDistanceMi(
+  lat: number,
+  lon: number,
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number
+): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const angularDist = distanceMi(lat1, lon1, lat, lon) / EARTH_RADIUS_MI;
+  const bearingToPoint = toRad(bearingDeg(lat1, lon1, lat, lon));
+  const bearingOnLeg = toRad(bearingDeg(lat1, lon1, lat2, lon2));
+  const crossTrackRad = Math.asin(
+    Math.sin(angularDist) * Math.sin(bearingToPoint - bearingOnLeg)
+  );
+  return Math.abs(crossTrackRad) * EARTH_RADIUS_MI;
+}

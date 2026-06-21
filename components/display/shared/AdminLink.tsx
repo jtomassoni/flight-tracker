@@ -1,13 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useKioskPreview } from '@/contexts/KioskPreviewContext';
 
 export default function AdminLink() {
-  const { enabled: ipadPreview } = useKioskPreview();
-
-  if (ipadPreview) return null;
-
   return (
     <Link
       href="/admin"

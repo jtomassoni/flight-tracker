@@ -29,10 +29,16 @@
     });
   }
 
-  if (shared.getViewMode() === 'fids') {
-    bootFids();
-  } else {
-    if (window.LegacyKiosk) window.LegacyKiosk.applyStandaloneShell();
-    bootLed();
+  function boot() {
+    shared.syncServerSettings(function () {
+      if (shared.getViewMode() === 'fids') {
+        bootFids();
+      } else {
+        if (window.LegacyKiosk) window.LegacyKiosk.applyStandaloneShell();
+        bootLed();
+      }
+    });
   }
+
+  boot();
 })();

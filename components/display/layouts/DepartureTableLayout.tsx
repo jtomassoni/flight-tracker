@@ -5,20 +5,19 @@ import { useLayoutDensity } from '@/hooks/useLayoutDensity';
 import type { DisplayLayoutProps } from '@/types/display';
 import type { NormalizedAircraft } from '@/types/aircraft';
 import {
-  fidsDepartureTime,
   fidsDestination,
   fidsFlightNumber,
-  fidsGate,
+  fidsOrigin,
   fidsStatus,
 } from '@/lib/denFids';
 import AirlineLogoImage from '@/components/display/shared/AirlineLogoImage';
 import { getAircraftDisplayBrand } from '@/lib/airlines';
 import { getVerticalTrend } from '@/lib/aircraftUtils';
-import FlightListState from '../shared/FlightListState';
+import { getDisplayEmptyState } from '@/lib/displayEmptyState';
 import KioskScrollRegion from '../shared/KioskScrollRegion';
 import './den-fids.css';
 
-const COL_HEADERS = ['Departing To', 'Airline', 'Flight', 'Gate', 'Time', 'Status'] as const;
+const COL_HEADERS = ['From', 'Destination', 'Airline', 'Flight', 'Status'] as const;
 
 function splitIntoPanels(aircraft: NormalizedAircraft[], panels: number): NormalizedAircraft[][] {
   const result = Array.from({ length: panels }, () => [] as NormalizedAircraft[]);
@@ -47,13 +46,9 @@ function DenBrandMark() {
 function FidsPanel({
   flights,
   panelIndex,
-  lastUpdated,
-  globalOffset,
 }: {
   flights: NormalizedAircraft[];
   panelIndex: number;
-  lastUpdated: Date | null;
-  globalOffset: number;
 }) {
   return (
     <section className="den-fids__panel flex-1">
@@ -75,15 +70,15 @@ function FidsPanel({
       </div>
 
       <KioskScrollRegion className="den-fids__rows min-h-0 flex-1" durationSec={32}>
-        {flights.map((ac, rowIndex) => {
-          const rowNum = globalOffset + rowIndex;
+        {flights.map((ac) => {
           const brand = getAircraftDisplayBrand(ac);
           const trend = getVerticalTrend(ac.verticalRateFpm);
-          const status = fidsStatus(trend, rowNum, lastUpdated);
+          const status = fidsStatus(trend);
 
           return (
             <div key={ac.hex} className="den-fids__row">
-              <span className="den-fids__dest">{fidsDestination(rowNum)}</span>
+              <span className="den-fids__dest">{fidsOrigin(ac)}</span>
+              <span className="den-fids__dest">{fidsDestination(ac)}</span>
               <div className="den-fids__airline">
                 <div className="den-fids__logo-wrap">
                   <AirlineLogoImage
@@ -97,8 +92,6 @@ function FidsPanel({
                 </div>
               </div>
               <span className="den-fids__data den-fids__flight">{fidsFlightNumber(ac)}</span>
-              <span className="den-fids__data">{fidsGate(rowNum, ac.hex)}</span>
-              <span className="den-fids__data">{fidsDepartureTime(rowNum, lastUpdated)}</span>
               <span className={`den-fids__status den-fids__status--${status.tone}`}>
                 {status.label}
               </span>
@@ -122,41 +115,40 @@ export default function DepartureTableLayout({
   status,
   lastUpdated,
   errorMessage,
+  trackLabel,
+  trackStatus,
 }: DisplayLayoutProps) {
   const { panelCount } = useLayoutDensity();
+  const feedDown = status === 'error' || status === 'offline';
+  const emptyState = getDisplayEmptyState({
+    status,
+    trackLabel,
+    trackStatus,
+    feedDown,
+    errorMessage,
+    locationLabel: settings.locationLabel,
+    radiusMi: settings.radiusMi,
+  });
   const panels = useMemo(
     () => splitIntoPanels(displayedAircraft, panelCount),
     [displayedAircraft, panelCount]
   );
 
-  let rowOffset = 0;
-
   return (
     <div className="den-fids flex h-full flex-col overflow-hidden">
       <main className="den-fids__main flex min-h-0 flex-1 flex-col md:flex-row">
         {displayedAircraft.length === 0 ? (
-          <div className="flex flex-1 items-center justify-center p-8">
-            <FlightListState
-              status={status}
-              count={0}
-              loadingMessage="Loading flight information…"
-              emptyMessage="No flights to display."
-            />
+          <div className="den-fids__empty flex flex-1 flex-col items-center justify-center gap-4 p-8 text-center">
+            <DenBrandMark />
+            <div>
+              <p className="den-fids__empty-title">{emptyState.title}</p>
+              <p className="den-fids__empty-sub">{emptyState.subtitle}</p>
+            </div>
           </div>
         ) : (
-          panels.map((flights, i) => {
-            const panel = (
-              <FidsPanel
-                key={i}
-                flights={flights}
-                panelIndex={i}
-                lastUpdated={lastUpdated}
-                globalOffset={rowOffset}
-              />
-            );
-            rowOffset += flights.length;
-            return panel;
-          })
+          panels.map((flights, i) => (
+            <FidsPanel key={i} flights={flights} panelIndex={i} />
+          ))
         )}
       </main>
 

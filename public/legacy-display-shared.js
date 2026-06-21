@@ -8,6 +8,61 @@
   var DEFAULT_LON = -105.0333;
   var LEGACY_MAX_AIRCRAFT = 8;
 
+  /** ICAO → IATA for common Denver carriers (flight-watch + labels). */
+  var AIRLINE_IATA = {
+    UAL: 'UA',
+    SWA: 'WN',
+    DAL: 'DL',
+    AAL: 'AA',
+    FFT: 'F9',
+    JBU: 'B6',
+    ASA: 'AS',
+    NKS: 'NK',
+    F9: 'F9',
+  };
+
+  var EXCLUSIVE_MAINLINE = {
+    ENY: 'AAL',
+    PDT: 'AAL',
+    JIA: 'AAL',
+    EDV: 'DAL',
+    QXE: 'ASA',
+    AWI: 'UAL',
+    LOF: 'UAL',
+  };
+
+  var MAINLINE_FLIGHT_RANGES = [
+    { min: 3420, max: 3499, mainline: 'ASA' },
+    { min: 2920, max: 3109, mainline: 'AAL' },
+    { min: 3520, max: 3569, mainline: 'DAL' },
+    { min: 4439, max: 4858, mainline: 'DAL' },
+    { min: 9783, max: 9784, mainline: 'DAL' },
+    { min: 3805, max: 3854, mainline: 'UAL' },
+    { min: 4085, max: 4714, mainline: 'UAL' },
+    { min: 4860, max: 4868, mainline: 'UAL' },
+    { min: 5176, max: 6060, mainline: 'UAL' },
+    { min: 5660, max: 6189, mainline: 'UAL' },
+    { min: 3100, max: 3399, mainline: 'AAL' },
+    { min: 4000, max: 4420, mainline: 'DAL' },
+    { min: 6070, max: 6999, mainline: 'UAL' },
+  ];
+
+  var MULTI_PARTNER = { SKW: 1, RPA: 1, ASH: 1, GJS: 1 };
+  var REGIONAL_OPERATORS = {
+    SKW: 1,
+    RPA: 1,
+    ENY: 1,
+    PDT: 1,
+    JIA: 1,
+    EDV: 1,
+    QXE: 1,
+    AWI: 1,
+    ASH: 1,
+    GJS: 1,
+    LOF: 1,
+  };
+  var DEFAULT_MAINLINE = 'UAL';
+
   function trim(str) {
     return String(str || '').replace(/^\s+|\s+$/g, '');
   }
@@ -37,6 +92,41 @@
     return isNaN(n) ? fallback : n;
   }
 
+  function readStoredRaw() {
+    try {
+      var raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {}
+    return null;
+  }
+
+  function persistSettings(next) {
+    try {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+    } catch (e) {}
+  }
+
+  function applySettingsPatch(base, patch) {
+    if (!patch || typeof patch !== 'object') return base;
+    var out = {};
+    var k;
+    for (k in base) {
+      if (Object.prototype.hasOwnProperty.call(base, k)) out[k] = base[k];
+    }
+    for (k in patch) {
+      if (!Object.prototype.hasOwnProperty.call(patch, k)) continue;
+      if (patch[k] === undefined) continue;
+      out[k] = patch[k];
+    }
+    if (typeof out.maxAircraft === 'number') {
+      out.maxAircraft = Math.min(out.maxAircraft, LEGACY_MAX_AIRCRAFT);
+    }
+    if (typeof out.refreshIntervalSec === 'number') {
+      out.refreshIntervalSec = Math.max(out.refreshIntervalSec, 60);
+    }
+    return out;
+  }
+
   function settingsFromQuery(query) {
     var hasCoords = query.lat != null || query.lon != null;
     if (!hasCoords && !query.radiusMi && !query.max && !query.refresh) return null;
@@ -61,84 +151,163 @@
       refreshIntervalSec: 60,
       altitudeFilter: 'all',
       hideNoCallsign: false,
+      cargoOnly: false,
       mode: 'nearby',
+      theme: 'flightwall',
+      trackAirline: '',
+      trackFlightNumber: '',
+      nightDimEnabled: false,
+      nightDimStart: '22:00',
+      nightDimEnd: '06:00',
+      nightDimLevel: 60,
+      keepAwake: true,
     };
 
-    var stored = null;
-    try {
-      var raw = localStorage.getItem(SETTINGS_KEY);
-      if (raw) stored = JSON.parse(raw);
-    } catch (e) {}
-
-    var merged = {
-      lat: stored && typeof stored.lat === 'number' ? stored.lat : defaults.lat,
-      lon: stored && typeof stored.lon === 'number' ? stored.lon : defaults.lon,
-      radiusMi: stored && typeof stored.radiusMi === 'number' ? stored.radiusMi : defaults.radiusMi,
-      maxAircraft: Math.min(
-        stored && typeof stored.maxAircraft === 'number' ? stored.maxAircraft : defaults.maxAircraft,
-        LEGACY_MAX_AIRCRAFT
-      ),
-      refreshIntervalSec: Math.max(
-        stored && typeof stored.refreshIntervalSec === 'number'
-          ? stored.refreshIntervalSec
-          : defaults.refreshIntervalSec,
-        60
-      ),
-      altitudeFilter: (stored && stored.altitudeFilter) || defaults.altitudeFilter,
-      hideNoCallsign: !!(stored && stored.hideNoCallsign),
-      mode: (stored && stored.mode) || defaults.mode,
-    };
+    var merged = applySettingsPatch(defaults, readStoredRaw() || {});
 
     var fromUrl = settingsFromQuery(parseQuery());
     if (fromUrl) {
-      merged = fromUrl;
-      try {
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
-      } catch (e) {}
+      merged = applySettingsPatch(merged, fromUrl);
     }
 
-    // Night dimming + keep-awake — layered on independently of the coords/refresh
-    // block above so they work whether or not other settings came from the URL.
-    merged.nightDimEnabled =
-      stored && typeof stored.nightDimEnabled === 'boolean' ? stored.nightDimEnabled : false;
-    merged.nightDimStart = (stored && stored.nightDimStart) || '22:00';
-    merged.nightDimEnd = (stored && stored.nightDimEnd) || '06:00';
-    merged.nightDimLevel =
-      stored && typeof stored.nightDimLevel === 'number' ? stored.nightDimLevel : 60;
-    merged.keepAwake = stored && typeof stored.keepAwake === 'boolean' ? stored.keepAwake : true;
-
     var query = parseQuery();
-    var dimTouched = false;
     if (query.awake != null) {
       merged.keepAwake = !(query.awake === '0' || query.awake === 'false');
-      dimTouched = true;
     }
     if (query.dim != null) {
       merged.nightDimEnabled = query.dim === '1' || query.dim === 'true';
-      dimTouched = true;
     }
-    if (query.dimStart) {
-      merged.nightDimStart = query.dimStart;
-      dimTouched = true;
-    }
-    if (query.dimEnd) {
-      merged.nightDimEnd = query.dimEnd;
-      dimTouched = true;
-    }
+    if (query.dimStart) merged.nightDimStart = query.dimStart;
+    if (query.dimEnd) merged.nightDimEnd = query.dimEnd;
     if (query.dimLevel != null) {
       var lvl = int(query.dimLevel, 60);
       if (lvl < 0) lvl = 0;
       if (lvl > 95) lvl = 95;
       merged.nightDimLevel = lvl;
-      dimTouched = true;
     }
-    if (dimTouched) {
-      try {
-        localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
-      } catch (e) {}
+
+    if (query.airline) {
+      merged.trackAirline = trim(query.airline).toUpperCase();
+    }
+    if (query.flight) {
+      merged.trackFlightNumber = String(query.flight).replace(/\D/g, '');
+    }
+    if (query.track) {
+      var parsedTrack = parseTrackQuery(query.track);
+      if (parsedTrack) {
+        merged.trackAirline = parsedTrack.airline;
+        merged.trackFlightNumber = parsedTrack.flightNumber;
+      }
     }
 
     return merged;
+  }
+
+  function parseTrackQuery(query) {
+    var compact = trim(query).replace(/\s+/g, '').toUpperCase();
+    var match = compact.match(/^([A-Z0-9]{2,3})(\d+)$/);
+    if (!match) return null;
+    return { airline: match[1], flightNumber: match[2] };
+  }
+
+  function iataToIcao(iata) {
+    var key;
+    for (key in AIRLINE_IATA) {
+      if (AIRLINE_IATA[key] === iata) return key;
+    }
+    return null;
+  }
+
+  function resolveAirlineIcao(raw) {
+    var token = trim(raw).toUpperCase();
+    if (!token) return null;
+    if (token.length === 3 && AIRLINE_IATA[token]) return token;
+    var fromIata = iataToIcao(token);
+    if (fromIata) return fromIata;
+    return null;
+  }
+
+  function parseFlightNumber(callsign) {
+    var numPart = trim(callsign).slice(3).replace(/\D/g, '');
+    if (!numPart) return null;
+    var n = parseInt(numPart, 10);
+    return isNaN(n) ? null : n;
+  }
+
+  function mainlineFromFlightNumber(flightNumber) {
+    var i;
+    for (i = 0; i < MAINLINE_FLIGHT_RANGES.length; i++) {
+      var range = MAINLINE_FLIGHT_RANGES[i];
+      if (flightNumber >= range.min && flightNumber <= range.max) return range.mainline;
+    }
+    return null;
+  }
+
+  function resolveMainlineIcao(callsign) {
+    var upper = trim(callsign).toUpperCase();
+    var prefix = upper.slice(0, 3);
+    if (EXCLUSIVE_MAINLINE[prefix]) return EXCLUSIVE_MAINLINE[prefix];
+    if (MULTI_PARTNER[prefix] || REGIONAL_OPERATORS[prefix]) {
+      var flightNumber = parseFlightNumber(upper);
+      if (flightNumber != null) {
+        var mainline = mainlineFromFlightNumber(flightNumber);
+        if (mainline) return mainline;
+      }
+      return DEFAULT_MAINLINE;
+    }
+    return prefix;
+  }
+
+  function buildTrackTarget(airline, flightNumber) {
+    var airlineIcao = resolveAirlineIcao(airline);
+    var digits = String(flightNumber || '').replace(/\D/g, '');
+    var flightNum = digits ? parseInt(digits, 10) : NaN;
+    if (!airlineIcao || isNaN(flightNum)) return null;
+    var iata = AIRLINE_IATA[airlineIcao] || airlineIcao;
+    return {
+      airlineIcao: airlineIcao,
+      flightNumber: flightNum,
+      icaoCallsign: airlineIcao + String(flightNum),
+      displayLabel: iata + ' ' + flightNum,
+    };
+  }
+
+  function aircraftMatchesTrack(ac, target) {
+    if (!trim(ac.callsign)) return false;
+    var cs = trim(ac.callsign).toUpperCase();
+    if (cs === target.icaoCallsign) return true;
+    var acNum = parseFlightNumber(cs);
+    if (acNum == null || acNum !== target.flightNumber) return false;
+    return resolveMainlineIcao(cs) === target.airlineIcao;
+  }
+
+  function findTrackedAircraft(list, target) {
+    var i;
+    for (i = 0; i < list.length; i++) {
+      if (aircraftMatchesTrack(list[i], target)) return list[i];
+    }
+    return null;
+  }
+
+  function applyDisplayedAircraft(list, settings) {
+    var target = buildTrackTarget(settings.trackAirline, settings.trackFlightNumber);
+    if (target) {
+      var tracked = findTrackedAircraft(list, target);
+      return tracked ? [tracked] : [];
+    }
+    return sortAircraft(filterAircraft(list, settings)).slice(0, settings.maxAircraft);
+  }
+
+  function flightsApiParams(settings) {
+    var params =
+      'lat=' + encodeURIComponent(String(settings.lat)) +
+      '&lon=' + encodeURIComponent(String(settings.lon)) +
+      '&radiusMi=' + encodeURIComponent(String(settings.radiusMi));
+    var target = buildTrackTarget(settings.trackAirline, settings.trackFlightNumber);
+    if (target) {
+      params += '&callsign=' + encodeURIComponent(target.icaoCallsign);
+    }
+    return params;
   }
 
   function requestJson(url, timeoutMs, callback) {
@@ -186,6 +355,17 @@
     xhr.send();
   }
 
+  function syncServerSettings(callback) {
+    requestJson('/api/settings', 10000, function (err, data) {
+      if (!err && data && data.settings) {
+        var stored = readStoredRaw() || {};
+        var merged = applySettingsPatch(stored, data.settings);
+        persistSettings(merged);
+      }
+      if (callback) callback(err);
+    });
+  }
+
   function score(ac) {
     var s = 0;
     var dist = num(ac.distanceMi, 99);
@@ -228,7 +408,16 @@
 
   function getViewMode() {
     var query = parseQuery();
-    return query.view === 'fids' ? 'fids' : 'led';
+    if (query.view === 'fids') return 'fids';
+    if (query.view === 'led') return 'led';
+    try {
+      var raw = localStorage.getItem(SETTINGS_KEY);
+      if (raw) {
+        var stored = JSON.parse(raw);
+        if (stored.theme === 'airport-led') return 'fids';
+      }
+    } catch (e) {}
+    return 'led';
   }
 
   function loadScript(src, callback) {
@@ -257,6 +446,10 @@
     requestJson: requestJson,
     sortAircraft: sortAircraft,
     filterAircraft: filterAircraft,
+    buildTrackTarget: buildTrackTarget,
+    applyDisplayedAircraft: applyDisplayedAircraft,
+    flightsApiParams: flightsApiParams,
+    syncServerSettings: syncServerSettings,
     getViewMode: getViewMode,
     loadScript: loadScript,
     loadStylesheet: loadStylesheet,

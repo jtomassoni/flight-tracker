@@ -163,6 +163,11 @@ export function classifyLedAircraftIcon(rawType?: string, category?: string): Le
   return 'jet';
 }
 
+/** Mainline jet silhouette for the route progress marker (nose points right). */
+export const LED_PROGRESS_PLANE_KIND: LedAircraftIcon = 'jet';
+export const LED_PROGRESS_PLANE_H = ICONS.jet.h;
+export const LED_PROGRESS_PLANE_W = ICONS.jet.w;
+
 /** Native aspect ratio (width / height) of a silhouette. */
 export function ledAircraftIconAspect(kind: LedAircraftIcon): number {
   const art = ICONS[kind];

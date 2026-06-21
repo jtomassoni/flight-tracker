@@ -6,6 +6,8 @@
   var ROTATE_MS = 10000;
   var pollTimer = null;
   var rotateTimer = null;
+  var lastSettingsSyncMs = 0;
+  var SETTINGS_SYNC_MS = 5 * 60 * 1000;
   var aircraftList = [];
   var displayIndex = 0;
   var painter = null;
@@ -48,8 +50,12 @@
   function renderCurrent() {
     var wall = global.LegacyLedWall;
     var ac = currentAircraft();
-    if (!wall || !painter || !ac) {
-      setStatus(aircraftList.length ? 'Loading…' : 'No flights in range');
+    if (!wall || !painter) {
+      setStatus(aircraftList.length ? 'Loading…' : emptyStatusMessage());
+      return;
+    }
+    if (!ac) {
+      setStatus(emptyStatusMessage());
       return;
     }
     var content = wall.aircraftToLedContent(ac);
@@ -60,6 +66,13 @@
           : ''
       );
     });
+  }
+
+  function emptyStatusMessage() {
+    var settings = shared.loadSettings();
+    var target = shared.buildTrackTarget(settings.trackAirline, settings.trackFlightNumber);
+    if (target) return target.displayLabel + ' not airborne';
+    return 'No flights in range';
   }
 
   function scheduleRotate() {
@@ -76,16 +89,11 @@
     pollTimer = setTimeout(poll, intervalSec * 1000);
   }
 
-  function poll() {
+  function pollFlights() {
     var settings = shared.loadSettings();
     setStatus('Connecting…');
 
-    var params =
-      'lat=' + encodeURIComponent(String(settings.lat)) +
-      '&lon=' + encodeURIComponent(String(settings.lon)) +
-      '&radiusMi=' + encodeURIComponent(String(settings.radiusMi));
-
-    shared.requestJson('/api/flights?' + params, 25000, function (err, data) {
+    shared.requestJson('/api/flights?' + shared.flightsApiParams(settings), 25000, function (err, data) {
       if (err) {
         if (!aircraftList.length) showError('Cannot load flights', err.message || 'Request failed');
         else setStatus(err.message || 'Update failed');
@@ -93,20 +101,29 @@
         return;
       }
 
-      var filtered = shared.filterAircraft(data.aircraft || [], settings);
-      var sorted = shared.sortAircraft(filtered);
-      aircraftList = sorted.slice(0, settings.maxAircraft);
+      aircraftList = shared.applyDisplayedAircraft(data.aircraft || [], settings);
       if (displayIndex >= aircraftList.length) displayIndex = 0;
 
       if (!aircraftList.length) {
-        setStatus('No flights in range');
-        if (painter) renderCurrent();
+        setStatus(emptyStatusMessage());
       } else {
         renderCurrent();
         scheduleRotate();
       }
       schedulePoll(settings.refreshIntervalSec);
     });
+  }
+
+  function poll() {
+    var now = Date.now();
+    if (now - lastSettingsSyncMs >= SETTINGS_SYNC_MS) {
+      lastSettingsSyncMs = now;
+      shared.syncServerSettings(function () {
+        pollFlights();
+      });
+      return;
+    }
+    pollFlights();
   }
 
   function onResize() {

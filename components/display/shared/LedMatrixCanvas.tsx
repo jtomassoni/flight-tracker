@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useKioskPreview } from '@/contexts/KioskPreviewContext';
 import type { LedFlightContent } from '@/lib/ledMatrix';
 import {
   ledGridForOrientation,
@@ -26,7 +25,6 @@ export default function LedMatrixCanvas({
 }: LedMatrixCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bufferRef = useRef<HTMLCanvasElement | null>(null);
-  const { enabled: ipadPreview } = useKioskPreview();
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -58,9 +56,7 @@ export default function LedMatrixCanvas({
         canvasRef.current.height = height;
       }
 
-      const rows = ipadPreview
-        ? baseRows
-        : ledWallRowCount(cols, baseRows, width, height);
+      const rows = ledWallRowCount(cols, baseRows, width, height);
       if (buffer.width !== cols || buffer.height !== rows) {
         buffer.width = cols;
         buffer.height = rows;
@@ -69,7 +65,7 @@ export default function LedMatrixCanvas({
       const { logoRect } = renderLedBuffer(bufferCtx, cols, rows, content, logo);
       const imageData = bufferCtx.getImageData(0, 0, cols, rows);
       paintLedDots(displayCtx, imageData, width, height, logoRect, {
-        fitFrame: ipadPreview,
+        fitFrame: false,
         logoBackground: content.logoBackground,
         logoPalette: content.logoPalette,
       });
@@ -89,13 +85,13 @@ export default function LedMatrixCanvas({
       cancelled = true;
       stopObserving();
     };
-  }, [orientation, content, ipadPreview]);
+  }, [orientation, content]);
 
   return (
     <canvas
       ref={canvasRef}
       className={className}
-      aria-label={`${content.airlineName} ${content.routeHero}`}
+      aria-label={`${content.airlineName} ${content.routeHero || content.flightId}`}
     />
   );
 }

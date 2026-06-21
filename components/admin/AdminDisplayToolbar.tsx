@@ -7,15 +7,15 @@ export default function AdminDisplayToolbar() {
   const { saved, zipLoading, handleReset, handleSave } = useAdminSettings();
 
   return (
-    <div className="admin-command-strip__actions">
+    <>
       {saved && (
-        <span className="admin-command-strip__saved admin-mono">
-          <span className="admin-command-strip__saved-dot" aria-hidden />
+        <span className="admin-header__saved">
+          <span className="admin-header__saved-dot" aria-hidden />
           Saved
         </span>
       )}
       <button type="button" onClick={handleReset} className="admin-btn admin-btn--ghost">
-        Cancel
+        Reset
       </button>
       <button
         type="button"
@@ -26,8 +26,8 @@ export default function AdminDisplayToolbar() {
         Save
       </button>
       <Link href="/display" className="admin-btn admin-btn--launch">
-        Launch Display →
+        Open display
       </Link>
-    </div>
+    </>
   );
 }

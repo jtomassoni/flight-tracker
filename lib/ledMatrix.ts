@@ -8,7 +8,6 @@ import {
   LED_FONT,
   ledCharCellH,
   ledCompactCellH,
-  ledScaledCellW,
   ledScaledTextMetrics,
   pickFlightIdScale,
   pickWallFlightIdScale,
@@ -18,10 +17,11 @@ import {
 import { drawLedAirlineMark } from '@/lib/ledAirlineMarks';
 import {
   drawLedAircraftIcon,
-  ledAircraftIconAspect,
-  type LedAircraftIcon,
+  LED_PROGRESS_PLANE_H,
+  LED_PROGRESS_PLANE_KIND,
+  LED_PROGRESS_PLANE_W,
 } from '@/lib/ledAircraftIcons';
-import type { LedTelemetryField } from '@/lib/ledFlightWall';
+import type { LedTelemetryEmphasis, LedTelemetryField } from '@/lib/ledFlightWall';
 
 /**
  * FlightWall desk panel resolution — scaled up 15% in BOTH axes (128×32→147×37,
@@ -35,15 +35,36 @@ export const LED_GRID = {
   portrait: { cols: 74, rows: 74 },
 } as const;
 
+/** Cool blue/white phosphor tiers — each tier maps to a semantic role on the panel. */
 export const LED_COLORS = {
-  phosphor: '#ececec',
+  /** Bright white — primary kinetic readouts (speed) and flight ID. */
   hero: '#ffffff',
-  telemetry: '#72dcff',
-  dim: '#b0b0b0',
-  muted: '#808080',
+  /** Cool off-white — altitude and origin labels. */
+  phosphor: '#d4e2ec',
+  /** Sky cyan — live phase (LANDING) and route accent (destination, progress). */
+  telemetry: '#58b8e8',
+  /** Steel blue-gray — static metadata (aircraft type) and unflown route track. */
+  dim: '#7d96a8',
+  muted: '#4a5c68',
+  track: '#243848',
   panel: '#000000',
   unlit: '#0a0a0a',
 } as const;
+
+
+function ledEmphasisColor(emphasis?: LedTelemetryEmphasis): string {
+  switch (emphasis) {
+    case 'primary':
+      return LED_COLORS.hero;
+    case 'status':
+      return LED_COLORS.telemetry;
+    case 'measure':
+      return LED_COLORS.phosphor;
+    case 'secondary':
+    default:
+      return LED_COLORS.dim;
+  }
+}
 
 const TEXT_THRESHOLD = 100;
 /** Logo mark pixels below this alpha are treated as tile background. */
@@ -59,6 +80,8 @@ export type LedFlightContent = {
   /** Regional operator code (e.g. SKW) for partner-flown mainline flights. */
   operatorTag?: string;
   routeHero: string;
+  /** 0–1 fraction of the route flown (origin→destination); null when unknown. */
+  routeProgress?: number | null;
   telemetry: LedTelemetryField[];
   logoUrl?: string;
   logoIcao: string;
@@ -108,6 +131,11 @@ type LayoutRegion = {
   dividerX: number;
   bandTop: number;
   bandH: number;
+  /** Full-width top band: origin · progress · destination (replaces flight number). */
+  headerX: number;
+  headerY: number;
+  headerW: number;
+  headerH: number;
   routeZoneTop: number;
   routeZoneH: number;
   statsZoneTop: number;
@@ -141,7 +169,7 @@ const LOGO_WIDTH_FRACTION = 0.4;
 /** Wall displays — wider logo column and larger tile. */
 const WALL_LOGO_WIDTH_FRACTION = 0.48;
 const WALL_LOGO_SIZE_SCALE = 1;
-const WALL_FLIGHT_TOP_INSET = 4;
+const WALL_FLIGHT_TOP_INSET = 1;
 
 /** Logo tile size relative to the max square that fits the column. */
 const LOGO_SIZE_SCALE = 0.92;
@@ -150,30 +178,24 @@ function isWallDisplay(rows: number): boolean {
   return rows > LED_GRID.landscape.rows + 4;
 }
 
-/** Upper band share for stacked origin / arrow / destination. */
-const ROUTE_ZONE_RATIO = 0.58;
-/** Desk panel — leave more room for full aircraft names + speed in the stats band. */
-const DESK_ROUTE_ZONE_RATIO = 0.4;
+/** Top header: airport codes + progress track with plane marker. */
+const HEADER_ROW_H = ledCharCellH() + LED_PROGRESS_PLANE_H + 3;
 
 function computeLogoColumnWidth(cols: number, widthFraction = LOGO_WIDTH_FRACTION): number {
   return Math.max(12, Math.floor(cols * widthFraction));
 }
 
-/** Left column: flight ID band on top, logo square anchored bottom-left. */
+/** Left column: route header band on top, logo square anchored bottom-left. */
 function computeLogoColumn(cols: number, rows: number) {
   const wall = isWallDisplay(rows);
   const columnW = computeLogoColumnWidth(
     cols,
     wall ? WALL_LOGO_WIDTH_FRACTION : LOGO_WIDTH_FRACTION
   );
-  const maxFlightH = 2 * LED_FONT.glyphH + LED_FONT.gapY;
-  const flightBandMin = maxFlightH + 2;
+  const headerH = HEADER_ROW_H;
   const logoBandW = columnW - LOGO_LEFT_INSET - LOGO_RIGHT_INSET;
   const sizeScale = wall ? WALL_LOGO_SIZE_SCALE : Math.min(1.1, LOGO_SIZE_SCALE);
-  const flightHeaderRows = maxFlightH + 4;
-  const logoTopMin = wall
-    ? flightHeaderRows + LOGO_TOP_INSET + 2
-    : flightBandMin + LOGO_TOP_INSET;
+  const logoTopMin = headerH + LOGO_TOP_INSET + 1;
 
   const maxSide = Math.min(
     logoBandW,
@@ -199,7 +221,7 @@ function computeLogoColumn(cols: number, rows: number) {
     logoX: LOGO_LEFT_INSET,
     logoY,
     flightX: LOGO_LEFT_INSET,
-    flightBandH: wall ? flightHeaderRows : logoY,
+    flightBandH: headerH,
     flightW: wall ? logoBandW : logoW,
     flightTopInset: wall ? WALL_FLIGHT_TOP_INSET : 1,
   };
@@ -234,9 +256,8 @@ function parseLedRouteHero(hero: string): { origin: string; dest: string } {
  */
 function buildRightContentLayout(
   rows: number,
-  logoY: number,
-  logoH: number,
-  options?: { wall?: boolean; rightBandTop?: number }
+  headerBottom: number,
+  options?: { wall?: boolean }
 ): Pick<
   LayoutRegion,
   | 'bandTop'
@@ -250,37 +271,19 @@ function buildRightContentLayout(
   | 'wall'
 > {
   const wall = options?.wall ?? false;
-  let bandTop: number;
-  let bandBottom: number;
-
-  if (wall) {
-    bandTop = options?.rightBandTop ?? WALL_FLIGHT_TOP_INSET;
-    bandBottom = rows - 2;
-  } else {
-    bandTop = logoY + RIGHT_BAND_INSET;
-    bandBottom = rows - 2;
-  }
-
+  const bandTop = headerBottom + (wall ? 1 : 2);
+  const bandBottom = rows - 2;
   const bandH = Math.max(ledCompactCellH() * 2, bandBottom - bandTop);
-  const routeRatio = wall ? ROUTE_ZONE_RATIO : DESK_ROUTE_ZONE_RATIO;
-  const routeZoneH = Math.max(ledCharCellH(), Math.floor(bandH * routeRatio));
-  const statsZoneH = bandH - routeZoneH;
-  const routeZoneTop = bandTop;
-  const statsZoneTop = bandTop + routeZoneH;
-  const useStackedRoute =
-    wall || routeZoneH >= ledCharCellH() * 2 + 6;
-  const statsUseFullFont =
-    wall || statsZoneH >= ledCharCellH() + 1;
 
   return {
     bandTop,
     bandH,
-    routeZoneTop,
-    routeZoneH,
-    statsZoneTop,
-    statsZoneH,
-    useStackedRoute,
-    statsUseFullFont,
+    routeZoneTop: bandTop,
+    routeZoneH: 0,
+    statsZoneTop: bandTop,
+    statsZoneH: bandH,
+    useStackedRoute: false,
+    statsUseFullFont: wall || bandH >= ledCharCellH() + 1,
     wall,
   };
 }
@@ -292,10 +295,10 @@ function buildLandscapeLayout(cols: number, rows: number): LayoutRegion {
   const dividerX = logo.columnW + 1;
   const mainX = logo.columnW + RIGHT_COL_GAP + RIGHT_COL_PAD;
   const mainW = cols - mainX - pad - RIGHT_COL_PAD;
-  const rightLayout = buildRightContentLayout(rows, logo.logoY, logo.logoH, {
-    wall,
-    rightBandTop: wall ? logo.flightTopInset : undefined,
-  });
+  const headerY = wall ? WALL_FLIGHT_TOP_INSET : 1;
+  const headerH = logo.flightBandH;
+  const headerBottom = headerY + headerH;
+  const rightLayout = buildRightContentLayout(rows, headerBottom, { wall });
 
   return {
     pad,
@@ -312,6 +315,10 @@ function buildLandscapeLayout(cols: number, rows: number): LayoutRegion {
     flightW: logo.flightW,
     flightTopInset: logo.flightTopInset,
     dividerX,
+    headerX: pad,
+    headerY,
+    headerW: cols - 2 * pad,
+    headerH,
     ...rightLayout,
   };
 }
@@ -551,7 +558,7 @@ function renderLogoMark(
       content.logoTileBorder !== false
     );
   } else {
-    drawLogoFallback(ctx, content.logoFallback, layout);
+    drawLogoFallback(ctx, content.logoFallback, layout, content.logoBackground);
   }
 
   return logoRect;
@@ -565,155 +572,170 @@ function drawPanelChrome(ctx: CanvasRenderingContext2D, layout: LayoutRegion): v
   }
 }
 
-function drawRouteBlock(
+/**
+ * Route progress: origin cap · continuous track (cyan flown / dim remaining) · plane · dest cap.
+ */
+function drawRouteProgressBar(
   ctx: CanvasRenderingContext2D,
-  layout: LayoutRegion,
-  routeHero: string
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+  progress: number | null | undefined
 ): void {
-  const { mainX, mainW, routeZoneTop, routeZoneH, useStackedRoute, wall } = layout;
-  const textX = mainX + 2;
-  const textW = mainW - 4;
+  if (w <= 0 || h <= 0) return;
+
+  const planeH = LED_PROGRESS_PLANE_H;
+  const planeW = LED_PROGRESS_PLANE_W;
+  const planeY = y;
+  const trackY = y + Math.floor(planeH / 2);
+  const trackStart = x + 1;
+  const trackEnd = x + w - 2;
+
+  const frac =
+    progress == null ? null : Math.max(0, Math.min(1, progress));
+
+  ctx.fillStyle = LED_COLORS.phosphor;
+  ctx.fillRect(x, trackY, 1, 1);
+  ctx.fillStyle = LED_COLORS.telemetry;
+  ctx.fillRect(x + w - 1, trackY, 1, 1);
+
+  if (trackStart > trackEnd) return;
+
+  const drawTrackLine = (from: number, to: number, color: string) => {
+    if (from > to) return;
+    ctx.fillStyle = color;
+    for (let col = from; col <= to; col += 1) {
+      ctx.fillRect(col, trackY, 1, 1);
+    }
+  };
+
+  drawTrackLine(trackStart, trackEnd, LED_COLORS.dim);
+
+  if (frac == null) return;
+
+  const noseCol = x + Math.round(w * frac);
+  const planeX = Math.max(x, Math.min(noseCol - planeW + 1, x + w - planeW));
+  const flownEnd = Math.max(trackStart, planeX) - 1;
+
+  drawTrackLine(trackStart, flownEnd, LED_COLORS.telemetry);
+
+  drawLedAircraftIcon(ctx, LED_PROGRESS_PLANE_KIND, planeX, planeY, planeH, LED_COLORS.hero);
+}
+
+/** Full-width top row: origin (left) · flight ID (center) · destination (right) + progress. */
+function drawRouteHeaderRow(
+  ctx: CanvasRenderingContext2D,
+  layout: Pick<LayoutRegion, 'headerX' | 'headerY' | 'headerW' | 'headerH' | 'wall'>,
+  routeHero: string,
+  progress: number | null | undefined,
+  flightId?: string
+): void {
+  const { headerX, headerY, headerW, headerH, wall } = layout;
   const { origin, dest } = parseLedRouteHero(routeHero);
+  const hasRoute = Boolean(origin || dest);
+  if (!hasRoute && !flightId) return;
+
+  const barH = LED_PROGRESS_PLANE_H;
+  const textSlotH = Math.max(ledCharCellH(), headerH - barH - 1);
   const pickRouteScale = wall ? pickWallFlightIdScale : pickFlightIdScale;
+  const textX = headerX + 1;
+  const textW = headerW - 2;
+  const sideW = Math.floor(textW * 0.22);
+  const centerW = Math.max(ledCharCellH() * 3, textW - 2 * sideW);
+  const centerX = textX + Math.floor((textW - centerW) / 2);
+  const codeMaxW = sideW;
+  const routeLabel = origin || dest || '';
+  const scale = pickRouteScale(routeLabel || flightId || 'DEN', codeMaxW, textSlotH);
+  const destW = dest
+    ? ledScaledTextMetrics(dest, scale.scaleX, scale.scaleY).width
+    : 0;
+  const rowH = ledScaledTextMetrics(routeLabel || flightId || 'X', scale.scaleX, scale.scaleY)
+    .height;
+  const textY = headerY + Math.max(0, Math.floor((textSlotH - rowH) / 2));
+  const snap = scale.scaleX === 1;
 
-  if (useStackedRoute && dest) {
-    const arrowScale = wall ? 2 : 1;
-    const arrowH = wall
-      ? ledScaledTextMetrics('→', arrowScale, arrowScale).height
-      : ledCharCellH();
-    const gap = wall ? 4 : 2;
-    const endSlotH = Math.max(
-      ledCharCellH(),
-      Math.floor((routeZoneH - arrowH - gap * 2) / 2)
-    );
-    const endScale = pickRouteScale(origin, textW, endSlotH);
-    const endMetrics = ledScaledTextMetrics(
-      origin,
-      endScale.scaleX,
-      endScale.scaleY
-    );
-    const blockH = endMetrics.height * 2 + arrowH + gap * 2;
-    let y = wall
-      ? routeZoneTop
-      : routeZoneTop + Math.round((routeZoneH - blockH) / 2);
-
+  if (origin) {
     drawLedTextScaled(
       ctx,
       origin,
-      centerLedTextXScaled(origin, textX, textW, endScale.scaleX),
-      y,
-      LED_COLORS.hero,
-      textW,
-      endScale.scaleX,
-      endScale.scaleY,
-      endScale.scaleX === 1
-    );
-    y += endMetrics.height + gap;
-
-    drawLedTextScaled(
-      ctx,
-      '→',
-      centerLedTextXScaled('→', textX, textW, arrowScale),
-      y,
+      textX,
+      textY,
       LED_COLORS.phosphor,
-      textW,
-      arrowScale,
-      arrowScale,
-      false
+      codeMaxW,
+      scale.scaleX,
+      scale.scaleY,
+      snap
     );
-    y += arrowH + gap;
-
+  }
+  if (dest) {
     drawLedTextScaled(
       ctx,
       dest,
-      centerLedTextXScaled(dest, textX, textW, endScale.scaleX),
-      y,
-      LED_COLORS.hero,
-      textW,
-      endScale.scaleX,
-      endScale.scaleY,
-      endScale.scaleX === 1
-    );
-    return;
-  }
-
-  const scale = pickRouteScale(routeHero, textW, routeZoneH);
-  const metrics = ledScaledTextMetrics(
-    routeHero,
-    scale.scaleX,
-    scale.scaleY
-  );
-  const y = wall
-    ? routeZoneTop
-    : routeZoneTop + Math.round((routeZoneH - metrics.height) / 2);
-
-  drawLedTextScaled(
-    ctx,
-    routeHero,
-    centerLedTextXScaled(routeHero, textX, textW, scale.scaleX),
-    y,
-    LED_COLORS.hero,
-    textW,
-    scale.scaleX,
-    scale.scaleY,
-    scale.scaleX === 1
-  );
-}
-
-/** Gap between the type silhouette and its label, relative to the icon height. */
-const ICON_GAP_RATIO = 0.35;
-
-/**
- * Draw the aircraft-type line centered as an [icon · label] group. Falls back to a
- * plain centered label when there is no silhouette or it can't fit.
- */
-function drawTypeLineWithIcon(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  icon: LedAircraftIcon | undefined,
-  textX: number,
-  textW: number,
-  y: number,
-  scale: { scaleX: number; scaleY: number }
-): void {
-  const metrics = ledScaledTextMetrics(text, scale.scaleX, scale.scaleY);
-  const iconH = metrics.height;
-  const iconW = icon ? ledAircraftIconAspect(icon) * iconH : 0;
-  const iconGap = icon ? Math.max(1, Math.round(iconH * ICON_GAP_RATIO)) : 0;
-  const labelMaxW = Math.max(0, textW - iconW - iconGap);
-
-  if (!icon || labelMaxW < ledScaledCellW(scale.scaleX)) {
-    drawLedTextScaled(
-      ctx,
-      text,
-      centerLedTextXScaled(text, textX, textW, scale.scaleX),
-      y,
+      textX + textW - destW,
+      textY,
       LED_COLORS.telemetry,
-      textW,
+      codeMaxW,
       scale.scaleX,
       scale.scaleY,
-      scale.scaleX === 1
+      snap
     );
-    return;
+  }
+  if (flightId) {
+    const idScale = pickRouteScale(flightId, centerW, textSlotH);
+    const idMetrics = ledScaledTextMetrics(flightId, idScale.scaleX, idScale.scaleY);
+    const idY = headerY + Math.max(0, Math.floor((textSlotH - idMetrics.height) / 2));
+    drawLedTextScaled(
+      ctx,
+      flightId,
+      centerLedTextXScaled(flightId, centerX, centerW, idScale.scaleX),
+      idY,
+      LED_COLORS.hero,
+      centerW,
+      idScale.scaleX,
+      idScale.scaleY,
+      idScale.scaleX === 1
+    );
   }
 
-  const label = truncateLedTextScaled(text, labelMaxW, scale.scaleX);
-  const labelW = ledScaledTextMetrics(label, scale.scaleX, scale.scaleY).width;
-  const groupW = iconW + iconGap + labelW;
-  const groupX = textX + Math.max(0, Math.floor((textW - groupW) / 2));
+  if (hasRoute) {
+    const barY = headerY + textSlotH;
+    drawRouteProgressBar(ctx, textX, barY, textW, barH, progress);
+  }
+}
 
-  drawLedAircraftIcon(ctx, icon, groupX, y, iconH, LED_COLORS.telemetry);
-  drawLedTextScaled(
-    ctx,
-    label,
-    groupX + iconW + iconGap,
-    y,
-    LED_COLORS.telemetry,
-    labelMaxW,
-    scale.scaleX,
-    scale.scaleY,
-    scale.scaleX === 1
-  );
+/** Visual order: type · phase · altitude · speed (primary readout last). */
+function orderedTelemetryFields(telemetry: LedTelemetryField[]): LedTelemetryField[] {
+  const typeField = telemetry.find((f) => f.emphasis === 'secondary');
+  const speedField = telemetry.find((f) => f.emphasis === 'primary');
+  const statusFields = telemetry.filter((f) => f.emphasis === 'status');
+  const measureFields = telemetry.filter((f) => f.emphasis === 'measure');
+  if (!typeField || !speedField) return telemetry.filter(Boolean);
+  return [typeField, ...statusFields, ...measureFields, speedField];
+}
+
+const STATS_SLOT_WEIGHTS: Record<number, readonly number[]> = {
+  2: [0.34, 0.66],
+  3: [0.24, 0.3, 0.46],
+  4: [0.18, 0.2, 0.24, 0.38],
+};
+
+function pickStatsScale(
+  field: LedTelemetryField,
+  text: string,
+  textW: number,
+  slotH: number,
+  wall: boolean
+) {
+  const picker =
+    field.emphasis === 'primary'
+      ? wall
+        ? pickWallFlightIdScale
+        : pickFlightIdScale
+      : wall
+        ? pickWallFlightIdScale
+        : pickTelemetryScale;
+  return picker(text, textW, slotH);
 }
 
 function drawStatsRow(
@@ -724,52 +746,46 @@ function drawStatsRow(
   const { mainX, mainW, statsZoneTop, statsZoneH, wall } = layout;
   const textX = mainX + 1;
   const textW = mainW - 2;
-  const aircraft = telemetry[0]?.value ?? '';
-  const aircraftIcon = telemetry[0]?.icon;
-  const speed = telemetry[1]?.value ?? '';
-  const motion = telemetry[2]?.value ?? '';
+  const entries = orderedTelemetryFields(telemetry);
 
-  const gap = wall ? 3 : 2;
-  /** Lines fitting the band at the base 5×7 font, with the motion line as the first drop. */
-  const maxLines = Math.max(
-    1,
-    Math.floor((statsZoneH + gap) / (LED_FONT.glyphH + gap))
-  );
-  let lines = motion ? [aircraft, motion, speed] : [aircraft, speed];
-  if (lines.length > maxLines) {
-    lines = [aircraft, speed].slice(0, Math.max(1, maxLines));
-  }
+  const gap = wall ? 2 : 1;
+  const lines = entries.length > 0 ? entries : [];
 
   if (lines.length >= 2) {
-    const count = lines.length;
-    const slotH = Math.floor((statsZoneH - gap * (count - 1)) / count);
-    const pickScale = wall ? pickWallFlightIdScale : pickTelemetryScale;
+    const weights = STATS_SLOT_WEIGHTS[lines.length] ?? lines.map(() => 1 / lines.length);
+    let slotTop = statsZoneTop;
 
-    lines.forEach((text, i) => {
-      const scale = pickScale(text, textW, slotH);
+    lines.forEach((field, i) => {
+      const slotH = Math.max(
+        LED_FONT.glyphH,
+        Math.floor(statsZoneH * (weights[i] ?? 1 / lines.length))
+      );
+      const text = field.value;
+      const color = ledEmphasisColor(field.emphasis);
+      const scale = pickStatsScale(field, text, textW, slotH, wall);
       const metrics = ledScaledTextMetrics(text, scale.scaleX, scale.scaleY);
-      const slotTop = statsZoneTop + i * (slotH + gap);
       const y = slotTop + Math.round((slotH - metrics.height) / 2);
-
-      if (i === 0) {
-        drawTypeLineWithIcon(ctx, text, aircraftIcon, textX, textW, y, scale);
-        return;
-      }
 
       drawLedTextScaled(
         ctx,
         text,
         centerLedTextXScaled(text, textX, textW, scale.scaleX),
         y,
-        LED_COLORS.telemetry,
+        color,
         textW,
         scale.scaleX,
         scale.scaleY,
         scale.scaleX === 1
       );
+
+      slotTop += slotH + (i < lines.length - 1 ? gap : 0);
     });
     return;
   }
+
+  const field = lines[0];
+  const aircraft = field?.value ?? '';
+  const typeColor = ledEmphasisColor(field?.emphasis);
 
   const rowH = ledCompactCellH();
   const rowY = statsZoneTop + Math.round((statsZoneH - rowH) / 2);
@@ -781,38 +797,29 @@ function drawStatsRow(
   );
   const aircraftY = rowY + Math.round((rowH - aircraftMetrics.height) / 2);
 
-  let aircraftX = textX;
-  let aircraftMaxW = textW;
-  if (aircraftIcon) {
-    const iconH = aircraftMetrics.height;
-    const iconW = ledAircraftIconAspect(aircraftIcon) * iconH;
-    const iconGap = Math.max(1, Math.round(iconH * ICON_GAP_RATIO));
-    if (textW - iconW - iconGap >= ledScaledCellW(aircraftScale.scaleX)) {
-      drawLedAircraftIcon(ctx, aircraftIcon, textX, aircraftY, iconH, LED_COLORS.telemetry);
-      aircraftX = textX + iconW + iconGap;
-      aircraftMaxW = Math.max(0, textW - iconW - iconGap);
-    }
-  }
-
   drawLedTextScaled(
     ctx,
     aircraft,
-    aircraftX,
+    textX,
     aircraftY,
-    LED_COLORS.telemetry,
-    aircraftMaxW,
+    typeColor,
+    textW,
     aircraftScale.scaleX,
     aircraftScale.scaleY,
     aircraftScale.scaleX === 1
   );
-  drawLedTextCompactRight(
-    ctx,
-    speed,
-    textX + textW,
-    rowY,
-    LED_COLORS.telemetry,
-    textW
-  );
+
+  const speedField = telemetry.find((f) => f.emphasis === 'primary');
+  if (speedField) {
+    drawLedTextCompactRight(
+      ctx,
+      speedField.value,
+      textX + textW,
+      rowY,
+      ledEmphasisColor(speedField.emphasis),
+      textW
+    );
+  }
 }
 
 function renderLandscapeLayout(
@@ -836,71 +843,39 @@ function drawLandscapeFlightPanel(
   ctx: CanvasRenderingContext2D,
   layout: LayoutRegion,
   content: LedFlightContent,
-  rows: number
+  _rows: number
 ): void {
-  const wall = isWallDisplay(rows);
-  const operator = content.operatorTag?.trim() ?? '';
-  /** Stack the operator below the flight ID when the band can hold a second compact line. */
-  const showOperator =
-    operator.length > 0 &&
-    layout.flightBandH >= LED_FONT.glyphH + ledCompactCellH() + 2;
-  const idBandH = showOperator
-    ? layout.flightBandH - ledCompactCellH() - 1
-    : layout.flightBandH;
-
-  const flightScale = wall
-    ? pickWallFlightIdScale(content.flightId, layout.flightW, idBandH)
-    : pickFlightIdScale(content.flightId, layout.flightW, idBandH);
-  const flightMetrics = ledScaledTextMetrics(
-    content.flightId,
-    flightScale.scaleX,
-    flightScale.scaleY
-  );
-  const flightY = wall
-    ? layout.flightTopInset
-    : Math.max(1, Math.floor((idBandH - flightMetrics.height) / 2));
-
-  drawLedTextScaled(
+  drawRouteHeaderRow(
     ctx,
-    content.flightId,
-    layout.flightX + 1,
-    flightY,
-    LED_COLORS.hero,
-    layout.flightW - 2,
-    flightScale.scaleX,
-    flightScale.scaleY,
-    true
+    layout,
+    content.routeHero,
+    content.routeProgress,
+    content.flightId
   );
-
-  if (showOperator) {
-    drawLedTextCompact(
-      ctx,
-      `- ${operator}`,
-      layout.flightX + 1,
-      flightY + flightMetrics.height + 1,
-      LED_COLORS.telemetry,
-      layout.flightW - 2
-    );
-  }
-
   drawPanelChrome(ctx, layout);
-  drawRouteBlock(ctx, layout, content.routeHero);
   drawStatsRow(ctx, layout, content.telemetry);
+}
+
+function logoFallbackColor(background: string): string {
+  const bg = parseHexColor(background);
+  return colorLuminance(bg) > 140 ? LED_COLORS.muted : LED_COLORS.hero;
 }
 
 function drawLogoFallback(
   ctx: CanvasRenderingContext2D,
   fallback: string,
-  layout: Pick<LayoutRegion, 'logoX' | 'logoY' | 'logoW' | 'logoH'>
+  layout: Pick<LayoutRegion, 'logoX' | 'logoY' | 'logoW' | 'logoH'>,
+  background: string
 ): void {
   const text = fallback.slice(0, layout.logoW >= 16 ? 3 : 2);
+  const color = logoFallbackColor(background);
   if (layout.logoH >= ledCharCellH() + 2) {
     drawLedText(
       ctx,
       text,
       layout.logoX + 1,
       layout.logoY + Math.floor((layout.logoH - ledCharCellH()) / 2),
-      LED_COLORS.phosphor,
+      color,
       layout.logoW - 2
     );
     return;
@@ -910,7 +885,7 @@ function drawLogoFallback(
     text,
     layout.logoX + 1,
     layout.logoY + Math.floor((layout.logoH - COMPACT_SAFE) / 2),
-    LED_COLORS.phosphor
+    color
   );
 }
 

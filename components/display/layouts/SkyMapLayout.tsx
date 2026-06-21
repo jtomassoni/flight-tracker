@@ -10,6 +10,7 @@ import {
   getVerticalTrend,
 } from '@/lib/aircraftUtils';
 import { getAircraftDisplayBrand } from '@/lib/airlines';
+import { getDisplayEmptyState } from '@/lib/displayEmptyState';
 import { useLayoutDensity } from '@/hooks/useLayoutDensity';
 import AirlineLogoImage from '../shared/AirlineLogoImage';
 import KioskTicker from '../shared/KioskTicker';
@@ -27,8 +28,21 @@ export default function SkyMapLayout({
   settings,
   lastUpdated,
   status,
+  errorMessage,
+  trackLabel,
+  trackStatus,
 }: DisplayLayoutProps) {
   const { viewport } = useLayoutDensity();
+  const feedDown = status === 'error' || status === 'offline';
+  const emptyState = getDisplayEmptyState({
+    status,
+    trackLabel,
+    trackStatus,
+    feedDown,
+    errorMessage,
+    locationLabel: settings.locationLabel,
+    radiusMi: settings.radiusMi,
+  });
 
   return (
     <div className="relative flex h-full flex-col overflow-hidden bg-slate-950">
@@ -70,6 +84,22 @@ export default function SkyMapLayout({
           {viewport !== 'desk' && <p className="capitalize text-slate-400">{status}</p>}
         </div>
       </header>
+
+      {displayedAircraft.length === 0 && (
+        <div className="pointer-events-none relative z-10 flex flex-1 items-center justify-center p-6">
+          <div className="rounded-2xl border border-white/15 bg-slate-950/80 px-6 py-5 text-center shadow-lg backdrop-blur-md">
+            <p className="text-[10px] uppercase tracking-[0.3em] text-sky-300/80">
+              {emptyState.kicker ?? (feedDown ? 'Signal Lost' : 'Live Airspace')}
+            </p>
+            <h2 className="mt-1 text-xl font-bold text-white sm:text-2xl">
+              {emptyState.title}
+            </h2>
+            <p className="mt-1 text-xs text-slate-300 sm:text-sm">
+              {emptyState.subtitle}
+            </p>
+          </div>
+        </div>
+      )}
 
       {displayedAircraft.length > 0 && (
         <footer className="pointer-events-none relative z-10 mt-auto safe-bottom p-[var(--kiosk-pad)]">

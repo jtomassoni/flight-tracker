@@ -93,7 +93,7 @@
 /* Column headers — white like the real boards */
 .den-fids__col-header {
   display: grid;
-  grid-template-columns: 1.15fr 1.1fr 0.8fr 0.55fr 0.6fr 0.75fr;
+  grid-template-columns: 1fr 1fr 0.8fr 0.7fr 0.75fr;
   gap: 0.35rem;
   align-items: end;
   background: var(--den-header);
@@ -109,7 +109,7 @@
 /* Rows — uniform navy, thin separators */
 .den-fids__row {
   display: grid;
-  grid-template-columns: 1.15fr 1.1fr 0.8fr 0.55fr 0.6fr 0.75fr;
+  grid-template-columns: 1fr 1fr 0.8fr 0.7fr 0.75fr;
   gap: 0.35rem;
   align-items: center;
   padding: 0.28rem 0.55rem;
@@ -198,16 +198,45 @@
   color: #f87171;
 }
 
-/* iPad / desk: hide status to fit */
+/* Empty / loading board */
+.den-fids__empty {
+  background: var(--den-bg);
+}
+
+.den-fids__empty .den-fids__mark {
+  width: 56px;
+  height: 56px;
+  opacity: 0.85;
+}
+
+.den-fids__empty-title {
+  font-size: clamp(1.5rem, 4vw, 2.75rem);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--den-white);
+  line-height: 1.1;
+}
+
+.den-fids__empty-sub {
+  margin-top: 0.5rem;
+  font-size: clamp(0.7rem, 1.4vw, 0.95rem);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--den-yellow);
+}
+
+/* iPad / desk: drop the origin column to fit */
 @media (max-width: 1279px) {
-  .den-fids__col-header span:nth-child(6),
-  .den-fids__row > *:nth-child(6) {
+  .den-fids__col-header span:nth-child(1),
+  .den-fids__row > *:nth-child(1) {
     display: none;
   }
 
   .den-fids__col-header,
   .den-fids__row {
-    grid-template-columns: 1.1fr 1.05fr 0.85fr 0.55fr 0.65fr;
+    grid-template-columns: 1.1fr 0.85fr 0.7fr 0.75fr;
   }
 
   .den-fids__tagline {
@@ -230,16 +259,18 @@
   }
 }
 
-/* Phone: drop gate column */
+/* Phone: drop origin + status, keep destination / airline / flight */
 @media (max-width: 639px) {
-  .den-fids__col-header span:nth-child(4),
-  .den-fids__row > *:nth-child(4) {
+  .den-fids__col-header span:nth-child(1),
+  .den-fids__row > *:nth-child(1),
+  .den-fids__col-header span:nth-child(5),
+  .den-fids__row > *:nth-child(5) {
     display: none;
   }
 
   .den-fids__col-header,
   .den-fids__row {
-    grid-template-columns: 1fr 1fr 0.85fr 0.65fr;
+    grid-template-columns: 1fr 0.85fr 0.7fr;
     padding-left: 0.4rem;
     padding-right: 0.4rem;
   }
