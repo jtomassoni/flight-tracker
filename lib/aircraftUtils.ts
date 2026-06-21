@@ -1,6 +1,25 @@
 import type { NormalizedAircraft, VerticalTrend } from '@/types/aircraft';
 import { formatBrandedCallsign } from './airlines';
 
+/** Baro altitudes at or below this are treated as the airport surface. */
+export const SURFACE_MAX_ALT_FT = 500;
+
+/** Overhead display — exclude ADS-B ground and parked surface traffic. */
+export function isAirborne(
+  ac: Pick<NormalizedAircraft, 'altitudeFt' | 'groundSpeedKt'>
+): boolean {
+  const alt = ac.altitudeFt;
+  if (alt == null || alt <= 0) return false;
+  if (alt <= SURFACE_MAX_ALT_FT && (ac.groundSpeedKt == null || ac.groundSpeedKt < 1)) {
+    return false;
+  }
+  return true;
+}
+
+export function filterAirborne(aircraft: NormalizedAircraft[]): NormalizedAircraft[] {
+  return aircraft.filter(isAirborne);
+}
+
 export function formatCallsign(callsign?: string): string {
   if (!callsign) return '—';
   return callsign.trim().toUpperCase();

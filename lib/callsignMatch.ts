@@ -77,6 +77,23 @@ export function findTrackedAircraft(
   return aircraft.find((ac) => aircraftMatchesTrack(ac, target)) ?? null;
 }
 
+/** Admin watch form values from a live callsign (prefers marketing IATA). */
+export function trackFieldsFromCallsign(callsign: string): { airline: string; flightNumber: string } | null {
+  const trimmed = callsign.trim().toUpperCase();
+  if (!trimmed) return null;
+
+  const numMatch = trimmed.match(/(\d+)$/);
+  if (!numMatch) return null;
+
+  const flightNumber = numMatch[1]!;
+  const mainlineIcao = resolveMainlineIcao(trimmed);
+  const brand = getAirlineByIcao(mainlineIcao);
+  const airline = brand?.iata ?? mainlineIcao;
+
+  if (!buildTrackTarget(airline, flightNumber)) return null;
+  return { airline, flightNumber };
+}
+
 /** Parse a shorthand track query like "UA1234" or "UAL 1234". */
 export function parseTrackQuery(query: string): { airline: string; flightNumber: string } | null {
   const trimmed = query.trim();

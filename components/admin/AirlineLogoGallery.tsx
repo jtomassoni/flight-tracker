@@ -13,6 +13,7 @@ import {
 } from '@/lib/airlineThemePreview';
 import { hasLedAirlineMark } from '@/lib/ledAirlineMarks';
 import AirlineLedLogoTile from '@/components/admin/AirlineLedLogoTile';
+import { useLogoCatalog } from '@/components/admin/LogoCatalogContext';
 import AirlineLogoImage from '@/components/display/shared/AirlineLogoImage';
 import './airline-logo-gallery.css';
 
@@ -47,16 +48,19 @@ export function AirlineLogoSourceBadge({
 type AirlineLogoGalleryProps = {
   variant?: 'compact' | 'expanded';
   linkToTester?: boolean;
+  filter?: 'all' | 'needs-logo';
 };
 
 function ExpandedAirlineCard({
   icao,
   brand,
   content,
+  logoUrl,
 }: {
   icao: string;
   brand: NonNullable<ReturnType<typeof getLogoBrandByIcao>>;
   content: NonNullable<ReturnType<typeof buildAirlineLedPreview>>;
+  logoUrl?: string;
 }) {
   return (
     <article className="airline-logo-card">
@@ -82,6 +86,7 @@ function ExpandedAirlineCard({
               alt={`${brand.name} approved logo`}
               width={48}
               height={48}
+              logoUrl={logoUrl}
             />
           </div>
         </figure>
@@ -108,10 +113,12 @@ function CompactAirlineCard({
   icao,
   brand,
   content,
+  logoUrl,
 }: {
   icao: string;
   brand: NonNullable<ReturnType<typeof getLogoBrandByIcao>>;
   content: NonNullable<ReturnType<typeof buildAirlineLedPreview>>;
+  logoUrl?: string;
 }) {
   return (
     <article className="airline-logo-card">
@@ -124,7 +131,7 @@ function CompactAirlineCard({
       </header>
       <div className="airline-logo-card__previews">
         <figure className="airline-logo-card__cdn" title="Approved logo">
-          <AirlineLogoImage brand={brand} size={64} alt="" width={32} height={32} />
+          <AirlineLogoImage brand={brand} size={64} alt="" width={32} height={32} logoUrl={logoUrl} />
         </figure>
         <div className="airline-logo-card__led">
           <AirlineLedLogoTile
@@ -142,11 +149,20 @@ function CompactAirlineCard({
 export default function AirlineLogoGallery({
   variant = 'compact',
   linkToTester = false,
+  filter = 'all',
 }: AirlineLogoGalleryProps) {
+  const { catalog, getApprovedUrl } = useLogoCatalog();
   const isCompact = variant === 'compact';
   const brandList = isCompact ? AIRLINE_ICAO_LIST : LOGO_BRAND_ICAO_LIST;
   const carrierCount = AIRLINE_ICAO_LIST.length;
   const categoryCount = CATEGORY_ICAO_LIST.length;
+  const approvedSet = new Set(
+    catalog.filter((entry) => entry.approved).map((entry) => entry.icao)
+  );
+  const visibleList =
+    filter === 'needs-logo'
+      ? brandList.filter((icao) => !approvedSet.has(icao))
+      : brandList;
 
   return (
     <div
@@ -160,20 +176,29 @@ export default function AirlineLogoGallery({
             traffic category.
           </p>
           <span className="airline-logo-gallery__summary-count admin-mono">
-            {carrierCount} carriers · {categoryCount} categories
+            {approvedSet.size}/{brandList.length} approved · {carrierCount} carriers ·{' '}
+            {categoryCount} categories
           </span>
         </header>
       )}
       <div className="airline-logo-gallery__grid">
-      {brandList.map((icao) => {
+      {visibleList.length === 0 ? (
+        <p className="logo-approve__hint">
+          {filter === 'needs-logo'
+            ? 'All carriers have approved logos. Switch to “All” to review them.'
+            : 'No carriers in the catalog.'}
+        </p>
+      ) : (
+      visibleList.map((icao) => {
         const brand = getLogoBrandByIcao(icao);
-        const content = buildAirlineLedPreview(icao);
+        const logoUrl = getApprovedUrl(icao);
+        const content = buildAirlineLedPreview(icao, { logoUrl });
         if (!brand || !content) return null;
 
         const card = isCompact ? (
-          <CompactAirlineCard icao={icao} brand={brand} content={content} />
+          <CompactAirlineCard icao={icao} brand={brand} content={content} logoUrl={logoUrl} />
         ) : (
-          <ExpandedAirlineCard icao={icao} brand={brand} content={content} />
+          <ExpandedAirlineCard icao={icao} brand={brand} content={content} logoUrl={logoUrl} />
         );
 
         if (!linkToTester) {
@@ -187,13 +212,14 @@ export default function AirlineLogoGallery({
         return (
           <Link
             key={icao}
-            href={`/admin/theme-tester/preview?icao=${icao}`}
+            href={`/admin/theme-tester?icao=${icao}`}
             className="airline-logo-card__link airline-logo-gallery__item"
           >
             {card}
           </Link>
         );
-      })}
+      })
+      )}
       </div>
     </div>
   );

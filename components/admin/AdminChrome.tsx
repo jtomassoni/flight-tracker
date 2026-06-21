@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 import AdminDisplayToolbar from '@/components/admin/AdminDisplayToolbar';
 import AdminNav from '@/components/admin/AdminNav';
 
-const SETTINGS_ROUTES = new Set(['/admin/themes', '/admin/location', '/admin/filters', '/admin/screen']);
+const SETTINGS_ROUTES = new Set(['/admin/themes', '/admin/settings']);
 
 function isSettingsRoute(pathname: string): boolean {
   return SETTINGS_ROUTES.has(pathname) || pathname === '/admin';

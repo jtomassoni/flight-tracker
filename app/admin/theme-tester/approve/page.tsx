@@ -1,15 +1,5 @@
-import type { Metadata } from 'next';
-import { Suspense } from 'react';
-import AirlineThemeTester from '@/components/admin/AirlineThemeTester';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Approve Logos',
-};
-
-export default function ApproveLogosPage() {
-  return (
-    <Suspense fallback={<div className="admin-page p-6 text-slate-400">Loading…</div>}>
-      <AirlineThemeTester tab="approve" />
-    </Suspense>
-  );
+export default function ApproveLogosRedirect() {
+  redirect('/admin/theme-tester');
 }

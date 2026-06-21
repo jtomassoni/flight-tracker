@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import LogoManifestProvider from '@/components/LogoManifestProvider';
 
 /** Runs before React hydrates — sends old iPads to /old-ipad-display before SSR loading screen. */
 const LEGACY_REDIRECT_SCRIPT = `
@@ -19,7 +20,7 @@ export default function DisplayLayout({ children }: { children: ReactNode }) {
   return (
     <>
       <script dangerouslySetInnerHTML={{ __html: LEGACY_REDIRECT_SCRIPT }} />
-      {children}
+      <LogoManifestProvider>{children}</LogoManifestProvider>
     </>
   );
 }

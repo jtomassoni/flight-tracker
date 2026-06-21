@@ -1,29 +1,50 @@
 /**
- * Approved logo manifest — the source-of-truth logos promoted via the admin
- * approval tool (`public/airline-logos/approved.json`).
+ * Approved logo manifest — logos promoted via the admin approval tool.
  *
- * The display, gallery, and LED renderers resolve logos through this first so an
- * approved local asset always wins over the Kiwi CDN fallback.
+ * URLs are stored in Vercel Blob (prod + local dev with `vercel env pull`) or
+ * served from data/airline-logos/ via /api/airline-logos/asset/ when no blob
+ * token is configured.
+ *
+ * Client code loads the manifest at runtime (LogoManifestProvider or legacy
+ * syncLogoManifest) before resolving logo URLs.
  */
-import approvedManifest from '@/public/airline-logos/approved.json';
 
-type ApprovedEntry = {
-  file: string;
+export type ApprovedLogoEntry = {
+  url?: string;
+  file?: string;
   source?: string;
   approvedAt?: string;
 };
 
-const APPROVED_LOGOS = approvedManifest as Record<string, ApprovedEntry>;
+let approvedManifest: Record<string, ApprovedLogoEntry> = {};
 
-export function hasApprovedLogo(icao: string): boolean {
-  return Boolean(APPROVED_LOGOS[icao?.trim().toUpperCase()]?.file);
+export function setApprovedManifest(manifest: Record<string, ApprovedLogoEntry>): void {
+  approvedManifest = manifest ?? {};
 }
 
-/** Same-origin path to a carrier's approved logo, or undefined if none is approved. */
-export function approvedLogoUrl(icao: string): string | undefined {
-  const entry = APPROVED_LOGOS[icao?.trim().toUpperCase()];
-  if (!entry?.file) return undefined;
+export function getApprovedManifest(): Record<string, ApprovedLogoEntry> {
+  return approvedManifest;
+}
+
+function logoCacheSuffix(entry: ApprovedLogoEntry): string {
+  const fromSource = entry.source?.match(/(\d{10,})/)?.[1];
+  if (fromSource) return `?v=${fromSource}`;
   const version = entry.approvedAt ? Date.parse(entry.approvedAt) : NaN;
-  const suffix = Number.isFinite(version) ? `?v=${version}` : '';
-  return `/airline-logos/${entry.file}${suffix}`;
+  return Number.isFinite(version) ? `?v=${version}` : '';
+}
+
+export function hasApprovedLogo(icao: string): boolean {
+  const entry = approvedManifest[icao?.trim().toUpperCase()];
+  return Boolean(entry?.url || entry?.file);
+}
+
+/** Approved logo URL for a carrier, or undefined when none is approved. */
+export function approvedLogoUrl(icao: string): string | undefined {
+  const entry = approvedManifest[icao?.trim().toUpperCase()];
+  if (!entry) return undefined;
+  if (entry.file) {
+    return `/api/airline-logos/asset/${entry.file}${logoCacheSuffix(entry)}`;
+  }
+  if (entry.url) return entry.url;
+  return undefined;
 }

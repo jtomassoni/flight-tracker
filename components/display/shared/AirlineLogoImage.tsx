@@ -1,7 +1,7 @@
 'use client';
 
-import Image from 'next/image';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
+import { useLogoManifestRevision } from '@/components/LogoManifestProvider';
 import { airlineLogoUrl, type AirlineBrand } from '@/lib/airlines';
 import { drawLedAirlineMark, hasLedAirlineMark } from '@/lib/ledAirlineMarks';
 
@@ -17,6 +17,8 @@ type AirlineLogoImageProps = {
   height?: number;
   /** Upscale native marks to fill the canvas (source-asset previews). LED wall keeps 1×. */
   fillMark?: boolean;
+  /** Fresh URL from the logo catalog API (mtime cache-bust). */
+  logoUrl?: string;
 };
 
 export default function AirlineLogoImage({
@@ -29,10 +31,15 @@ export default function AirlineLogoImage({
   width,
   height,
   fillMark = false,
+  logoUrl: logoUrlOverride,
 }: AirlineLogoImageProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const logoManifestRevision = useLogoManifestRevision();
   const useNative = hasLedAirlineMark(brand.icao);
-  const approvedUrl = useNative ? undefined : airlineLogoUrl(brand);
+  const approvedUrl = useMemo(
+    () => (useNative ? undefined : (logoUrlOverride ?? airlineLogoUrl(brand))),
+    [brand, logoUrlOverride, logoManifestRevision, useNative]
+  );
 
   useEffect(() => {
     if (!useNative) return undefined;
@@ -78,24 +85,27 @@ export default function AirlineLogoImage({
   if (approvedUrl) {
     if (fill) {
       return (
-        <Image
-          src={approvedUrl}
-          alt={alt ?? brand.name}
-          fill
-          className={className ?? 'object-contain p-2'}
-          unoptimized
-        />
+        <span className={`relative block ${className ?? ''}`} style={{ width: '100%', height: '100%' }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            key={approvedUrl}
+            src={approvedUrl}
+            alt={alt ?? brand.name}
+            className="h-full w-full object-contain p-2"
+          />
+        </span>
       );
     }
 
     return (
-      <Image
+      /* eslint-disable-next-line @next/next/no-img-element */
+      <img
+        key={approvedUrl}
         src={approvedUrl}
         alt={alt ?? brand.name}
         width={width ?? size / 2}
         height={height ?? size / 2}
         className={className}
-        unoptimized
       />
     );
   }
@@ -107,7 +117,7 @@ export default function AirlineLogoImage({
   return (
     <span
       role="img"
-      aria-label={alt ?? `${brand.name} (${brand.iata})`}
+      aria-label={alt ?? brand.name}
       className={className}
       style={{
         ...boxStyle,
@@ -116,11 +126,16 @@ export default function AirlineLogoImage({
         justifyContent: 'center',
         color: brand.primaryColor,
         fontWeight: 700,
-        fontSize: '0.7em',
-        letterSpacing: '0.04em',
+        fontSize: fill ? 'clamp(0.42em, 2.4vw, 0.62em)' : '0.55em',
+        lineHeight: 1.1,
+        letterSpacing: '0.02em',
+        textAlign: 'center',
+        padding: '0.12em',
+        overflow: 'hidden',
+        wordBreak: 'break-word',
       }}
     >
-      {brand.iata}
+      {brand.name}
     </span>
   );
 }

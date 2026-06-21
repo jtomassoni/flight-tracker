@@ -30,13 +30,15 @@
   }
 
   function boot() {
-    shared.syncServerSettings(function () {
-      if (shared.getViewMode() === 'fids') {
-        bootFids();
-      } else {
-        if (window.LegacyKiosk) window.LegacyKiosk.applyStandaloneShell();
-        bootLed();
-      }
+    shared.syncLogoManifest(function () {
+      shared.syncServerSettings(function () {
+        if (shared.getViewMode() === 'fids') {
+          bootFids();
+        } else {
+          if (window.LegacyKiosk) window.LegacyKiosk.applyStandaloneShell();
+          bootLed();
+        }
+      });
     });
   }
 

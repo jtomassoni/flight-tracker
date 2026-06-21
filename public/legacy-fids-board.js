@@ -102,12 +102,16 @@
   function rowHtml(ac, index) {
     var icao = resolveCallsignPrefix(ac.callsign);
     var iata = airlineIata(ac.callsign);
+    var logoUrl = shared.approvedLogoUrl(icao);
+    var logoImg = logoUrl
+      ? '<img src="' + logoUrl + '" alt="' + iata + '" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\'">'
+      : '';
     return (
       '<div class="fids-row">' +
       '<div class="fids-col-dest">' + DESTINATIONS[index % DESTINATIONS.length] + '</div>' +
       '<div class="fids-col-airline"><div class="fids-logo-wrap">' +
-      '<img src="/airline-logos/' + icao + '.png" alt="' + iata + '" onerror="this.style.display=\'none\';this.nextSibling.style.display=\'block\'">' +
-      '<span class="fids-airline-code" style="display:none">' + iata + '</span></div></div>' +
+      logoImg +
+      '<span class="fids-airline-code" style="display:' + (logoUrl ? 'none' : 'block') + '">' + iata + '</span></div></div>' +
       '<div class="fids-col-flight">' + displayId(ac) + '</div>' +
       '<div class="fids-col-gate">A' + (10 + index % 20) + '</div>' +
       '<div class="fids-col-time">' + (function () {
@@ -195,7 +199,7 @@
     document.documentElement.className = 'fids-mode';
     document.body.className = 'fids-mode';
     document.getElementById('app').innerHTML = '<div class="fids-loading" id="fids-status">Loading…</div>';
-    if (global.LegacyKiosk) global.LegacyKiosk.mountButton();
+    if (global.LegacyKiosk) global.LegacyKiosk.applyStandaloneShell();
     window.addEventListener('online', poll);
     poll();
   }

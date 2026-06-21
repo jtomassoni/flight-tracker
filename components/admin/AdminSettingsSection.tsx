@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAdminSettings } from '@/components/admin/AdminSettingsProvider';
+import WatchFlightPanel from '@/components/admin/WatchFlightPanel';
 import FlightMap from '@/components/display/maps/FlightMap';
-import { getTheme, getThemeSwatches, THEME_LIST } from '@/lib/themes';
+import { getTheme, getThemeSwatches, LAYOUT_LABELS, THEME_LIST } from '@/lib/themes';
 import { clampDimLevel, saveSettings, type DisplayMode, type ThemeId } from '@/lib/settings';
 import { buildTrackTarget } from '@/lib/callsignMatch';
 
-export type AdminSettingsSection = 'themes' | 'location' | 'filters' | 'screen';
+export type AdminSettingsSection = 'themes' | 'settings' | 'watch';
 
 const MODE_LABELS: Record<DisplayMode, string> = {
   nearby: 'All nearby',
@@ -24,9 +25,8 @@ const MODE_OPTIONS = (Object.keys(MODE_LABELS) as DisplayMode[]).map((value) => 
 
 const SECTION_COPY: Record<AdminSettingsSection, { panelTitle: string }> = {
   themes: { panelTitle: 'Display preset' },
-  location: { panelTitle: 'Corridor' },
-  filters: { panelTitle: 'Radar & traffic' },
-  screen: { panelTitle: 'Screen & power' },
+  settings: { panelTitle: 'Settings' },
+  watch: { panelTitle: 'Watch a flight' },
 };
 
 function buildOldIpadDisplayPath(
@@ -145,11 +145,13 @@ function ThemeChip({
   name,
   selected,
   onSelect,
+  variant = 'grid',
 }: {
   id: ThemeId;
   name: string;
   selected: boolean;
   onSelect: () => void;
+  variant?: 'grid' | 'sidebar';
 }) {
   const theme = getTheme(id);
   const swatches = getThemeSwatches(theme);
@@ -160,20 +162,72 @@ function ThemeChip({
       onClick={onSelect}
       data-selected={selected}
       title={`${name} — ${theme.description}`}
-      className="admin-theme-module"
+      className={`admin-theme-module ${variant === 'sidebar' ? 'admin-theme-module--sidebar' : ''}`}
     >
       <div className="admin-theme-module__swatches">
         {swatches.map((color, index) => (
           <span key={index} style={{ backgroundColor: color }} />
         ))}
       </div>
-      <span className="admin-theme-module__name">{name}</span>
+      <div className="admin-theme-module__body">
+        <span className="admin-theme-module__name">{name}</span>
+        {variant === 'sidebar' && (
+          <span className="admin-theme-module__desc">{theme.description}</span>
+        )}
+      </div>
       {selected && (
         <span className="admin-theme-module__mark admin-mono" aria-hidden>
           Selected
         </span>
       )}
     </button>
+  );
+}
+
+function ThemePreviewPanel({
+  themeId,
+  watchAirline = '',
+  watchFlightNumber = '',
+}: {
+  themeId: ThemeId;
+  watchAirline?: string;
+  watchFlightNumber?: string;
+}) {
+  const theme = getTheme(themeId);
+  const trackTarget = buildTrackTarget(watchAirline, watchFlightNumber);
+  const previewSrc = useMemo(() => {
+    const params = new URLSearchParams({ embed: '1', theme: themeId });
+    if (trackTarget) {
+      params.set('airline', watchAirline.trim());
+      params.set('flight', watchFlightNumber.trim());
+    }
+    return `/display?${params.toString()}`;
+  }, [themeId, trackTarget, watchAirline, watchFlightNumber]);
+
+  return (
+    <>
+      <div className="admin-theme-preview-meta">
+        <p className="admin-theme-preview-meta__name">{theme.name}</p>
+        {trackTarget ? (
+          <p className="admin-theme-preview-meta__desc">
+            Watch mode · {trackTarget.displayLabel}
+          </p>
+        ) : (
+          <p className="admin-theme-preview-meta__desc">{theme.description}</p>
+        )}
+        <p className="admin-theme-preview-meta__layout admin-mono">
+          {LAYOUT_LABELS[theme.layout]}
+        </p>
+      </div>
+      <div className="admin-theme-preview">
+        <iframe
+          key={previewSrc}
+          title={`${theme.name} preview`}
+          src={previewSrc}
+          className="admin-theme-preview__frame"
+        />
+      </div>
+    </>
   );
 }
 
@@ -236,6 +290,15 @@ function Panel({
   );
 }
 
+function SettingsGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="admin-settings-group">
+      <h3 className="admin-settings-group__title">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
 export default function AdminSettingsSection({ section }: { section: AdminSettingsSection }) {
   const {
     settings,
@@ -254,26 +317,64 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
     <div className="admin-page">
       <div className="admin-page__content">
         {section === 'themes' && (
-          <Panel title={copy.panelTitle}>
-            <div className="admin-theme-matrix">
-              {THEME_LIST.map((t) => (
-                <ThemeChip
-                  key={t.id}
-                  id={t.id}
-                  name={t.name}
-                  selected={settings.theme === t.id}
-                  onSelect={() => update('theme', t.id)}
-                />
-              ))}
-            </div>
-          </Panel>
+          <div className="admin-page__split admin-page__split--themes">
+            <Panel title={copy.panelTitle} className="admin-panel-card--fill">
+              <div className="admin-theme-matrix admin-theme-matrix--sidebar">
+                {THEME_LIST.map((t) => (
+                  <ThemeChip
+                    key={t.id}
+                    id={t.id}
+                    name={t.name}
+                    selected={settings.theme === t.id}
+                    onSelect={() => update('theme', t.id)}
+                    variant="sidebar"
+                  />
+                ))}
+              </div>
+            </Panel>
+
+            <Panel title="Preview" className="admin-panel-card--fill">
+              <ThemePreviewPanel
+                themeId={settings.theme}
+                watchAirline={settings.trackAirline}
+                watchFlightNumber={settings.trackFlightNumber}
+              />
+            </Panel>
+          </div>
         )}
 
-        {section === 'location' && (
-          <Panel title={copy.panelTitle} className="admin-page-card--fill admin-panel-card--fill">
+        {section === 'watch' && (
+          <div className="admin-page__split admin-page__split--watch">
+            <Panel
+              title={copy.panelTitle}
+              className="admin-panel-card--fill admin-panel-card--scrollable"
+            >
+              <WatchFlightPanel />
+            </Panel>
+
+            <Panel title="Preview" className="admin-panel-card--fill">
+              <SelectField
+                label="Theme"
+                value={settings.theme}
+                options={THEME_LIST.map((t) => ({ value: t.id, label: t.name }))}
+                onChange={(v) => update('theme', v)}
+                compact
+              />
+              <ThemePreviewPanel
+                themeId={settings.theme}
+                watchAirline={settings.trackAirline}
+                watchFlightNumber={settings.trackFlightNumber}
+              />
+            </Panel>
+          </div>
+        )}
+
+        {section === 'settings' && (
+          <Panel title={copy.panelTitle} className="admin-panel-card--fill admin-panel-card--scrollable">
+            <SettingsGroup title="Location">
             <div className="admin-zip-row">
               <label className="min-w-0 flex-1">
-                <span className="admin-label mb-1 block">ZIP Code</span>
+                <span className="admin-label mb-1 block">ZIP code</span>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -316,94 +417,9 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
                 {settings.radiusMi} mi · {settings.refreshIntervalSec}s
               </p>
             </div>
-          </Panel>
-        )}
+            </SettingsGroup>
 
-        {section === 'filters' && (
-          <div className="admin-page__split">
-          <Panel title="Watch a flight">
-            <p className="admin-surface__hint">
-              Track one flight by airline and number. The display shows only that aircraft when airborne.
-            </p>
-            <div className="admin-field-grid admin-field-grid--page">
-              <label className="block min-w-0">
-                <span className="admin-label mb-1 block">Airline</span>
-                <input
-                  type="text"
-                  value={settings.trackAirline ?? ''}
-                  onChange={(e) =>
-                    update('trackAirline', e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 3))
-                  }
-                  placeholder="UA"
-                  className="admin-input admin-input--compact admin-mono uppercase"
-                />
-              </label>
-              <label className="block min-w-0">
-                <span className="admin-label mb-1 block">Flight #</span>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={settings.trackFlightNumber ?? ''}
-                  onChange={(e) =>
-                    update('trackFlightNumber', e.target.value.replace(/\D/g, '').slice(0, 5))
-                  }
-                  placeholder="1234"
-                  className="admin-input admin-input--compact admin-mono"
-                />
-              </label>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="admin-btn admin-btn--ghost admin-btn--compact"
-                onClick={() => {
-                  const next = {
-                    ...settings,
-                    trackAirline: settings.trackAirline ?? '',
-                    trackFlightNumber: settings.trackFlightNumber ?? '',
-                  };
-                  saveSettings(next);
-                  update('trackAirline', next.trackAirline);
-                  update('trackFlightNumber', next.trackFlightNumber);
-                }}
-                disabled={
-                  !buildTrackTarget(settings.trackAirline ?? '', settings.trackFlightNumber ?? '')
-                }
-              >
-                Save watch
-              </button>
-              <button
-                type="button"
-                className="admin-btn admin-btn--ghost admin-btn--compact"
-                onClick={() => {
-                  const next = { ...settings, trackAirline: '', trackFlightNumber: '' };
-                  saveSettings(next);
-                  update('trackAirline', '');
-                  update('trackFlightNumber', '');
-                }}
-                disabled={!settings.trackAirline && !settings.trackFlightNumber}
-              >
-                Clear
-              </button>
-            </div>
-            {buildTrackTarget(settings.trackAirline ?? '', settings.trackFlightNumber ?? '') && (
-              <p className="admin-surface__hint">
-                Watching{' '}
-                <span className="admin-mono text-[var(--text)]">
-                  {
-                    buildTrackTarget(settings.trackAirline ?? '', settings.trackFlightNumber ?? '')!
-                      .displayLabel
-                  }
-                </span>
-                {' '}·{' '}
-                <span className="admin-mono">
-                  /display?airline={settings.trackAirline}&amp;flight={settings.trackFlightNumber}
-                </span>
-              </p>
-            )}
-          </Panel>
-
-          <Panel title={copy.panelTitle} className="admin-panel-card--fill">
+            <SettingsGroup title="Traffic">
             <div className="admin-field-grid admin-field-grid--page">
               <SelectField
                 compact
@@ -484,13 +500,9 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
               label="Cargo flights only"
               hint="FedEx, UPS, Atlas, DHL and other freight operators"
             />
+            </SettingsGroup>
 
-          </Panel>
-          </div>
-        )}
-
-        {section === 'screen' && (
-          <Panel title={copy.panelTitle}>
+            <SettingsGroup title="Screen">
             <Toggle
               compact
               checked={settings.keepAwake}
@@ -562,6 +574,7 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
               nightDimEnd={settings.nightDimEnd}
               nightDimLevel={settings.nightDimLevel}
             />
+            </SettingsGroup>
 
           </Panel>
         )}

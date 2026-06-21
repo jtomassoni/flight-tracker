@@ -1,10 +1,5 @@
-import type { Metadata } from 'next';
-import AdminSettingsSection from '@/components/admin/AdminSettingsSection';
-
-export const metadata: Metadata = {
-  title: 'Location',
-};
+import { redirect } from 'next/navigation';
 
 export default function AdminLocationPage() {
-  return <AdminSettingsSection section="location" />;
+  redirect('/admin/settings');
 }

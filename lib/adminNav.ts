@@ -13,27 +13,25 @@ export const ADMIN_NAV_ITEMS: AdminNavItem[] = [
     match: (pathname) => pathname === '/admin' || pathname.startsWith('/admin/themes'),
   },
   {
-    href: '/admin/location',
-    label: 'Location',
+    href: '/admin/settings',
+    label: 'Settings',
     code: '02',
-    match: (pathname) => pathname.startsWith('/admin/location'),
+    match: (pathname) =>
+      pathname.startsWith('/admin/settings') ||
+      pathname.startsWith('/admin/filters') ||
+      pathname.startsWith('/admin/location') ||
+      pathname.startsWith('/admin/screen'),
   },
   {
-    href: '/admin/filters',
-    label: 'Filters',
+    href: '/admin/watch',
+    label: 'Watch',
     code: '03',
-    match: (pathname) => pathname.startsWith('/admin/filters'),
+    match: (pathname) => pathname.startsWith('/admin/watch'),
   },
   {
-    href: '/admin/screen',
-    label: 'Screen',
-    code: '04',
-    match: (pathname) => pathname.startsWith('/admin/screen'),
-  },
-  {
-    href: '/admin/theme-tester/approve',
+    href: '/admin/theme-tester',
     label: 'Logos',
-    code: '05',
+    code: '04',
     match: (pathname) =>
       pathname.startsWith('/admin/theme-tester') || pathname.startsWith('/admin/logos'),
   },

@@ -188,15 +188,55 @@ export function pickWallFlightIdScale(
   return { scaleX: 1, scaleY: 1 };
 }
 
-/** Telemetry lines — shrink to fit full aircraft names beside speed readouts. */
+/** Telemetry lines — scale up on tall iPad bands, down when space is tight. */
 export function pickTelemetryScale(
   text: string,
   bandW: number,
   bandH: number
 ): { scaleX: number; scaleY: number } {
-  for (const scale of [1, 0.85, 0.75, 0.65]) {
+  const cellH = ledCharCellH();
+  const scales =
+    bandH >= cellH * 4
+      ? [2, 1.5, 1, 0.85, 0.75, 0.65]
+      : bandH >= cellH * 2.5
+        ? [1.5, 1, 0.85, 0.75, 0.65]
+        : [1, 0.85, 0.75, 0.65];
+
+  for (const scale of scales) {
     const { width, height } = ledScaledTextMetrics(text, scale, scale);
     if (width <= bandW && height + 1 <= bandH) {
+      return { scaleX: scale, scaleY: scale };
+    }
+  }
+
+  return { scaleX: 0.65, scaleY: 0.65 };
+}
+
+/** Alt/speed pair — one scale so both halves share a baseline and stay legible. */
+export function pickStatsPairScale(
+  leftText: string,
+  rightText: string,
+  leftW: number,
+  rightW: number,
+  bandH: number
+): { scaleX: number; scaleY: number } {
+  const cellH = ledCharCellH();
+  const scales =
+    bandH >= cellH * 2.5
+      ? [1.5, 1.25, 1, 0.85, 0.75, 0.65]
+      : [1.25, 1, 0.85, 0.75, 0.65];
+
+  for (const scale of scales) {
+    const left = truncateLedTextScaled(leftText, leftW, scale);
+    const right = truncateLedTextScaled(rightText, rightW, scale);
+    const leftMetrics = ledScaledTextMetrics(left, scale, scale);
+    const rightMetrics = ledScaledTextMetrics(right, scale, scale);
+    const rowH = Math.max(leftMetrics.height, rightMetrics.height);
+    if (
+      leftMetrics.width <= leftW &&
+      rightMetrics.width <= rightW &&
+      rowH + 1 <= bandH
+    ) {
       return { scaleX: scale, scaleY: scale };
     }
   }

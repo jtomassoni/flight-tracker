@@ -10,6 +10,7 @@
  */
 
 import type { AircraftRoute, NormalizedAircraft } from '@/types/aircraft';
+import { isNNumberTail } from '@/lib/aircraftCategories';
 
 const ADSBDB_BASE = 'https://api.adsbdb.com/v0/callsign';
 
@@ -72,7 +73,7 @@ function normalizeCallsign(callsign?: string): string | null {
   // adsbdb keys on ICAO/IATA callsigns (e.g. "UAL123"); skip N-number tails
   // and anything without at least an airline prefix + number.
   if (!/^[A-Z0-9]{3,8}$/.test(trimmed)) return null;
-  if (/^N[0-9][A-Z0-9]{0,5}$/.test(trimmed)) return null;
+  if (isNNumberTail(trimmed)) return null;
   return trimmed;
 }
 

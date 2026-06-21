@@ -1,10 +1,5 @@
-import type { Metadata } from 'next';
-import AdminSettingsSection from '@/components/admin/AdminSettingsSection';
-
-export const metadata: Metadata = {
-  title: 'Filters',
-};
+import { redirect } from 'next/navigation';
 
 export default function AdminFiltersPage() {
-  return <AdminSettingsSection section="filters" />;
+  redirect('/admin/settings');
 }

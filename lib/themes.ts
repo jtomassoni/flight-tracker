@@ -164,3 +164,13 @@ export function getThemeSwatches(theme: ThemeDefinition): string[] {
     theme.cssVars['--foreground'],
   ];
 }
+
+export const LAYOUT_LABELS: Record<LayoutId, string> = {
+  'departure-table': 'Departure board',
+  'split-flap-board': 'Split-flap board',
+  'airline-gallery': 'Card gallery',
+  'first-class-hero': 'Hero spotlight',
+  'radar-scope': 'Radar scope',
+  'google-map': 'Live map',
+  'led-matrix': 'LED matrix',
+};

@@ -289,11 +289,106 @@
     return null;
   }
 
+  var SURFACE_MAX_ALT_FT = 500;
+
+  function isAirborne(ac) {
+    var alt = ac.altitudeFt;
+    if (alt == null || alt <= 0) return false;
+    if (alt <= SURFACE_MAX_ALT_FT && (ac.groundSpeedKt == null || ac.groundSpeedKt < 1)) {
+      return false;
+    }
+    return true;
+  }
+
+  function normalizeTail(value) {
+    if (!value) return '';
+    return String(value).trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  }
+
+  function aircraftTail(ac) {
+    return normalizeTail(ac.registration) || normalizeTail(ac.callsign);
+  }
+
+  /** Public celebrity / corporate tails — always eligible when airborne. */
+  var FAMOUS_TAILS = {
+    N628TS: 1, N757AF: 1, N194WM: 1, N271DV: 1,
+    N3200X: 1, N621MM: 1,
+    N2N: 1, N68885: 1, N232G: 1, N383PA: 1, N100A: 1,
+    N959RW: 1, N486RW: 1, N586RW: 1,
+    N280WS: 1, N601CH: 1, N602CH: 1, N661CH: 1, N662CH: 1
+  };
+
+  /** Curated airline ICAO codes (must match lib/airlines.ts). */
+  var DISPLAY_AIRLINE_ICAO = {
+    UAL: 1, SWA: 1, DAL: 1, AAL: 1, FFT: 1, JBU: 1, ASA: 1, ACA: 1,
+    AFR: 1, BAW: 1, DLH: 1, EIN: 1, AMX: 1, AAY: 1, MXY: 1, CAY: 1,
+    CMP: 1, EDW: 1, ICE: 1, THY: 1, VIV: 1, VOI: 1, WJA: 1, SCX: 1
+  };
+
+  var CARGO_CALLSIGN_PREFIXES = {
+    FDX: 1, UPS: 1, GTI: 1, GSS: 1, ABX: 1, ATN: 1,
+    DHL: 1, DHX: 1, DAE: 1, AHK: 1, BCS: 1
+  };
+
+  var MILITARY_CALLSIGN_PREFIXES = [
+    'RCH', 'REACH', 'EVAC', 'NAVY', 'ARMY', 'USAF', 'USN', 'USMC',
+    'SPAR', 'CONDO', 'DUKE', 'IRON', 'HKY', 'MOXY', 'TOPCAT', 'TITAN',
+    'VIPER', 'JAKE'
+  ];
+
+  function isNNumberTail(value) {
+    var normalized = normalizeTail(value);
+    if (!normalized) return false;
+    return /^N[1-9][0-9]{0,4}[A-Z]{0,2}$/.test(normalized);
+  }
+
+  function isNNumberAircraft(ac) {
+    return isNNumberTail(ac.registration) || isNNumberTail(ac.callsign);
+  }
+
+  function isFamousTail(ac) {
+    var tail = aircraftTail(ac);
+    return Boolean(tail && FAMOUS_TAILS[tail]);
+  }
+
+  function hasKnownAirlineCallsign(callsign) {
+    var cs = trim(callsign).toUpperCase();
+    if (!cs || cs.length < 3 || isNNumberTail(cs)) return false;
+    return Boolean(DISPLAY_AIRLINE_ICAO[resolveMainlineIcao(cs)]);
+  }
+
+  function isCargoCallsign(callsign) {
+    var cs = trim(callsign).toUpperCase();
+    if (!cs || cs.length < 3) return false;
+    return Boolean(CARGO_CALLSIGN_PREFIXES[cs.slice(0, 3)]);
+  }
+
+  function isMilitaryCallsign(callsign) {
+    var cs = trim(callsign).toUpperCase();
+    if (!cs) return false;
+    var i;
+    for (i = 0; i < MILITARY_CALLSIGN_PREFIXES.length; i++) {
+      if (cs.indexOf(MILITARY_CALLSIGN_PREFIXES[i]) === 0) return true;
+    }
+    return false;
+  }
+
+  /** Strict allowlist — airlines, cargo, military, and famous tails only. */
+  function isDisplayEligibleAircraft(ac) {
+    if (isFamousTail(ac)) return true;
+    var cs = trim(ac.callsign).toUpperCase();
+    if (!cs || cs.length < 3 || isNNumberTail(cs)) return false;
+    if (hasKnownAirlineCallsign(cs)) return true;
+    if (isCargoCallsign(cs)) return true;
+    if (isMilitaryCallsign(cs)) return true;
+    return false;
+  }
+
   function applyDisplayedAircraft(list, settings) {
     var target = buildTrackTarget(settings.trackAirline, settings.trackFlightNumber);
     if (target) {
       var tracked = findTrackedAircraft(list, target);
-      return tracked ? [tracked] : [];
+      return tracked && isAirborne(tracked) ? [tracked] : [];
     }
     return sortAircraft(filterAircraft(list, settings)).slice(0, settings.maxAircraft);
   }
@@ -366,6 +461,41 @@
     });
   }
 
+  var LOGO_MANIFEST = {};
+
+  function logoCacheSuffix(entry) {
+    if (!entry) return '';
+    var fromSource = entry.source && entry.source.match(/(\d{10,})/);
+    if (fromSource) return '?v=' + fromSource[1];
+    if (entry.approvedAt) {
+      var version = Date.parse(entry.approvedAt);
+      if (!isNaN(version)) return '?v=' + version;
+    }
+    return '';
+  }
+
+  function approvedLogoUrl(icao) {
+    if (!icao) return null;
+    var key = trim(icao).toUpperCase();
+    var entry = LOGO_MANIFEST[key];
+    if (!entry) return null;
+    if (entry.url) return entry.url;
+    if (entry.file) return '/api/airline-logos/asset/' + entry.file + logoCacheSuffix(entry);
+    return null;
+  }
+
+  function syncLogoManifest(callback) {
+    requestJson('/api/airline-logos/manifest', 10000, function (err, data) {
+      if (!err && data && data.manifest) {
+        LOGO_MANIFEST = data.manifest;
+        if (global.LegacyLedWall && global.LegacyLedWall.setApprovedManifest) {
+          global.LegacyLedWall.setApprovedManifest(data.manifest);
+        }
+      }
+      if (callback) callback(err);
+    });
+  }
+
   function score(ac) {
     var s = 0;
     var dist = num(ac.distanceMi, 99);
@@ -399,6 +529,8 @@
     var i;
     for (i = 0; i < list.length; i++) {
       var ac = list[i];
+      if (!isAirborne(ac)) continue;
+      if (!isDisplayEligibleAircraft(ac)) continue;
       if (settings.hideNoCallsign && !trim(ac.callsign)) continue;
       if (!passesAltitude(ac, settings.altitudeFilter)) continue;
       out.push(ac);
@@ -450,6 +582,8 @@
     applyDisplayedAircraft: applyDisplayedAircraft,
     flightsApiParams: flightsApiParams,
     syncServerSettings: syncServerSettings,
+    syncLogoManifest: syncLogoManifest,
+    approvedLogoUrl: approvedLogoUrl,
     getViewMode: getViewMode,
     loadScript: loadScript,
     loadStylesheet: loadStylesheet,

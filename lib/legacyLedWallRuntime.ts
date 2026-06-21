@@ -1,3 +1,4 @@
+import { setApprovedManifest } from '@/lib/approvedLogos';
 import type { NormalizedAircraft } from '@/types/aircraft';
 import {
   airlineLedLogoUrl,
@@ -37,7 +38,7 @@ export function aircraftToLedContent(ac: NormalizedAircraft): LedFlightContent {
     telemetry: ledTelemetryFields(ac),
     logoUrl: airlineLedLogoUrl(brand),
     logoIcao: resolveLedLogoMarkIcao(brand, operatorTag),
-    logoFallback: brand.iata,
+    logoFallback: brand.name,
     logoBackground: wallStyle.logoBackground,
     logoBorder: wallStyle.logoBorder,
     accentStripe: wallStyle.accentStripe,
@@ -98,14 +99,19 @@ export function createLedWallPainter(canvas: HTMLCanvasElement): LedWallPainter 
   }
 
   return {
-    async draw(content) {
+    draw(content) {
       currentContent = content;
       const nextUrl = content.logoUrl;
-      if (nextUrl !== logoUrl) {
-        logoUrl = nextUrl;
-        logo = nextUrl ? await loadLedLogo(nextUrl) : null;
-      }
+      // Paint immediately — never block the header/route bar on logo CDN latency.
       if (!cancelled) drawFrame();
+      if (nextUrl === logoUrl) return Promise.resolve();
+      logoUrl = nextUrl;
+      const url = nextUrl;
+      return loadLedLogo(url ?? '').then((img) => {
+        if (cancelled || logoUrl !== url) return;
+        logo = img;
+        drawFrame();
+      });
     },
     resize() {
       drawFrame();
@@ -120,4 +126,5 @@ export const LegacyLedWall = {
   aircraftToLedContent,
   createLedWallPainter,
   detectOrientation,
+  setApprovedManifest,
 };

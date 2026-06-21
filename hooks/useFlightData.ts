@@ -9,6 +9,7 @@ import {
   SETTINGS_STORAGE_KEY,
 } from '@/lib/constants';
 import { applyClientFilters } from '@/lib/filters';
+import { isAirborne } from '@/lib/aircraftUtils';
 import { limitAircraft, sortByInterestingness } from '@/lib/sorting';
 import {
   buildTrackTarget,
@@ -65,11 +66,12 @@ function resolveDisplayedAircraft(
   }
 
   const tracked = findTrackedAircraft(filtered, trackTarget);
+  const airborneTracked = tracked && isAirborne(tracked) ? tracked : null;
   return {
     filteredAircraft: filtered,
-    displayedAircraft: tracked ? [tracked] : [],
+    displayedAircraft: airborneTracked ? [airborneTracked] : [],
     trackLabel: trackTarget.displayLabel,
-    trackStatus: tracked ? 'found' : 'not-found',
+    trackStatus: airborneTracked ? 'found' : 'not-found',
   };
 }
 

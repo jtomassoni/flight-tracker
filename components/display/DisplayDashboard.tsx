@@ -24,6 +24,8 @@ function stepTheme(current: ThemeId, direction: -1 | 1): ThemeId {
 
 export default function DisplayDashboard() {
   const [manualTheme, setManualTheme] = useState<ThemeId | null>(null);
+  const [urlTheme, setUrlTheme] = useState<ThemeId | null>(null);
+  const [embedded, setEmbedded] = useState(false);
   const [previewError, setPreviewError] = useState(false);
   const [pollLayout, setPollLayout] = useState<LayoutId>(
     () => getTheme(DEFAULT_SETTINGS.theme).layout
@@ -45,6 +47,7 @@ export default function DisplayDashboard() {
   } = useFlightData(pollLayout);
 
   // Shareable links: /display?airline=UA&flight=1234 or /display?track=UA1234
+  // Admin embed: /display?embed=1&theme=flightwall
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const airline = params.get('airline');
@@ -60,9 +63,15 @@ export default function DisplayDashboard() {
         trackFlightNumber: parsed?.flightNumber ?? flight ?? '',
       });
     }
+
+    const themeParam = params.get('theme');
+    if (themeParam && THEME_IDS.includes(themeParam as ThemeId)) {
+      setUrlTheme(themeParam as ThemeId);
+    }
+    setEmbedded(params.get('embed') === '1');
   }, []);
 
-  const activeThemeId = manualTheme ?? settings.theme;
+  const activeThemeId = manualTheme ?? urlTheme ?? settings.theme;
   const theme = getTheme(activeThemeId);
 
   useEffect(() => {
@@ -105,10 +114,10 @@ export default function DisplayDashboard() {
       <ScreenManager settings={settings} />
       <ThemeProvider key={activeThemeId} themeId={activeThemeId}>
         <div className="h-full w-full">{layout}</div>
-        <AdminLink />
+        {!embedded && <AdminLink />}
       </ThemeProvider>
 
-      {isDev && (
+      {isDev && !embedded && (
         <ThemeDebugPanel
           activeThemeId={activeThemeId}
           isManual={manualTheme !== null}

@@ -1,10 +1,10 @@
 import type { AirlineBrand } from '@/lib/airlines';
 import { hasLedAirlineMark } from '@/lib/ledAirlineMarks';
 import { getRegionalOperator } from '@/lib/regionalCarriers';
-import { isCategoryBrand } from '@/lib/aircraftCategories';
+import { isCategoryBrand, aircraftTail, isNNumberTail } from '@/lib/aircraftCategories';
 import { formatAircraftTypeBoard } from '@/lib/aircraftTypes';
 import { distanceMi } from '@/lib/geo';
-import { getFiledRoute, getValidatedRoute } from '@/lib/routePlausibility';
+import { getFiledRoute } from '@/lib/routePlausibility';
 import type { NormalizedAircraft } from '@/types/aircraft';
 
 /** Short airport code for the LED hero, preferring IATA (3-letter) over ICAO. */
@@ -42,7 +42,7 @@ export function formatLedRouteHero(route: string): string {
  * fake progress.
  */
 export function computeFlightProgress(ac: NormalizedAircraft): number | null {
-  const route = getValidatedRoute(ac);
+  const route = getFiledRoute(ac);
   if (
     !route ||
     route.originLat == null ||
@@ -61,8 +61,9 @@ export function computeFlightProgress(ac: NormalizedAircraft): number | null {
 }
 
 export function formatLedFlightId(ac: NormalizedAircraft, brand: AirlineBrand): string {
-  if (isCategoryBrand(brand.icao)) {
-    return ac.registration?.trim() || ac.callsign?.trim() || ac.hex.toUpperCase();
+  const tail = aircraftTail(ac);
+  if (isCategoryBrand(brand.icao) || isNNumberTail(tail) || isNNumberTail(ac.callsign)) {
+    return tail || ac.hex.toUpperCase();
   }
   const raw = ac.flightNumber?.trim() || ac.callsign?.trim().slice(3) || '';
   const digits = raw.replace(/\D/g, '');
@@ -91,9 +92,9 @@ export function formatLedAircraftType(ac: NormalizedAircraft): string {
 }
 
 export function formatLedSpeedMph(groundSpeedKt?: number): string {
-  if (groundSpeedKt == null) return '--- mph';
+  if (groundSpeedKt == null) return '--- MPH';
   const mph = Math.round(groundSpeedKt * 1.15078);
-  return `${mph} mph`;
+  return `${mph} MPH`;
 }
 
 /** Below this baro altitude an aircraft is treated as on the airport surface. */
@@ -154,6 +155,12 @@ const LED_LANDING_MAX_ALT_FT = 10000;
 export function formatLedFlightPhase(ac: NormalizedAircraft): string {
   const vRate = ac.verticalRateFpm;
   const alt = ac.altitudeFt;
+  const speed = ac.groundSpeedKt;
+
+  if (alt != null && alt <= TAXI_MAX_ALT_FT) {
+    if (speed == null || speed < 1) return 'ON GROUND';
+    if (speed <= TAXI_MAX_SPEED_KT) return 'TAXIING';
+  }
 
   if (vRate != null && !Number.isNaN(vRate)) {
     if (vRate > LED_VERTICAL_THRESHOLD) {
@@ -178,6 +185,10 @@ export type LedTelemetryField = {
 
 export function ledTelemetryFields(ac: NormalizedAircraft): LedTelemetryField[] {
   const taxiing = isAircraftTaxiing(ac);
+  const parked =
+    ac.altitudeFt != null &&
+    ac.altitudeFt <= TAXI_MAX_ALT_FT &&
+    (ac.groundSpeedKt == null || ac.groundSpeedKt < 1);
   const fields: LedTelemetryField[] = [
     {
       value: formatLedAircraftType(ac),
@@ -185,14 +196,14 @@ export function ledTelemetryFields(ac: NormalizedAircraft): LedTelemetryField[] 
     },
   ];
 
-  if (!taxiing) {
+  if (!taxiing && !parked) {
     fields.push({ value: formatLedFlightPhase(ac), emphasis: 'status' });
   }
 
   fields.push({ value: formatLedAltitude(ac.altitudeFt), emphasis: 'measure' });
 
   fields.push({
-    value: taxiing ? 'TAXIING' : formatLedSpeedMph(ac.groundSpeedKt),
+    value: parked ? 'PARKED' : taxiing ? 'TAXIING' : formatLedSpeedMph(ac.groundSpeedKt),
     emphasis: 'primary',
   });
 

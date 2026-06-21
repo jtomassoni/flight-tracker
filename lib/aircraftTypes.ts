@@ -65,6 +65,10 @@ const ICAO_TYPE_NAMES: Record<string, string> = {
   GLF4: 'Gulfstream IV',
   GLF5: 'Gulfstream V',
   CL35: 'Challenger 350',
+  LJ35: 'Learjet 35',
+  LJ45: 'Learjet 45',
+  LJ60: 'Learjet 60',
+  LJ75: 'Learjet 75',
 };
 
 /**
@@ -83,6 +87,10 @@ const BOARD_TYPE_NAMES: Record<string, string> = {
   GLF4: 'Gulf IV',
   GLF5: 'Gulf V',
   CL35: 'CL350',
+  LJ35: 'LJ35',
+  LJ45: 'LJ45',
+  LJ60: 'LJ60',
+  LJ75: 'LJ75',
 };
 
 function normalizeTypeCode(raw: string): string {

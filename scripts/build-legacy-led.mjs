@@ -12,7 +12,7 @@ await esbuild.build({
   format: 'iife',
   globalName: 'LegacyLedWall',
   platform: 'browser',
-  target: ['es2017'],
+  target: ['es2015'],
   tsconfig: join(root, 'tsconfig.json'),
   logLevel: 'info',
 });

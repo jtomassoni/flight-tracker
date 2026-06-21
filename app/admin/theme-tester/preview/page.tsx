@@ -1,15 +1,10 @@
-import type { Metadata } from 'next';
-import { Suspense } from 'react';
-import AirlineThemeTester from '@/components/admin/AirlineThemeTester';
+import { redirect } from 'next/navigation';
 
-export const metadata: Metadata = {
-  title: 'Theme Preview',
-};
-
-export default function ThemePreviewPage() {
-  return (
-    <Suspense fallback={<div className="admin-page p-6 text-slate-400">Loading…</div>}>
-      <AirlineThemeTester tab="preview" />
-    </Suspense>
-  );
+export default async function ThemePreviewRedirect({
+  searchParams,
+}: {
+  searchParams: Promise<{ icao?: string }>;
+}) {
+  const { icao } = await searchParams;
+  redirect(icao ? `/admin/theme-tester?icao=${icao}` : '/admin/theme-tester');
 }

@@ -1,10 +1,5 @@
-import type { Metadata } from 'next';
-import AdminSettingsSection from '@/components/admin/AdminSettingsSection';
-
-export const metadata: Metadata = {
-  title: 'Screen',
-};
+import { redirect } from 'next/navigation';
 
 export default function AdminScreenPage() {
-  return <AdminSettingsSection section="screen" />;
+  redirect('/admin/settings');
 }

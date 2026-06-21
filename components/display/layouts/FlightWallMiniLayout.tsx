@@ -19,6 +19,7 @@ import {
 import { getDisplayEmptyState } from '@/lib/displayEmptyState';
 import { useKioskOrientation } from '@/hooks/useKioskOrientation';
 import LedMatrixCanvas from '../shared/LedMatrixCanvas';
+import { useLogoManifestRevision } from '@/components/LogoManifestProvider';
 import './flight-wall-mini.css';
 
 const ROTATE_MS = 10_000;
@@ -33,6 +34,7 @@ export default function FlightWallMiniLayout({
 }: DisplayLayoutProps) {
   const [index, setIndex] = useState(0);
   const orientation = useKioskOrientation();
+  const logoManifestRevision = useLogoManifestRevision();
   const feedDown = status === 'error' || status === 'offline';
   const emptyState = getDisplayEmptyState({
     status,
@@ -85,14 +87,14 @@ export default function FlightWallMiniLayout({
       telemetry: ledTelemetryFields(aircraft),
       logoUrl: airlineLedLogoUrl(brand),
       logoIcao: resolveLedLogoMarkIcao(brand, operatorTag),
-      logoFallback: brand.iata,
+      logoFallback: brand.name,
       logoBackground: wallStyle.logoBackground,
       logoBorder: wallStyle.logoBorder,
       accentStripe: wallStyle.accentStripe,
       logoPalette: wallStyle.logoPalette,
       logoTileBorder: wallStyle.logoTileBorder,
     };
-  }, [aircraft, displayedAircraft.length, index]);
+  }, [aircraft, displayedAircraft.length, index, logoManifestRevision]);
 
   return (
     <div className="flight-wall-mini h-full w-full">

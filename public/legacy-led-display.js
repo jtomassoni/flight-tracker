@@ -14,7 +14,9 @@
   var statusEl = null;
 
   function setStatus(msg) {
-    if (statusEl) statusEl.textContent = msg;
+    if (!statusEl) return;
+    statusEl.textContent = msg;
+    statusEl.style.display = msg ? 'block' : 'none';
   }
 
   function showError(title, detail) {
@@ -47,6 +49,28 @@
     return aircraftList.length ? aircraftList[displayIndex % aircraftList.length] : null;
   }
 
+  function hasLedRoute(ac) {
+    var route = ac && ac.route;
+    if (!route) return false;
+    return Boolean(
+      (route.originIata && shared.trim(route.originIata)) ||
+        (route.originIcao && shared.trim(route.originIcao)) ||
+        (route.destIata && shared.trim(route.destIata)) ||
+        (route.destIcao && shared.trim(route.destIcao))
+    );
+  }
+
+  function sortWithRoutesFirst(list) {
+    var withRoute = [];
+    var withoutRoute = [];
+    var i;
+    for (i = 0; i < list.length; i++) {
+      if (hasLedRoute(list[i])) withRoute.push(list[i]);
+      else withoutRoute.push(list[i]);
+    }
+    return withRoute.length > 0 ? withRoute.concat(withoutRoute) : list;
+  }
+
   function renderCurrent() {
     var wall = global.LegacyLedWall;
     var ac = currentAircraft();
@@ -59,13 +83,14 @@
       return;
     }
     var content = wall.aircraftToLedContent(ac);
-    painter.draw(content).then(function () {
-      setStatus(
-        aircraftList.length > 1
-          ? 'Flight ' + (displayIndex + 1) + ' of ' + aircraftList.length
-          : ''
-      );
-    });
+    var drawn = painter.draw(content);
+    if (drawn && typeof drawn.then === 'function') {
+      drawn.then(function () {
+        setStatus('');
+      });
+    } else {
+      setStatus('');
+    }
   }
 
   function emptyStatusMessage() {
@@ -91,17 +116,23 @@
 
   function pollFlights() {
     var settings = shared.loadSettings();
-    setStatus('Connecting…');
+    if (!aircraftList.length) setStatus('Connecting…');
 
     shared.requestJson('/api/flights?' + shared.flightsApiParams(settings), 25000, function (err, data) {
       if (err) {
-        if (!aircraftList.length) showError('Cannot load flights', err.message || 'Request failed');
-        else setStatus(err.message || 'Update failed');
+        if (!aircraftList.length) {
+          showError('Cannot load flights', err.message || 'Request failed');
+        } else {
+          setStatus('');
+          renderCurrent();
+        }
         schedulePoll(settings.refreshIntervalSec);
         return;
       }
 
-      aircraftList = shared.applyDisplayedAircraft(data.aircraft || [], settings);
+      aircraftList = sortWithRoutesFirst(
+        shared.applyDisplayedAircraft(data.aircraft || [], settings)
+      );
       if (displayIndex >= aircraftList.length) displayIndex = 0;
 
       if (!aircraftList.length) {
@@ -136,10 +167,7 @@
       return;
     }
 
-    if (global.LegacyKiosk) {
-      global.LegacyKiosk.applyStandaloneShell();
-      global.LegacyKiosk.mountButton();
-    }
+    if (global.LegacyKiosk) global.LegacyKiosk.applyStandaloneShell();
 
     showCanvas();
     var canvas = document.getElementById('led-canvas');

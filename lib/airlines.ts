@@ -1,6 +1,7 @@
 import type { NormalizedAircraft } from '@/types/aircraft';
 import { approvedLogoUrl } from './approvedLogos';
-import { CATEGORY_BRANDS, getNonAirlineDisplayBrand } from './aircraftCategories';
+import { CATEGORY_BRANDS, getNonAirlineDisplayBrand, isFamousTail, isNNumberAircraft, isNNumberTail } from './aircraftCategories';
+import { CARGO_AIRLINE_ICAO_LIST, getCargoAirlineByIcao, getCargoAirlineFromCallsign } from './cargoAirlines';
 import { hasLedAirlineMark } from './ledAirlineMarks';
 import {
   formatBrandedCallsign,
@@ -228,11 +229,15 @@ const FALLBACK_BRAND: AirlineBrand = {
 
 export const AIRLINE_ICAO_LIST = Object.keys(AIRLINES).sort();
 
-/** Non-airline category brands (military, private, cargo, etc.) that also support logos. */
+/** Non-airline category brands (military, private jet, etc.) that also support logos. */
 export const CATEGORY_ICAO_LIST = Object.keys(CATEGORY_BRANDS).sort();
 
-/** Every brand that can have an approved logo — commercial carriers plus categories. */
-export const LOGO_BRAND_ICAO_LIST = [...AIRLINE_ICAO_LIST, ...CATEGORY_ICAO_LIST];
+/** Every brand that can have an approved logo — commercial, cargo, and categories. */
+export const LOGO_BRAND_ICAO_LIST = [
+  ...AIRLINE_ICAO_LIST,
+  ...CARGO_AIRLINE_ICAO_LIST,
+  ...CATEGORY_ICAO_LIST,
+];
 
 export function getAirlineByIcao(icao: string): AirlineBrand | null {
   const key = icao.trim().toUpperCase();
@@ -250,11 +255,11 @@ export function getAirlineByIata(iata: string): AirlineBrand | null {
 /** Resolve an airline OR category brand by ICAO — used by the logo approval tool. */
 export function getLogoBrandByIcao(icao: string): AirlineBrand | null {
   const key = icao.trim().toUpperCase();
-  return AIRLINES[key] ?? CATEGORY_BRANDS[key] ?? null;
+  return AIRLINES[key] ?? getCargoAirlineByIcao(key) ?? CATEGORY_BRANDS[key] ?? null;
 }
 
 export function getAirlineFromCallsign(callsign?: string): AirlineBrand | null {
-  if (!callsign) return null;
+  if (!callsign || isNNumberTail(callsign)) return null;
   const resolved = resolveCallsignPrefix(callsign);
   return AIRLINES[resolved] ?? null;
 }
@@ -265,8 +270,18 @@ export function getAirlineBrand(callsign?: string): AirlineBrand {
 
 /** Resolve airline livery or non-commercial category brand for a track. */
 export function getAircraftDisplayBrand(ac: NormalizedAircraft): AirlineBrand {
-  const airline = getAirlineFromCallsign(ac.callsign);
-  if (airline) return airline;
+  if (isFamousTail(ac)) {
+    return getNonAirlineDisplayBrand(ac);
+  }
+
+  const cargo = getCargoAirlineFromCallsign(ac.callsign);
+  if (cargo) return cargo;
+
+  if (!isNNumberAircraft(ac)) {
+    const airline = getAirlineFromCallsign(ac.callsign);
+    if (airline) return airline;
+  }
+
   return getNonAirlineDisplayBrand(ac);
 }
 
@@ -352,13 +367,16 @@ const LED_LOGO_PALETTE: Partial<Record<string, readonly string[]>> = {
   SCX: ['#FFFFFF', '#003594'],
   SKW: ['#FFFFFF', '#C4D600'],
   SWA: ['#D5152E', '#FFBF27', '#304CB2', '#CCCCCC'],
-  MIL: ['#C5A572', '#3D4F2F', '#2C1810'],
-  PVT: ['#D4AF37', '#64748B', '#1E293B'],
-  GA: ['#FFFFFF', '#166534', '#DC2626'],
-  VIP: ['#FBBF24', '#581C87', '#FFFFFF'],
+  FDX: ['#FF6600', '#4D148C', '#FFFFFF'],
+  UPS: ['#FFB500', '#351C15', '#FFFFFF'],
+  GTI: ['#FFFFFF', '#003366', '#C8102E'],
+  DHK: ['#FFCC00', '#D40511', '#FFFFFF'],
+  ABX: ['#FF9900', '#232F3E', '#FFFFFF'],
+  MIL: ['#FFFFFF', '#C5A572', '#3D4F2F', '#2C1810'],
+  PVT: ['#FFFFFF', '#D4AF37', '#64748B', '#1E293B'],
 };
 
-const LED_LOGO_NO_TILE_BORDER = new Set(['JBU', 'SWA', 'MIL', 'PVT', 'GA', 'VIP']);
+const LED_LOGO_NO_TILE_BORDER = new Set(['JBU', 'SWA', 'MIL', 'PVT', 'GA', 'FDX', 'UPS', 'GTI', 'ABX', 'DHK']);
 
 function airlineLedLogoPalette(
   brand: AirlineBrand,
@@ -384,7 +402,18 @@ function airlineLedLogoPalette(
 }
 
 /** Carriers whose Kiwi logos are full-color marks on a white tile. */
-const COLOR_LOGO_TILE = new Set(['AAL', 'FFT', 'ASA', 'EIN']);
+const COLOR_LOGO_TILE = new Set([
+  'AAL',
+  'FFT',
+  'ASA',
+  'EIN',
+  'MIL',
+  'FDX',
+  'UPS',
+  'GTI',
+  'ABX',
+  'DHK',
+]);
 
 /** Logo tile styling for the FlightWall LED theme */
 export function getAirlineLedWallStyle(brand: AirlineBrand): AirlineLedWallStyle {
@@ -402,7 +431,7 @@ export function getAirlineLedWallStyle(brand: AirlineBrand): AirlineLedWallStyle
   /** Black tile — multicolor marks rendered on a near-black CDN background. */
   const onBlackLogo = ['VOI'].includes(brand.icao);
   /** Navy tile — logo PNGs are marks on transparent (not a white CDN matte). */
-  const onDarkLogo = ['UAL', 'DAL', 'JBU', 'SWA', 'MIL', 'PVT', 'VIP'].includes(brand.icao);
+  const onDarkLogo = ['UAL', 'DAL', 'JBU', 'SWA', 'PVT'].includes(brand.icao);
   const logoBackground = onBlackLogo
     ? '#070707'
     : onDarkLogo
@@ -618,41 +647,95 @@ const GALLERY_LIVERY: Record<string, AirlineTileStyle> = {
     badgeBackground: '#D4AF37',
     badgeTextColor: '#1E293B',
   },
-  GA: {
-    cardBackground: 'linear-gradient(165deg, #166534 0%, #0f4527 55%, #052e16 100%)',
-    headerBackground: 'linear-gradient(180deg, #ffffff 0%, #ecfdf5 100%)',
-    headerTextColor: '#166534',
-    headerMutedColor: 'rgba(22, 101, 52, 0.72)',
-    accentBarColor: 'linear-gradient(90deg, #166534 0%, #DC2626 100%)',
+  FDX: {
+    cardBackground: 'linear-gradient(165deg, #4D148C 0%, #3a0f6a 55%, #1a0630 100%)',
+    headerBackground: 'linear-gradient(180deg, #FF6600 0%, #ff8533 100%)',
+    headerTextColor: '#4D148C',
+    headerMutedColor: 'rgba(77, 20, 140, 0.72)',
+    accentBarColor: 'linear-gradient(90deg, #4D148C 0%, #FF6600 100%)',
     logoBackground: '#ffffff',
-    borderColor: '#166534',
+    borderColor: '#FF6600',
     textColor: '#f8fafc',
     mutedTextColor: 'rgba(248, 250, 252, 0.72)',
-    labelColor: '#86efac',
+    labelColor: '#FF6600',
     statBackground:
-      'linear-gradient(145deg, rgba(255, 255, 255, 0.14) 0%, rgba(134, 239, 172, 0.1) 100%)',
+      'linear-gradient(145deg, rgba(255, 102, 0, 0.18) 0%, rgba(255, 255, 255, 0.06) 100%)',
     statAltBackground:
-      'linear-gradient(145deg, rgba(0, 0, 0, 0.32) 0%, rgba(22, 101, 52, 0.18) 100%)',
-    badgeBackground: '#DC2626',
+      'linear-gradient(145deg, rgba(0, 0, 0, 0.34) 0%, rgba(77, 20, 140, 0.22) 100%)',
+    badgeBackground: '#FF6600',
+    badgeTextColor: '#4D148C',
+  },
+  UPS: {
+    cardBackground: 'linear-gradient(165deg, #351C15 0%, #241209 55%, #120904 100%)',
+    headerBackground: 'linear-gradient(180deg, #FFB500 0%, #ffc933 100%)',
+    headerTextColor: '#351C15',
+    headerMutedColor: 'rgba(53, 28, 21, 0.72)',
+    accentBarColor: 'linear-gradient(90deg, #351C15 0%, #FFB500 100%)',
+    logoBackground: '#ffffff',
+    borderColor: '#FFB500',
+    textColor: '#f8fafc',
+    mutedTextColor: 'rgba(248, 250, 252, 0.72)',
+    labelColor: '#FFB500',
+    statBackground:
+      'linear-gradient(145deg, rgba(255, 181, 0, 0.18) 0%, rgba(255, 255, 255, 0.06) 100%)',
+    statAltBackground:
+      'linear-gradient(145deg, rgba(0, 0, 0, 0.34) 0%, rgba(53, 28, 21, 0.22) 100%)',
+    badgeBackground: '#FFB500',
+    badgeTextColor: '#351C15',
+  },
+  GTI: {
+    cardBackground: 'linear-gradient(165deg, #003366 0%, #002244 55%, #001122 100%)',
+    headerBackground: 'linear-gradient(180deg, #ffffff 0%, #f0f4fa 100%)',
+    headerTextColor: '#003366',
+    headerMutedColor: 'rgba(0, 51, 102, 0.72)',
+    accentBarColor: 'linear-gradient(90deg, #003366 0%, #C8102E 100%)',
+    logoBackground: '#ffffff',
+    borderColor: '#C8102E',
+    textColor: '#f8fafc',
+    mutedTextColor: 'rgba(248, 250, 252, 0.72)',
+    labelColor: '#C8102E',
+    statBackground:
+      'linear-gradient(145deg, rgba(255, 255, 255, 0.14) 0%, rgba(200, 16, 46, 0.1) 100%)',
+    statAltBackground:
+      'linear-gradient(145deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 51, 102, 0.18) 100%)',
+    badgeBackground: '#C8102E',
     badgeTextColor: '#ffffff',
   },
-  VIP: {
-    cardBackground: 'linear-gradient(165deg, #581C87 0%, #3b0764 55%, #1e0533 100%)',
-    headerBackground: 'linear-gradient(180deg, #FBBF24 0%, #fde68a 100%)',
-    headerTextColor: '#581C87',
-    headerMutedColor: 'rgba(88, 28, 135, 0.72)',
-    accentBarColor: 'linear-gradient(90deg, #581C87 0%, #FBBF24 50%, #ffffff 100%)',
+  ABX: {
+    cardBackground: 'linear-gradient(165deg, #232F3E 0%, #161f29 55%, #0a0e12 100%)',
+    headerBackground: 'linear-gradient(180deg, #FF9900 0%, #ffb033 100%)',
+    headerTextColor: '#232F3E',
+    headerMutedColor: 'rgba(35, 47, 62, 0.72)',
+    accentBarColor: 'linear-gradient(90deg, #232F3E 0%, #FF9900 100%)',
     logoBackground: '#ffffff',
-    borderColor: '#FBBF24',
+    borderColor: '#FF9900',
     textColor: '#f8fafc',
-    mutedTextColor: 'rgba(248, 250, 252, 0.75)',
-    labelColor: '#FBBF24',
+    mutedTextColor: 'rgba(248, 250, 252, 0.72)',
+    labelColor: '#FF9900',
     statBackground:
-      'linear-gradient(145deg, rgba(251, 191, 36, 0.22) 0%, rgba(255, 255, 255, 0.08) 100%)',
+      'linear-gradient(145deg, rgba(255, 153, 0, 0.18) 0%, rgba(255, 255, 255, 0.06) 100%)',
     statAltBackground:
-      'linear-gradient(145deg, rgba(0, 0, 0, 0.32) 0%, rgba(88, 28, 135, 0.2) 100%)',
-    badgeBackground: '#FBBF24',
-    badgeTextColor: '#581C87',
+      'linear-gradient(145deg, rgba(0, 0, 0, 0.34) 0%, rgba(35, 47, 62, 0.22) 100%)',
+    badgeBackground: '#FF9900',
+    badgeTextColor: '#232F3E',
+  },
+  DHK: {
+    cardBackground: 'linear-gradient(165deg, #D40511 0%, #a0040d 55%, #600208 100%)',
+    headerBackground: 'linear-gradient(180deg, #FFCC00 0%, #ffe066 100%)',
+    headerTextColor: '#D40511',
+    headerMutedColor: 'rgba(212, 5, 17, 0.72)',
+    accentBarColor: 'linear-gradient(90deg, #D40511 0%, #FFCC00 100%)',
+    logoBackground: '#ffffff',
+    borderColor: '#FFCC00',
+    textColor: '#f8fafc',
+    mutedTextColor: 'rgba(248, 250, 252, 0.72)',
+    labelColor: '#FFCC00',
+    statBackground:
+      'linear-gradient(145deg, rgba(255, 204, 0, 0.18) 0%, rgba(255, 255, 255, 0.06) 100%)',
+    statAltBackground:
+      'linear-gradient(145deg, rgba(0, 0, 0, 0.34) 0%, rgba(212, 5, 17, 0.22) 100%)',
+    badgeBackground: '#FFCC00',
+    badgeTextColor: '#D40511',
   },
 };
 

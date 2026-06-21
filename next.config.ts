@@ -2,7 +2,7 @@ import type { NextConfig } from 'next';
 
 const nextConfig: NextConfig = {
   images: {
-    // Logos are served from local approved assets under /public/airline-logos.
+    // Approved logos are served from Vercel Blob (unoptimized) or /api/airline-logos/asset/.
     remotePatterns: [],
   },
 };

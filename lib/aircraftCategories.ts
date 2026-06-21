@@ -1,32 +1,47 @@
 import type { AirlineBrand } from '@/lib/airlines';
+import { getCargoAirlineFromCallsign } from '@/lib/cargoAirlines';
 import type { NormalizedAircraft } from '@/types/aircraft';
 
 export type AircraftTrafficClass =
   | 'airline'
-  | 'vip'
   | 'military'
   | 'cargo'
   | 'bizjet'
-  | 'ga'
   | 'unknown';
 
 /** ICAO codes for category brands — also used as LED mark keys. */
 export const CATEGORY_ICAO = {
   MILITARY: 'MIL',
   BIZJET: 'PVT',
-  GA: 'GA',
-  VIP: 'VIP',
-  CARGO: 'CGO',
 } as const;
 
 /**
- * Publicly reported tail numbers that enthusiasts track on ADS-B.
- * Matches registration or N-number callsign when present in the feed.
+ * Publicly reported tail numbers tracked on ADS-B — celebrities and Fortune 500
+ * corporate flight departments. Matches registration or N-number callsign.
  */
 const FAMOUS_TAILS: Record<string, { name: string }> = {
+  // —— Notable individuals ——
   N628TS: { name: 'Elon Musk' },
-  N898TS: { name: 'Taylor Swift' },
   N757AF: { name: 'Trump Force One' },
+  N194WM: { name: 'Bill Gates' },
+  N271DV: { name: 'Jeff Bezos' },
+  N3200X: { name: 'Taylor Swift' },
+  N621MM: { name: 'Taylor Swift' }, // prior reg (Falcon 7X, re-registered 2026)
+
+  // —— Fortune 500 / major corporate flight departments ——
+  N2N: { name: 'Apple' },
+  N68885: { name: 'Meta' },
+  N232G: { name: 'Google' },
+  N383PA: { name: 'Walmart' },
+  N100A: { name: 'Exxon Mobil' },
+  N959RW: { name: 'Coca-Cola' },
+  N486RW: { name: 'Coca-Cola' },
+  N586RW: { name: 'Coca-Cola' },
+  N280WS: { name: 'Goldman Sachs' },
+  N601CH: { name: 'JPMorgan Chase' },
+  N602CH: { name: 'JPMorgan Chase' },
+  N661CH: { name: 'JPMorgan Chase' },
+  N662CH: { name: 'JPMorgan Chase' },
 };
 
 const MILITARY_CALLSIGN_PREFIXES = [
@@ -130,53 +145,19 @@ const BIZJET_TYPE_PREFIXES = [
   'E35L',
 ];
 
-const GA_TYPE_PREFIXES = [
-  'C150',
-  'C152',
-  'C172',
-  'C182',
-  'C206',
-  'C210',
-  'PA28',
-  'PA32',
-  'PA44',
-  'SR20',
-  'SR22',
-  'DA40',
-  'DA42',
-  'BE33',
-  'BE35',
-  'BE36',
-  'M20P',
-  'RV',
-  'AA5',
-  'P28A',
-  'C77R',
-  'TBM9',
-];
-
-const GA_EMITTER_CATEGORIES = new Set(['A1', 'A2']);
-
-/** ICAO airline designators for dedicated freight operators (callsign prefixes). */
+/** Top freight operators — matches lib/cargoAirlines.ts. */
 const CARGO_CALLSIGN_PREFIXES = [
   'FDX', // FedEx
   'UPS', // UPS Airlines
   'GTI', // Atlas Air
-  'GEC', // Lufthansa Cargo
-  'CLX', // Cargolux
-  'CKS', // Kalitta Air
-  'ABX', // ABX Air
-  'BOX', // AeroLogic
-  'GSS', // Atlas Air / DHL (Global Supply Systems)
-  'BCS', // DHL (European Air Transport)
-  'NCA', // Nippon Cargo
-  'PAC', // Polar Air Cargo
-  'MPH', // Martinair Cargo
-  'ABW', // AirBridgeCargo
-  'WGN', // Western Global
-  'ICL', // CAL Cargo
-  'CAO', // Air China Cargo
-  'CKK', // China Cargo
+  'GSS', // Atlas Air (Global Supply Systems)
+  'ABX', // Amazon Air (ABX Air)
+  'ATN', // Amazon Air (Air Transport International)
+  'DHL', // DHL Air
+  'DHX', // DHL Aero Expreso
+  'DAE', // DHL International Aviation ME
+  'AHK', // Air Hong Kong (DHL)
+  'BCS', // European Air Transport Leipzig (DHL)
 ];
 
 const CATEGORY_BRANDS: Record<string, AirlineBrand> = {
@@ -196,30 +177,6 @@ const CATEGORY_BRANDS: Record<string, AirlineBrand> = {
     accentColor: '#D4AF37',
     secondaryColor: '#64748B',
   },
-  [CATEGORY_ICAO.GA]: {
-    name: 'General Aviation',
-    icao: CATEGORY_ICAO.GA,
-    iata: 'GA',
-    primaryColor: '#166534',
-    accentColor: '#FFFFFF',
-    secondaryColor: '#DC2626',
-  },
-  [CATEGORY_ICAO.VIP]: {
-    name: 'Notable Jet',
-    icao: CATEGORY_ICAO.VIP,
-    iata: 'VIP',
-    primaryColor: '#581C87',
-    accentColor: '#FBBF24',
-    secondaryColor: '#FFFFFF',
-  },
-  [CATEGORY_ICAO.CARGO]: {
-    name: 'Cargo',
-    icao: CATEGORY_ICAO.CARGO,
-    iata: 'CG',
-    primaryColor: '#44403C',
-    accentColor: '#F59E0B',
-    secondaryColor: '#1C1917',
-  },
 };
 
 function normalizeTail(value?: string): string | undefined {
@@ -228,8 +185,26 @@ function normalizeTail(value?: string): string | undefined {
   return normalized.length > 0 ? normalized : undefined;
 }
 
-function aircraftTail(ac: NormalizedAircraft): string | undefined {
+/** US N-number — matches registration or callsign (e.g. N64CF, N12345, N1234A). */
+export function isNNumberTail(value?: string): boolean {
+  if (!value) return false;
+  return /^N[1-9][0-9]{0,4}[A-Z]{0,2}$/.test(normalizeTail(value) ?? '');
+}
+
+export function aircraftTail(ac: NormalizedAircraft): string | undefined {
   return normalizeTail(ac.registration) ?? normalizeTail(ac.callsign);
+}
+
+export function isNNumberAircraft(ac: NormalizedAircraft): boolean {
+  return isNNumberTail(ac.registration) || isNNumberTail(ac.callsign);
+}
+
+export function isFamousTail(ac: NormalizedAircraft): boolean {
+  return lookupFamousTail(ac) != null;
+}
+
+export function isMilitaryAircraft(ac: NormalizedAircraft): boolean {
+  return isMilitary(ac);
 }
 
 function lookupFamousTail(ac: NormalizedAircraft): { name: string } | null {
@@ -242,11 +217,6 @@ function matchesPrefix(value: string | undefined, prefixes: readonly string[]): 
   if (!value) return false;
   const upper = value.trim().toUpperCase();
   return prefixes.some((prefix) => upper.startsWith(prefix));
-}
-
-function isNNumberCallsign(callsign?: string): boolean {
-  if (!callsign) return false;
-  return /^N[0-9][0-9A-Z]{0,4}[A-Z]$/.test(callsign.trim().toUpperCase());
 }
 
 function isMilitary(ac: NormalizedAircraft): boolean {
@@ -266,54 +236,46 @@ function isCargo(ac: NormalizedAircraft): boolean {
   return CARGO_CALLSIGN_PREFIXES.includes(prefix);
 }
 
-function isBizjet(ac: NormalizedAircraft): boolean {
+export function isBizjet(ac: NormalizedAircraft): boolean {
   if (matchesPrefix(ac.aircraftType, BIZJET_TYPE_PREFIXES)) return true;
   if (ac.aircraftType === 'PC12') return true;
-  if (isNNumberCallsign(ac.callsign) && ac.category === 'A3') return true;
-  return false;
-}
-
-function isGeneralAviation(ac: NormalizedAircraft): boolean {
-  if (matchesPrefix(ac.aircraftType, GA_TYPE_PREFIXES)) return true;
-  if (ac.category && GA_EMITTER_CATEGORIES.has(ac.category)) return true;
-  if (isNNumberCallsign(ac.callsign) && !isBizjet(ac)) return true;
+  if (isNNumberAircraft(ac) && ac.category === 'A3') return true;
   return false;
 }
 
 export function classifyAircraft(ac: NormalizedAircraft, isAirline: boolean): AircraftTrafficClass {
   if (isAirline) return 'airline';
-  if (lookupFamousTail(ac)) return 'vip';
+  if (lookupFamousTail(ac)) return 'bizjet';
   if (isMilitary(ac)) return 'military';
   if (isCargo(ac)) return 'cargo';
   if (isBizjet(ac)) return 'bizjet';
-  if (isGeneralAviation(ac)) return 'ga';
   return 'unknown';
 }
+
+const UNKNOWN_NON_AIRLINE_BRAND: AirlineBrand = {
+  name: 'Unknown',
+  icao: 'UNK',
+  iata: 'XX',
+  primaryColor: '#334155',
+  accentColor: '#94A3B8',
+};
 
 export function getNonAirlineDisplayBrand(ac: NormalizedAircraft): AirlineBrand {
   const famous = lookupFamousTail(ac);
   if (famous) {
-    return { ...CATEGORY_BRANDS[CATEGORY_ICAO.VIP], name: famous.name };
+    return { ...CATEGORY_BRANDS[CATEGORY_ICAO.BIZJET]!, name: famous.name };
   }
 
-  switch (classifyAircraft(ac, false)) {
-    case 'military':
-      return CATEGORY_BRANDS[CATEGORY_ICAO.MILITARY];
-    case 'cargo':
-      return CATEGORY_BRANDS[CATEGORY_ICAO.CARGO];
-    case 'bizjet':
-      return CATEGORY_BRANDS[CATEGORY_ICAO.BIZJET];
-    case 'ga':
-      return CATEGORY_BRANDS[CATEGORY_ICAO.GA];
-    default:
-      return {
-        name: 'Unknown',
-        icao: 'UNK',
-        iata: 'XX',
-        primaryColor: '#334155',
-        accentColor: '#94A3B8',
-      };
+  if (isMilitary(ac)) {
+    return CATEGORY_BRANDS[CATEGORY_ICAO.MILITARY]!;
   }
+  const cargo = getCargoAirlineFromCallsign(ac.callsign);
+  if (cargo) return cargo;
+  if (isBizjet(ac)) {
+    return CATEGORY_BRANDS[CATEGORY_ICAO.BIZJET]!;
+  }
+
+  return UNKNOWN_NON_AIRLINE_BRAND;
 }
 
 export function isCategoryBrand(icao: string): boolean {

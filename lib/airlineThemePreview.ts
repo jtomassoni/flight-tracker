@@ -17,7 +17,10 @@ export function airlineLogoSource(brand: AirlineBrand): AirlineLogoSource {
   return 'iata-fallback';
 }
 
-export function buildAirlineLedPreview(icao: string): LedFlightContent | null {
+export function buildAirlineLedPreview(
+  icao: string,
+  options?: { logoUrl?: string }
+): LedFlightContent | null {
   const brand = getLogoBrandByIcao(icao);
   if (!brand) return null;
 
@@ -28,9 +31,9 @@ export function buildAirlineLedPreview(icao: string): LedFlightContent | null {
     routeHero: 'DEN→PHX',
     routeProgress: 0.45,
     telemetry: [{ value: formatAircraftTypeDisplay('B738') }, { value: '425 mph' }],
-    logoUrl: airlineLedLogoUrl(brand),
+    logoUrl: options?.logoUrl ?? airlineLedLogoUrl(brand),
     logoIcao: brand.icao,
-    logoFallback: brand.iata,
+    logoFallback: brand.name,
     logoBackground: wallStyle.logoBackground,
     logoBorder: wallStyle.logoBorder,
     accentStripe: wallStyle.accentStripe,
