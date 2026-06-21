@@ -178,7 +178,7 @@ export function pickWallFlightIdScale(
   bandW: number,
   bandH: number
 ): { scaleX: number; scaleY: number } {
-  for (const scale of [2, 1.5, 1]) {
+  for (const scale of [3, 2.5, 2, 1.5, 1]) {
     const { width, height } = ledScaledTextMetrics(text, scale, scale);
     if (width <= bandW && height + 2 <= bandH) {
       return { scaleX: scale, scaleY: scale };
@@ -196,11 +196,13 @@ export function pickTelemetryScale(
 ): { scaleX: number; scaleY: number } {
   const cellH = ledCharCellH();
   const scales =
-    bandH >= cellH * 4
-      ? [2, 1.5, 1, 0.85, 0.75, 0.65]
-      : bandH >= cellH * 2.5
-        ? [1.5, 1, 0.85, 0.75, 0.65]
-        : [1, 0.85, 0.75, 0.65];
+    bandH >= cellH * 5
+      ? [3, 2.5, 2, 1.5, 1, 0.85, 0.75, 0.65]
+      : bandH >= cellH * 4
+        ? [2.5, 2, 1.5, 1, 0.85, 0.75, 0.65]
+        : bandH >= cellH * 2.5
+          ? [1.5, 1, 0.85, 0.75, 0.65]
+          : [1, 0.85, 0.75, 0.65];
 
   for (const scale of scales) {
     const { width, height } = ledScaledTextMetrics(text, scale, scale);
@@ -222,9 +224,11 @@ export function pickStatsPairScale(
 ): { scaleX: number; scaleY: number } {
   const cellH = ledCharCellH();
   const scales =
-    bandH >= cellH * 2.5
-      ? [1.5, 1.25, 1, 0.85, 0.75, 0.65]
-      : [1.25, 1, 0.85, 0.75, 0.65];
+    bandH >= cellH * 3.5
+      ? [2.5, 2, 1.5, 1.25, 1, 0.85, 0.75, 0.65]
+      : bandH >= cellH * 2.5
+        ? [1.5, 1.25, 1, 0.85, 0.75, 0.65]
+        : [1.25, 1, 0.85, 0.75, 0.65];
 
   for (const scale of scales) {
     const left = truncateLedTextScaled(leftText, leftW, scale);

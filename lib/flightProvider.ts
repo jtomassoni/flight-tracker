@@ -33,6 +33,8 @@ export type FetchFlightsParams = {
   radiusMi: number;
   /** Optional ICAO callsign lookup — merged into geo results when tracking a specific flight. */
   callsign?: string;
+  /** Minimum seconds between upstream fetches for this query (Sky Map uses 1). */
+  minFreshSec?: number;
 };
 
 export type FetchFlightsResult = {
@@ -500,12 +502,13 @@ async function fetchLiveWithCache(
   provider: ProviderName,
   lat: number,
   lon: number,
-  radiusMi: number
+  radiusMi: number,
+  minFreshIntervalMs: number
 ): Promise<FetchFlightsResult> {
   const now = Date.now();
   const cached = cache.get(key);
 
-  if (cached && now - cached.upstreamAt < UPSTREAM_MIN_INTERVAL_MS) {
+  if (cached && now - cached.upstreamAt < minFreshIntervalMs) {
     return cachedResult(cached);
   }
 
@@ -529,7 +532,7 @@ async function fetchLiveWithCache(
     return runExclusiveUpstream(async () => {
       const afterWait = Date.now();
       const freshCached = cache.get(key);
-      if (freshCached && afterWait - freshCached.upstreamAt < UPSTREAM_MIN_INTERVAL_MS) {
+      if (freshCached && afterWait - freshCached.upstreamAt < minFreshIntervalMs) {
         return cachedResult(freshCached);
       }
 
@@ -539,7 +542,7 @@ async function fetchLiveWithCache(
         lon,
         radiusMi,
         afterWait,
-        UPSTREAM_MIN_INTERVAL_MS,
+        minFreshIntervalMs,
         'Recent upstream fetch for nearby query',
         false
       );
@@ -614,14 +617,27 @@ function mergeAircraftLists(
   return merged;
 }
 
+function resolveMinFreshIntervalMs(minFreshSec?: number): number {
+  if (minFreshSec == null) return UPSTREAM_MIN_INTERVAL_MS;
+  return Math.max(minFreshSec * 1000, MIN_GLOBAL_UPSTREAM_GAP_MS);
+}
+
 export async function fetchFlights(params: FetchFlightsParams): Promise<FetchFlightsResult> {
   const lat = params.lat ?? DEFAULT_LAT;
   const lon = params.lon ?? DEFAULT_LON;
   const provider = FLIGHT_PROVIDER;
   const key = cacheKey(lat, lon, params.radiusMi, provider);
+  const minFreshIntervalMs = resolveMinFreshIntervalMs(params.minFreshSec);
 
   try {
-    const result = await fetchLiveWithCache(key, provider, lat, lon, params.radiusMi);
+    const result = await fetchLiveWithCache(
+      key,
+      provider,
+      lat,
+      lon,
+      params.radiusMi,
+      minFreshIntervalMs
+    );
 
     const callsign = params.callsign?.trim().toUpperCase();
     if (!callsign) return result;

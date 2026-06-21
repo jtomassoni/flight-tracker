@@ -177,6 +177,7 @@
       }
       errorMessage = null;
       lastUpdated = new Date(data.fetchedAt);
+      settings = shared.applyTrackWatchPoll(data.aircraft || [], settings);
       var displayed = shared.applyDisplayedAircraft(data.aircraft || [], settings);
       render(displayed);
       schedulePoll(settings.refreshIntervalSec);

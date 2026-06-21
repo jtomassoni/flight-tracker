@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useFlightData } from '@/hooks/useFlightData';
+import { useRouteRetry } from '@/hooks/useRouteRetry';
 import { DEFAULT_SETTINGS, loadSettings, saveSettings, type ThemeId } from '@/lib/settings';
 import { parseTrackQuery } from '@/lib/callsignMatch';
 import { getTheme, THEME_IDS, type LayoutId } from '@/lib/themes';
@@ -46,16 +47,25 @@ export default function DisplayDashboard() {
     trackStatus,
   } = useFlightData(pollLayout);
 
+  const displayedWithRoutes = useRouteRetry(
+    previewError ? EMPTY_AIRCRAFT : displayedAircraft,
+    !previewError &&
+      status === 'ready' &&
+      (pollLayout === 'split-flap-board' || pollLayout === 'departure-table')
+  );
+
   // Shareable links: /display?airline=UA&flight=1234 or /display?track=UA1234
   // Admin embed: /display?embed=1&theme=flightwall
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    const isEmbedded = params.get('embed') === '1';
     const airline = params.get('airline');
     const flight = params.get('flight');
     const track = params.get('track');
     const parsed = track ? parseTrackQuery(track) : null;
 
-    if ((airline && flight) || parsed) {
+    // Shareable watch links persist settings; admin preview embeds must not clobber them.
+    if (!isEmbedded && ((airline && flight) || parsed)) {
       const current = loadSettings();
       saveSettings({
         ...current,
@@ -68,7 +78,7 @@ export default function DisplayDashboard() {
     if (themeParam && THEME_IDS.includes(themeParam as ThemeId)) {
       setUrlTheme(themeParam as ThemeId);
     }
-    setEmbedded(params.get('embed') === '1');
+    setEmbedded(isEmbedded);
   }, []);
 
   const activeThemeId = manualTheme ?? urlTheme ?? settings.theme;
@@ -85,7 +95,7 @@ export default function DisplayDashboard() {
   const effectiveError = previewError
     ? 'Preview — this is how a live-feed outage looks in this theme.'
     : errorMessage;
-  const effectiveDisplayed = previewError ? EMPTY_AIRCRAFT : displayedAircraft;
+  const effectiveDisplayed = previewError ? EMPTY_AIRCRAFT : displayedWithRoutes;
   const effectiveFiltered = previewError ? EMPTY_AIRCRAFT : filteredAircraft;
   const effectiveAll = previewError ? EMPTY_AIRCRAFT : aircraft;
   const featured = effectiveDisplayed[0] ?? null;

@@ -87,7 +87,7 @@ export function buildCenterMarkerIcon(): AircraftMarkerIcon {
   </defs>
   <g filter="url(#d)">
     <rect x="4" y="4" width="40" height="22" rx="6" fill="#0f172a" fill-opacity="0.94" stroke="#ffffff" stroke-width="2"/>
-    <text x="24" y="19" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700" font-family="Arial,sans-serif">ZIP</text>
+    <text x="24" y="19" text-anchor="middle" fill="#ffffff" font-size="11" font-weight="700" font-family="Arial,sans-serif">Home</text>
     <circle cx="24" cy="36" r="7" fill="#ffffff" stroke="#0f172a" stroke-width="2"/>
   </g>
 </svg>`;
@@ -101,14 +101,15 @@ export function buildCenterMarkerIcon(): AircraftMarkerIcon {
   };
 }
 
-/** Tone down base-map city labels so flight pills stand out */
+/** Tone down base-map labels/POIs — kiosk map is display-only (no hover targets). */
 export const SKY_MAP_STYLES: google.maps.MapTypeStyle[] = [
-  { featureType: 'poi', elementType: 'labels', stylers: [{ visibility: 'off' }] },
-  { featureType: 'transit', elementType: 'labels', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi', stylers: [{ visibility: 'off' }] },
+  { featureType: 'poi.business', stylers: [{ visibility: 'off' }] },
+  { featureType: 'transit', stylers: [{ visibility: 'off' }] },
   {
     featureType: 'administrative.locality',
     elementType: 'labels',
-    stylers: [{ visibility: 'simplified' }, { lightness: 40 }],
+    stylers: [{ visibility: 'off' }],
   },
   {
     featureType: 'road',

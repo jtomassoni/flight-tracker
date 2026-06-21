@@ -18,8 +18,11 @@ const ADSBDB_BASE = 'https://api.adsbdb.com/v0/callsign';
 const ROUTE_TTL_MS = 6 * 60 * 60 * 1000;
 /** Re-check "unknown" callsigns less often, but still expire (flight numbers get reused). */
 const UNKNOWN_TTL_MS = 60 * 60 * 1000;
+/** Active board retry cadence — re-query adsbdb even after a recent miss. */
+export const ROUTE_RETRY_INTERVAL_MS = 5000;
 /** Don't hammer upstream: cap concurrent lookups per enrichment pass. */
 const MAX_CONCURRENT_LOOKUPS = 12;
+const ROUTE_RETRY_MAX_CONCURRENT = 6;
 const LOOKUP_TIMEOUT_MS = 8_000;
 
 type CacheEntry = {
@@ -50,6 +53,7 @@ type AdsbdbResponse = {
 
 const cache = getPersistentRouteCache();
 const inflight = getPersistentRouteInflight();
+const retryLastAt = getPersistentRetryLastAt();
 
 function getPersistentRouteCache(): Map<string, CacheEntry> {
   const g = globalThis as typeof globalThis & {
@@ -67,7 +71,15 @@ function getPersistentRouteInflight(): Map<string, Promise<AircraftRoute | null>
   return g.__flightTrackerRouteInflight;
 }
 
-function normalizeCallsign(callsign?: string): string | null {
+function getPersistentRetryLastAt(): Map<string, number> {
+  const g = globalThis as typeof globalThis & {
+    __flightTrackerRouteRetryLastAt?: Map<string, number>;
+  };
+  if (!g.__flightTrackerRouteRetryLastAt) g.__flightTrackerRouteRetryLastAt = new Map();
+  return g.__flightTrackerRouteRetryLastAt;
+}
+
+export function normalizeRouteCallsign(callsign?: string): string | null {
   const trimmed = callsign?.trim().toUpperCase();
   if (!trimmed) return null;
   // adsbdb keys on ICAO/IATA callsigns (e.g. "UAL123"); skip N-number tails
@@ -75,6 +87,10 @@ function normalizeCallsign(callsign?: string): string | null {
   if (!/^[A-Z0-9]{3,8}$/.test(trimmed)) return null;
   if (isNNumberTail(trimmed)) return null;
   return trimmed;
+}
+
+function normalizeCallsign(callsign?: string): string | null {
+  return normalizeRouteCallsign(callsign);
 }
 
 function mapAirport(airport: AdsbdbAirport | undefined): {
@@ -172,6 +188,46 @@ async function resolveRoute(callsign: string): Promise<AircraftRoute | null> {
   return request;
 }
 
+/** Re-fetch routes for callsigns on the board retry loop (1s cadence, bypasses negative cache). */
+export async function resolveRoutesForRetry(
+  callsigns: string[]
+): Promise<Record<string, AircraftRoute | null>> {
+  const unique = Array.from(new Set(callsigns.map((c) => c.trim().toUpperCase()).filter(Boolean)));
+  if (unique.length === 0) return {};
+
+  const rows = await mapWithConcurrency(
+    unique,
+    ROUTE_RETRY_MAX_CONCURRENT,
+    async (callsign) => {
+      const now = Date.now();
+      const last = retryLastAt.get(callsign) ?? 0;
+      if (now - last < ROUTE_RETRY_INTERVAL_MS) {
+        return [callsign, cache.get(callsign)?.route ?? null] as const;
+      }
+      retryLastAt.set(callsign, now);
+
+      const pending = inflight.get(callsign);
+      if (pending) {
+        const route = await pending;
+        return [callsign, route] as const;
+      }
+
+      try {
+        const route = await fetchRoute(callsign);
+        cache.set(callsign, {
+          route,
+          expiresAt: Date.now() + (route ? ROUTE_TTL_MS : UNKNOWN_TTL_MS),
+        });
+        return [callsign, route] as const;
+      } catch {
+        return [callsign, cache.get(callsign)?.route ?? null] as const;
+      }
+    }
+  );
+
+  return Object.fromEntries(rows);
+}
+
 async function mapWithConcurrency<T, R>(
   items: T[],
   limit: number,
@@ -197,8 +253,9 @@ async function mapWithConcurrency<T, R>(
 }
 
 /**
- * Attach filed routes from callsign lookups. Position validation happens later
- * when drawing the progress bar — airport codes are shown from the lookup alone.
+ * Attach filed routes from callsign lookups. Client filters and boards validate
+ * each route against live position — implausible pairings (e.g. DTW→ORD over
+ * Denver) are dropped or shown without city labels.
  */
 export async function enrichWithRoutes(
   aircraft: NormalizedAircraft[]

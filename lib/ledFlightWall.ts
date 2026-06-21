@@ -4,7 +4,7 @@ import { getRegionalOperator } from '@/lib/regionalCarriers';
 import { isCategoryBrand, aircraftTail, isNNumberTail } from '@/lib/aircraftCategories';
 import { formatAircraftTypeBoard } from '@/lib/aircraftTypes';
 import { distanceMi } from '@/lib/geo';
-import { getFiledRoute } from '@/lib/routePlausibility';
+import { getDisplayRoute } from '@/lib/routePlausibility';
 import type { NormalizedAircraft } from '@/types/aircraft';
 
 /** Short airport code for the LED hero, preferring IATA (3-letter) over ICAO. */
@@ -17,7 +17,7 @@ function airportCode(iata?: string, icao?: string): string {
  * string when the flight's route is unknown — we never invent a route.
  */
 export function ledRouteLabel(ac: NormalizedAircraft): string {
-  const route = getFiledRoute(ac);
+  const route = getDisplayRoute(ac);
   if (!route) return '';
   const origin = airportCode(route.originIata, route.originIcao);
   const dest = airportCode(route.destIata, route.destIcao);
@@ -42,7 +42,7 @@ export function formatLedRouteHero(route: string): string {
  * fake progress.
  */
 export function computeFlightProgress(ac: NormalizedAircraft): number | null {
-  const route = getFiledRoute(ac);
+  const route = getDisplayRoute(ac);
   if (
     !route ||
     route.originLat == null ||

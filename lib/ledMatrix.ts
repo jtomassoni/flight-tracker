@@ -12,8 +12,8 @@ import {
   measureLedTextCompact,
   pickFlightIdScale,
   pickStatsPairScale,
-  pickWallFlightIdScale,
   pickTelemetryScale,
+  pickWallFlightIdScale,
   truncateLedTextCompact,
   truncateLedTextScaled,
 } from '@/lib/ledFont';
@@ -743,14 +743,14 @@ function drawRouteHeaderRow(
   }
 }
 
-/** Visual order: type · phase · altitude · speed (primary readout last). */
+/** Visual order: type · phase · speed · altitude. */
 function orderedTelemetryFields(telemetry: LedTelemetryField[]): LedTelemetryField[] {
   const typeField = telemetry.find((f) => f.emphasis === 'secondary');
   const speedField = telemetry.find((f) => f.emphasis === 'primary');
   const statusFields = telemetry.filter((f) => f.emphasis === 'status');
   const measureFields = telemetry.filter((f) => f.emphasis === 'measure');
   if (!typeField || !speedField) return telemetry.filter(Boolean);
-  return [typeField, ...statusFields, ...measureFields, speedField];
+  return [typeField, ...statusFields, speedField, ...measureFields];
 }
 
 type StatsScalePicker = (
@@ -824,120 +824,32 @@ function drawStatsTextInBand(
   ctx.restore();
 }
 
-/** Two-row stack: hero (with type overlay) + matched alt/speed pair. */
+/** Four-row stack: type · phase · speed · altitude. */
 function allocateStatsDashboardHeights(
   statsZoneH: number,
-  gap: number
-): { heroH: number; dataH: number; inset: number } {
-  const dataH = Math.max(ledCharCellH() + 1, Math.floor(statsZoneH * 0.38));
-  const heroH = Math.max(ledCharCellH() * 2, statsZoneH - dataH - gap);
-  const used = heroH + gap + dataH;
-  const inset = Math.max(0, Math.floor((statsZoneH - used) / 2));
-  return { heroH, dataH, inset };
+  gap: number,
+  rowCount: 2 | 3 | 4,
+  options?: { wall?: boolean }
+): { rowHeights: number[]; inset: number } {
+  const weights =
+    rowCount === 4
+      ? [0.14, 0.36, 0.28, 0.22]
+      : rowCount === 3
+        ? [0.2, 0.44, 0.36]
+        : [0.32, 0.68];
+  const totalGap = gap * (rowCount - 1);
+  const usable = Math.max(rowCount, statsZoneH - totalGap);
+  const weightSum = weights.reduce((sum, w) => sum + w, 0);
+  const rowHeights = weights.map((w) => Math.max(1, Math.floor((usable * w) / weightSum)));
+  const used = rowHeights.reduce((sum, h) => sum + h, 0);
+  rowHeights[rowCount - 1] = Math.max(1, rowHeights[rowCount - 1]! + (usable - used));
+  const inset = options?.wall
+    ? 0
+    : Math.max(0, Math.floor((statsZoneH - used - totalGap) / 2));
+  return { rowHeights, inset };
 }
 
-function drawStatsTypeBadge(
-  ctx: CanvasRenderingContext2D,
-  text: string,
-  textX: number,
-  textW: number,
-  bandY: number,
-  color: string
-): void {
-  drawLedTextCompact(ctx, text, textX, bandY, color, textW);
-}
-
-function drawStatsHeroRow(
-  ctx: CanvasRenderingContext2D,
-  typeField: LedTelemetryField,
-  heroField: LedTelemetryField,
-  textX: number,
-  textW: number,
-  bandY: number,
-  bandH: number
-): void {
-  drawStatsTextInBand(
-    ctx,
-    heroField.value,
-    textX,
-    bandY,
-    textW,
-    bandH,
-    ledEmphasisColor(heroField.emphasis),
-    'center',
-    pickFlightIdScale
-  );
-  drawStatsTypeBadge(
-    ctx,
-    typeField.value,
-    textX,
-    textW,
-    bandY,
-    ledEmphasisColor(typeField.emphasis)
-  );
-}
-
-function drawStatsPairRow(
-  ctx: CanvasRenderingContext2D,
-  leftText: string,
-  rightText: string,
-  leftColor: string,
-  rightColor: string,
-  textX: number,
-  textW: number,
-  bandY: number,
-  bandH: number
-): void {
-  const gutter = 3;
-  const halfW = Math.floor((textW - gutter) / 2);
-  const rightX = textX + halfW + gutter;
-  const rightW = textW - halfW - gutter;
-  const scale = pickStatsPairScale(leftText, rightText, halfW, rightW, bandH);
-  const leftDisplay = truncateLedTextScaled(leftText, halfW, scale.scaleX);
-  const rightDisplay = truncateLedTextScaled(rightText, rightW, scale.scaleX);
-  const leftMetrics = ledScaledTextMetrics(leftDisplay, scale.scaleX, scale.scaleY);
-  const rightMetrics = ledScaledTextMetrics(rightDisplay, scale.scaleX, scale.scaleY);
-  const rowH = Math.max(leftMetrics.height, rightMetrics.height);
-  const y = bandY + Math.round((bandH - rowH) / 2);
-  const dotX = textX + halfW + Math.floor(gutter / 2);
-
-  ctx.save();
-  ctx.beginPath();
-  ctx.rect(textX, bandY, textW, bandH);
-  ctx.clip();
-
-  drawLedTextScaled(
-    ctx,
-    leftDisplay,
-    textX,
-    y,
-    leftColor,
-    halfW,
-    scale.scaleX,
-    scale.scaleY,
-    scale.scaleX === 1
-  );
-  drawLedTextScaled(
-    ctx,
-    rightDisplay,
-    rightLedTextXScaled(rightDisplay, rightX, rightW, scale.scaleX),
-    y,
-    rightColor,
-    rightW,
-    scale.scaleX,
-    scale.scaleY,
-    scale.scaleX === 1
-  );
-
-  if (bandH >= ledCharCellH()) {
-    ctx.fillStyle = LED_COLORS.dim;
-    ctx.fillRect(dotX, bandY + Math.floor(bandH / 2), 1, 1);
-  }
-
-  ctx.restore();
-}
-
-/** Two-row dashboard: phase hero + alt/speed pair (type overlays hero). */
+/** Airborne — type, phase hero, speed, altitude. */
 function drawStatsDashboard(
   ctx: CanvasRenderingContext2D,
   textX: number,
@@ -945,47 +857,57 @@ function drawStatsDashboard(
   statsZoneTop: number,
   statsZoneH: number,
   gap: number,
+  wall: boolean,
   typeField: LedTelemetryField,
-  heroField: LedTelemetryField,
-  measureField: LedTelemetryField,
-  primaryField: LedTelemetryField
-): void {
-  const { heroH, dataH, inset } = allocateStatsDashboardHeights(statsZoneH, gap);
-  let top = statsZoneTop + inset;
-
-  drawStatsHeroRow(ctx, typeField, heroField, textX, textW, top, heroH);
-  top += heroH + gap;
-
-  drawStatsPairRow(
-    ctx,
-    measureField.value,
-    primaryField.value,
-    LED_COLORS.phosphor,
-    LED_COLORS.hero,
-    textX,
-    textW,
-    top,
-    dataH
-  );
-}
-
-/** Ground / taxi — hero row + lone altitude readout. */
-function drawStatsGroundLayout(
-  ctx: CanvasRenderingContext2D,
-  textX: number,
-  textW: number,
-  statsZoneTop: number,
-  statsZoneH: number,
-  gap: number,
-  typeField: LedTelemetryField,
-  heroField: LedTelemetryField,
+  statusField: LedTelemetryField,
+  primaryField: LedTelemetryField,
   measureField: LedTelemetryField
 ): void {
-  const { heroH, dataH, inset } = allocateStatsDashboardHeights(statsZoneH, gap);
+  const rowCount = 4;
+  const { rowHeights, inset } = allocateStatsDashboardHeights(statsZoneH, gap, rowCount, {
+    wall,
+  });
   let top = statsZoneTop + inset;
+  const phaseScale = wall ? pickWallFlightIdScale : pickFlightIdScale;
 
-  drawStatsHeroRow(ctx, typeField, heroField, textX, textW, top, heroH);
-  top += heroH + gap;
+  drawStatsTextInBand(
+    ctx,
+    typeField.value,
+    textX,
+    top,
+    textW,
+    rowHeights[0]!,
+    ledEmphasisColor(typeField.emphasis),
+    'center',
+    pickTelemetryScale
+  );
+  top += rowHeights[0]! + gap;
+
+  drawStatsTextInBand(
+    ctx,
+    statusField.value,
+    textX,
+    top,
+    textW,
+    rowHeights[1]!,
+    ledEmphasisColor(statusField.emphasis),
+    'center',
+    phaseScale
+  );
+  top += rowHeights[1]! + gap;
+
+  drawStatsTextInBand(
+    ctx,
+    primaryField.value,
+    textX,
+    top,
+    textW,
+    rowHeights[2]!,
+    ledEmphasisColor(primaryField.emphasis),
+    'center',
+    pickTelemetryScale
+  );
+  top += rowHeights[2]! + gap;
 
   drawStatsTextInBand(
     ctx,
@@ -993,11 +915,72 @@ function drawStatsGroundLayout(
     textX,
     top,
     textW,
-    dataH,
-    LED_COLORS.phosphor,
-    'left',
+    rowHeights[3]!,
+    ledEmphasisColor(measureField.emphasis),
+    'center',
     pickTelemetryScale
   );
+}
+
+/** Ground / taxi — type, status hero, optional altitude. */
+function drawStatsGroundLayout(
+  ctx: CanvasRenderingContext2D,
+  textX: number,
+  textW: number,
+  statsZoneTop: number,
+  statsZoneH: number,
+  gap: number,
+  wall: boolean,
+  typeField: LedTelemetryField,
+  heroField: LedTelemetryField,
+  measureField?: LedTelemetryField
+): void {
+  const rowCount = measureField ? 3 : 2;
+  const { rowHeights, inset } = allocateStatsDashboardHeights(statsZoneH, gap, rowCount, {
+    wall,
+  });
+  let top = statsZoneTop + inset;
+  const heroScale = wall ? pickWallFlightIdScale : pickFlightIdScale;
+
+  drawStatsTextInBand(
+    ctx,
+    typeField.value,
+    textX,
+    top,
+    textW,
+    rowHeights[0]!,
+    ledEmphasisColor(typeField.emphasis),
+    'center',
+    pickTelemetryScale
+  );
+  top += rowHeights[0]! + gap;
+
+  drawStatsTextInBand(
+    ctx,
+    heroField.value,
+    textX,
+    top,
+    textW,
+    rowHeights[1]!,
+    ledEmphasisColor(heroField.emphasis),
+    'center',
+    heroScale
+  );
+  top += rowHeights[1]! + gap;
+
+  if (measureField && rowCount >= 3) {
+    drawStatsTextInBand(
+      ctx,
+      measureField.value,
+      textX,
+      top,
+      textW,
+      rowHeights[2]!,
+      ledEmphasisColor(measureField.emphasis),
+      'center',
+      pickTelemetryScale
+    );
+  }
 }
 
 function drawStatsRow(
@@ -1026,15 +1009,16 @@ function drawStatsRow(
       statsZoneTop,
       statsZoneH,
       gap,
+      wall,
       typeField,
       statusField,
-      measureField,
-      primaryField
+      primaryField,
+      measureField
     );
     return;
   }
 
-  if (typeField && !statusField && measureField && primaryField) {
+  if (typeField && !statusField && primaryField) {
     drawStatsGroundLayout(
       ctx,
       textX,
@@ -1042,6 +1026,7 @@ function drawStatsRow(
       statsZoneTop,
       statsZoneH,
       gap,
+      wall,
       typeField,
       primaryField,
       measureField

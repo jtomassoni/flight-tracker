@@ -16,9 +16,7 @@ export function useLayoutDensity() {
     panelCount:
       viewport === 'compact' || isDeskPortrait
         ? 1
-        : viewport === 'desk'
-          ? 2
-          : 4,
+        : 2,
     galleryCols:
       viewport === 'compact' || isDeskPortrait
         ? 'grid-cols-1'
@@ -33,6 +31,13 @@ export function useLayoutDensity() {
           : 'grid-cols-4 xl:grid-cols-5',
     flapDestChars:
       viewport === 'compact' || isDeskPortrait ? 8 : viewport === 'desk' ? 10 : 14,
+    /** Max split-flap rows visible without scrolling */
+    flapMaxRows:
+      viewport === 'compact' || isDeskPortrait
+        ? 6
+        : viewport === 'desk'
+          ? 8
+          : 10,
     showGalleryStats: viewport !== 'desk',
     /** Max gallery cards that fit without scrolling (cols × rows for viewport) */
     galleryMaxCards:

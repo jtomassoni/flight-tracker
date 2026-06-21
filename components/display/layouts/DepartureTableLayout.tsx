@@ -4,16 +4,12 @@ import { useMemo } from 'react';
 import { useLayoutDensity } from '@/hooks/useLayoutDensity';
 import type { DisplayLayoutProps } from '@/types/display';
 import type { NormalizedAircraft } from '@/types/aircraft';
-import {
-  fidsDestination,
-  fidsFlightNumber,
-  fidsOrigin,
-  fidsStatus,
-} from '@/lib/denFids';
+import RouteEndpointField from '@/components/display/shared/RouteEndpointField';
 import AirlineLogoImage from '@/components/display/shared/AirlineLogoImage';
 import { getAircraftDisplayBrand } from '@/lib/airlines';
 import { getVerticalTrend } from '@/lib/aircraftUtils';
 import { getDisplayEmptyState } from '@/lib/displayEmptyState';
+import { fidsFlightNumber, fidsStatus } from '@/lib/denFids';
 import KioskScrollRegion from '../shared/KioskScrollRegion';
 import './den-fids.css';
 
@@ -51,7 +47,7 @@ function FidsPanel({
   panelIndex: number;
 }) {
   return (
-    <section className="den-fids__panel flex-1">
+    <section className="den-fids__panel">
       <header className="den-fids__panel-header">
         <div className="den-fids__brand">
           <DenBrandMark />
@@ -77,16 +73,15 @@ function FidsPanel({
 
           return (
             <div key={ac.hex} className="den-fids__row">
-              <span className="den-fids__dest">{fidsOrigin(ac)}</span>
-              <span className="den-fids__dest">{fidsDestination(ac)}</span>
+              <RouteEndpointField ac={ac} kind="origin" variant="fids" />
+              <RouteEndpointField ac={ac} kind="destination" variant="fids" />
               <div className="den-fids__airline">
                 <div className="den-fids__logo-wrap">
                   <AirlineLogoImage
                     brand={brand}
                     size={128}
                     alt={brand.name}
-                    width={72}
-                    height={28}
+                    fill
                     className="den-fids__logo-img"
                   />
                 </div>

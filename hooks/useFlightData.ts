@@ -5,8 +5,11 @@ import type { FlightsApiResponse } from '@/types/aircraft';
 import type { TrackStatus } from '@/types/display';
 import {
   LIVE_LAYOUT_POLL_INTERVAL_SEC,
+  RADAR_SWEEP_DURATION_SEC,
   SETTINGS_CHANGED_EVENT,
   SETTINGS_STORAGE_KEY,
+  SKY_MAP_POLL_INTERVAL_SEC,
+  SPLIT_FLAP_POLL_INTERVAL_SEC,
 } from '@/lib/constants';
 import { applyClientFilters } from '@/lib/filters';
 import { isAirborne } from '@/lib/aircraftUtils';
@@ -17,21 +20,36 @@ import {
   isTrackModeActive,
 } from '@/lib/callsignMatch';
 import {
+  applyDisplayHold,
+  EMPTY_DISPLAY_HOLD,
+  type DisplayHoldState,
+} from '@/lib/displayHold';
+import {
   cacheSettingsLocal,
   clampRefreshInterval,
   DEFAULT_SETTINGS,
   fetchServerSettings,
   loadSettings,
+  reconcileServerSettings,
+  saveSettings,
   type DisplaySettings,
 } from '@/lib/settings';
+import {
+  resolveTrackWatchAfterPoll,
+  trackWatchKey,
+} from '@/lib/trackWatch';
 import { FetchTimeoutError, fetchWithTimeout } from '@/lib/fetchWithTimeout';
 import type { LayoutId } from '@/lib/themes';
 
 const LIVE_LAYOUTS = new Set<LayoutId>(['radar-scope', 'google-map', 'led-matrix']);
+/** Layouts that trigger their own poll cadence (e.g. radar sweep). */
+const LAYOUT_DRIVEN_POLL = new Set<LayoutId>(['radar-scope']);
 
 const RATE_LIMIT_POLL_INTERVAL_SEC = 90;
 
 function resolvePollIntervalSec(refreshIntervalSec: number, layout?: LayoutId): number {
+  if (layout === 'google-map') return SKY_MAP_POLL_INTERVAL_SEC;
+  if (layout === 'split-flap-board') return SPLIT_FLAP_POLL_INTERVAL_SEC;
   if (layout && LIVE_LAYOUTS.has(layout)) return LIVE_LAYOUT_POLL_INTERVAL_SEC;
   return clampRefreshInterval(refreshIntervalSec);
 }
@@ -75,6 +93,42 @@ function resolveDisplayedAircraft(
   };
 }
 
+function withDisplayHold(
+  resolved: ReturnType<typeof resolveDisplayedAircraft>,
+  holdState: DisplayHoldState,
+  settings: DisplaySettings
+): {
+  holdState: DisplayHoldState;
+  filteredAircraft: FlightsApiResponse['aircraft'];
+  displayedAircraft: FlightsApiResponse['aircraft'];
+  trackLabel: string | null;
+  trackStatus: TrackStatus;
+} {
+  const held = applyDisplayHold(resolved.displayedAircraft, holdState, settings);
+  const trackTarget = buildTrackTarget(
+    settings.trackAirline ?? '',
+    settings.trackFlightNumber ?? ''
+  );
+
+  let trackStatus = resolved.trackStatus;
+  if (
+    trackTarget &&
+    resolved.displayedAircraft.length === 0 &&
+    held.displayed.length > 0 &&
+    findTrackedAircraft(held.displayed, trackTarget)
+  ) {
+    trackStatus = 'found';
+  }
+
+  return {
+    holdState: { held: held.held, contextKey: held.contextKey },
+    filteredAircraft: resolved.filteredAircraft,
+    displayedAircraft: held.displayed,
+    trackLabel: resolved.trackLabel,
+    trackStatus,
+  };
+}
+
 export type FlightDataState = {
   aircraft: FlightsApiResponse['aircraft'];
   filteredAircraft: FlightsApiResponse['aircraft'];
@@ -110,6 +164,10 @@ export function useFlightData(pollLayout?: LayoutId) {
   const pollLayoutRef = useRef(pollLayout);
   pollLayoutRef.current = pollLayout;
 
+  const holdRef = useRef<DisplayHoldState>(EMPTY_DISPLAY_HOLD);
+  const trackWasAirborneRef = useRef(false);
+  const trackWatchKeyRef = useRef('');
+
   const refresh = useCallback(async () => {
     const current = settingsRef.current;
     const intervalSec = resolvePollIntervalSec(
@@ -139,6 +197,12 @@ export function useFlightData(pollLayout?: LayoutId) {
       if (trackTarget) {
         params.set('callsign', trackTarget.icaoCallsign);
       }
+      if (pollLayoutRef.current === 'google-map') {
+        params.set('minFreshSec', String(SKY_MAP_POLL_INTERVAL_SEC));
+      }
+      if (pollLayoutRef.current === 'radar-scope') {
+        params.set('minFreshSec', String(RADAR_SWEEP_DURATION_SEC));
+      }
 
       const res = await fetchWithTimeout(`/api/flights?${params.toString()}`);
       if (!res.ok) {
@@ -152,19 +216,46 @@ export function useFlightData(pollLayout?: LayoutId) {
       }
 
       const data = (await res.json()) as FlightsApiResponse;
-      const resolved = resolveDisplayedAircraft(data.aircraft, current);
+
+      let activeSettings = current;
+      const watchKey = trackWatchKey(current);
+      if (trackWatchKeyRef.current !== watchKey) {
+        trackWatchKeyRef.current = watchKey;
+        trackWasAirborneRef.current = false;
+      }
+
+      if (watchKey) {
+        const watchResult = resolveTrackWatchAfterPoll(
+          data.aircraft,
+          activeSettings,
+          trackWasAirborneRef.current
+        );
+        trackWasAirborneRef.current = watchResult.wasAirborne;
+        if (watchResult.cleared) {
+          activeSettings = watchResult.settings;
+          saveSettings(activeSettings);
+          settingsRef.current = activeSettings;
+          setSettings(activeSettings);
+          holdRef.current = EMPTY_DISPLAY_HOLD;
+          trackWatchKeyRef.current = '';
+        }
+      }
+
+      const resolved = resolveDisplayedAircraft(data.aircraft, activeSettings);
+      const withHold = withDisplayHold(resolved, holdRef.current, activeSettings);
+      holdRef.current = withHold.holdState;
 
       setState({
         aircraft: data.aircraft,
-        filteredAircraft: resolved.filteredAircraft,
-        displayedAircraft: resolved.displayedAircraft,
+        filteredAircraft: withHold.filteredAircraft,
+        displayedAircraft: withHold.displayedAircraft,
         status: navigator.onLine ? 'ready' : 'offline',
         lastUpdated: new Date(data.fetchedAt),
         source: data.source,
         provider: data.provider,
         errorMessage: null,
-        trackLabel: resolved.trackLabel,
-        trackStatus: resolved.trackStatus,
+        trackLabel: withHold.trackLabel,
+        trackStatus: withHold.trackStatus,
       });
     } catch (err) {
       setState((prev) => ({
@@ -193,10 +284,16 @@ export function useFlightData(pollLayout?: LayoutId) {
     reloadSettings();
 
     const controller = new AbortController();
-    void fetchServerSettings(controller.signal).then((serverSettings) => {
-      if (serverSettings) {
-        cacheSettingsLocal(serverSettings);
-        setSettings(serverSettings);
+    void fetchServerSettings(controller.signal).then((payload) => {
+      if (!payload) return;
+      const action = reconcileServerSettings(payload);
+      if (action === 'push-local') {
+        saveSettings(loadSettings());
+        return;
+      }
+      if (action === 'apply') {
+        cacheSettingsLocal(payload.settings);
+        setSettings(payload.settings);
       }
     });
 
@@ -216,9 +313,11 @@ export function useFlightData(pollLayout?: LayoutId) {
     let cancelled = false;
     let timer: ReturnType<typeof setTimeout>;
 
+    const layoutDriven = pollLayout != null && LAYOUT_DRIVEN_POLL.has(pollLayout);
+
     const poll = async () => {
       const intervalSec = await refresh();
-      if (!cancelled) {
+      if (!cancelled && !layoutDriven) {
         timer = setTimeout(poll, intervalSec * 1000);
       }
     };
@@ -269,12 +368,14 @@ export function useFlightData(pollLayout?: LayoutId) {
         };
       }
       const resolved = resolveDisplayedAircraft(prev.aircraft, settings);
+      const withHold = withDisplayHold(resolved, holdRef.current, settings);
+      holdRef.current = withHold.holdState;
       return {
         ...prev,
-        filteredAircraft: resolved.filteredAircraft,
-        displayedAircraft: resolved.displayedAircraft,
-        trackLabel: resolved.trackLabel,
-        trackStatus: resolved.trackStatus,
+        filteredAircraft: withHold.filteredAircraft,
+        displayedAircraft: withHold.displayedAircraft,
+        trackLabel: withHold.trackLabel,
+        trackStatus: withHold.trackStatus,
       };
     });
   }, [settings]);

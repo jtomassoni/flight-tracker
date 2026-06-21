@@ -1,5 +1,5 @@
 import type { NormalizedAircraft } from '@/types/aircraft';
-import { getFiledRoute, getValidatedRoute } from '@/lib/routePlausibility';
+import { getValidatedRoute } from '@/lib/routePlausibility';
 
 /**
  * Score aircraft by "interestingness" for kiosk display:
@@ -23,9 +23,9 @@ export function interestingnessScore(ac: NormalizedAircraft): number {
   // Callsign preferred
   if (ac.callsign?.trim()) score += 10;
 
-  // Validated origin→destination — LED wall + FIDS can actually show a route
-  if (getFiledRoute(ac)) score += 35;
-  if (getValidatedRoute(ac)) score += 10;
+  // Validated origin→destination that matches live position
+  if (getValidatedRoute(ac)) score += 40;
+  else if (ac.route) score += 3;
 
   // Fresher data preferred
   if (ac.seenSecondsAgo != null) {

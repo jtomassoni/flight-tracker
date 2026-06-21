@@ -384,13 +384,103 @@
     return false;
   }
 
-  function applyDisplayedAircraft(list, settings) {
+  var heldDisplay = [];
+  var heldDisplayContextKey = '';
+  var trackWasAirborne = false;
+  var trackWatchKey = '';
+
+  function clearTrackWatch(settings) {
+    var cleared = applySettingsPatch(settings, {
+      trackAirline: '',
+      trackFlightNumber: '',
+    });
+    persistSettings(cleared);
+    return cleared;
+  }
+
+  function resolveTrackWatchAfterPoll(list, settings, wasAirborne) {
+    var target = buildTrackTarget(settings.trackAirline, settings.trackFlightNumber);
+    if (!target) {
+      return { settings: settings, wasAirborne: false, cleared: false };
+    }
+
+    var tracked = findTrackedAircraft(list, target);
+    if (tracked && isAirborne(tracked)) {
+      return { settings: settings, wasAirborne: true, cleared: false };
+    }
+
+    if (tracked && !isAirborne(tracked) && wasAirborne) {
+      return {
+        settings: clearTrackWatch(settings),
+        wasAirborne: false,
+        cleared: true,
+      };
+    }
+
+    return { settings: settings, wasAirborne: wasAirborne, cleared: false };
+  }
+
+  function trackWatchContextKey(settings) {
+    var target = buildTrackTarget(settings.trackAirline, settings.trackFlightNumber);
+    return target ? target.icaoCallsign : '';
+  }
+
+  function applyTrackWatchPoll(list, settings) {
+    var watchKey = trackWatchContextKey(settings);
+    if (trackWatchKey !== watchKey) {
+      trackWatchKey = watchKey;
+      trackWasAirborne = false;
+    }
+
+    if (!watchKey) {
+      return settings;
+    }
+
+    var result = resolveTrackWatchAfterPoll(list, settings, trackWasAirborne);
+    trackWasAirborne = result.wasAirborne;
+    if (result.cleared) {
+      heldDisplay = [];
+      heldDisplayContextKey = '';
+      trackWatchKey = '';
+      return result.settings;
+    }
+    return result.settings;
+  }
+
+  function displayHoldContextKey(settings) {
+    var target = buildTrackTarget(settings.trackAirline, settings.trackFlightNumber);
+    return (
+      Number(settings.lat).toFixed(4) +
+      ',' +
+      Number(settings.lon).toFixed(4) +
+      ',' +
+      (target ? target.icaoCallsign : '')
+    );
+  }
+
+  function resolveDisplayedAircraft(list, settings) {
     var target = buildTrackTarget(settings.trackAirline, settings.trackFlightNumber);
     if (target) {
       var tracked = findTrackedAircraft(list, target);
       return tracked && isAirborne(tracked) ? [tracked] : [];
     }
     return sortAircraft(filterAircraft(list, settings)).slice(0, settings.maxAircraft);
+  }
+
+  function applyDisplayedAircraft(list, settings) {
+    var contextKey = displayHoldContextKey(settings);
+    if (heldDisplayContextKey !== contextKey) {
+      heldDisplayContextKey = contextKey;
+      heldDisplay = [];
+    }
+
+    var next = resolveDisplayedAircraft(list, settings);
+    if (next.length > 0) {
+      heldDisplay = next;
+      return next;
+    }
+
+    return heldDisplay.length > 0 ? heldDisplay : [];
   }
 
   function flightsApiParams(settings) {
@@ -580,6 +670,7 @@
     filterAircraft: filterAircraft,
     buildTrackTarget: buildTrackTarget,
     applyDisplayedAircraft: applyDisplayedAircraft,
+    applyTrackWatchPoll: applyTrackWatchPoll,
     flightsApiParams: flightsApiParams,
     syncServerSettings: syncServerSettings,
     syncLogoManifest: syncLogoManifest,

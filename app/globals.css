@@ -119,11 +119,10 @@ body {
   overflow: hidden;
 }
 
-.kiosk-ticker-x__static {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
+.kiosk-ticker-x__grid {
+  display: grid;
   gap: 0.5rem;
+  justify-content: center;
 }
 
 .kiosk-ticker-x__track {
@@ -196,4 +195,15 @@ body {
   to {
     opacity: 1;
   }
+}
+
+/* Flight map — display-only kiosk; suppress Google Maps hover chrome */
+.flight-map,
+.sky-map-layout__map {
+  pointer-events: none;
+}
+
+.flight-map .gm-style,
+.flight-map .gm-style * {
+  cursor: default !important;
 }

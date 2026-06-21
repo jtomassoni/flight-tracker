@@ -71,3 +71,18 @@ export function getValidatedRoute(ac: NormalizedAircraft): AircraftRoute | undef
   if (!route || !isPlausibleRoute(ac, route)) return undefined;
   return route;
 }
+
+/** Origin/destination labels — only when position validates the filed route. */
+export function getDisplayRoute(ac: NormalizedAircraft): AircraftRoute | undefined {
+  return getValidatedRoute(ac);
+}
+
+/**
+ * Filed route with airport coordinates that contradict live position — e.g. a
+ * DTW→ORD lookup while the aircraft is over Denver.
+ */
+export function hasContradictoryRoute(ac: NormalizedAircraft): boolean {
+  const route = ac.route;
+  if (!route || !hasRouteCoordinates(route)) return false;
+  return !isPlausibleRoute(ac, route);
+}

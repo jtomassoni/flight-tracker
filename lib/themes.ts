@@ -3,8 +3,6 @@ import type { ThemeId } from './settings';
 export type LayoutId =
   | 'departure-table'
   | 'split-flap-board'
-  | 'airline-gallery'
-  | 'first-class-hero'
   | 'radar-scope'
   | 'google-map'
   | 'led-matrix';
@@ -15,6 +13,11 @@ export type ThemeDefinition = {
   description: string;
   layout: LayoutId;
   cssVars: Record<string, string>;
+  /** Static masthead shown above the split-flap departure rows */
+  boardHeader?: {
+    title: string;
+    subtitle?: string;
+  };
 };
 
 export const THEMES: Record<ThemeId, ThemeDefinition> = {
@@ -41,9 +44,13 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = {
   },
   'british-bus': {
     id: 'british-bus',
-    name: 'British Bus Terminal',
-    description: 'Black Solari split-flap board — ID, destination, and time columns.',
+    name: 'Train Station',
+    description: 'Black Solari split-flap board — airline, flight, city, status, and est. time.',
     layout: 'split-flap-board',
+    boardHeader: {
+      title: 'King Street Station',
+      subtitle: 'Est 1952',
+    },
     cssVars: {
       '--background': '#0a0a0a',
       '--foreground': '#f0f0f0',
@@ -55,42 +62,6 @@ export const THEMES: Record<ThemeId, ThemeDefinition> = {
       '--font-mono': 'var(--font-barlow-condensed), "Arial Narrow", Arial, sans-serif',
       '--font-serif': 'var(--font-barlow-condensed), Arial, sans-serif',
       '--glow': 'none',
-    },
-  },
-  'elegant-modern': {
-    id: 'elegant-modern',
-    name: 'Elegant & Modern',
-    description: 'Magazine-style card grid with airline logos and livery accents.',
-    layout: 'airline-gallery',
-    cssVars: {
-      '--background': '#0f172a',
-      '--foreground': '#f8fafc',
-      '--accent': '#38bdf8',
-      '--muted': '#94a3b8',
-      '--panel': '#1e293b',
-      '--border': '#334155',
-      '--font-display': 'var(--font-dm-sans), system-ui, sans-serif',
-      '--font-mono': 'var(--font-jetbrains), ui-monospace, monospace',
-      '--font-serif': 'var(--font-dm-sans), system-ui, sans-serif',
-      '--glow': '0 0 24px rgba(56, 189, 248, 0.18)',
-    },
-  },
-  'midnight-luxe': {
-    id: 'midnight-luxe',
-    name: 'Midnight First Class',
-    description: 'Cinematic hero spotlight with a gold filmstrip of traffic below.',
-    layout: 'first-class-hero',
-    cssVars: {
-      '--background': '#0a0908',
-      '--foreground': '#f5f0e6',
-      '--accent': '#c9a962',
-      '--muted': '#8a8175',
-      '--panel': '#141210',
-      '--border': '#2a2620',
-      '--font-display': 'var(--font-playfair), Georgia, serif',
-      '--font-mono': 'var(--font-jetbrains), ui-monospace, monospace',
-      '--font-serif': 'var(--font-playfair), Georgia, serif',
-      '--glow': '0 0 20px rgba(201, 169, 98, 0.25)',
     },
   },
   'radar-ops': {
@@ -168,8 +139,6 @@ export function getThemeSwatches(theme: ThemeDefinition): string[] {
 export const LAYOUT_LABELS: Record<LayoutId, string> = {
   'departure-table': 'Departure board',
   'split-flap-board': 'Split-flap board',
-  'airline-gallery': 'Card gallery',
-  'first-class-hero': 'Hero spotlight',
   'radar-scope': 'Radar scope',
   'google-map': 'Live map',
   'led-matrix': 'LED matrix',

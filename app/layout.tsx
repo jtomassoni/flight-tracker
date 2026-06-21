@@ -2,21 +2,15 @@ import type { Metadata, Viewport } from 'next';
 import {
   Barlow_Condensed,
   DM_Sans,
-  IBM_Plex_Mono,
   JetBrains_Mono,
   Pixelify_Sans,
-  Playfair_Display,
   Share_Tech_Mono,
-  Syne,
 } from 'next/font/google';
 import './globals.css';
 
 const shareTechMono = Share_Tech_Mono({ weight: '400', subsets: ['latin'], variable: '--font-share-tech' });
-const playfair = Playfair_Display({ weight: ['600', '700'], subsets: ['latin'], variable: '--font-playfair' });
-const ibmPlexMono = IBM_Plex_Mono({ weight: ['400', '600'], subsets: ['latin'], variable: '--font-ibm-plex' });
 const dmSans = DM_Sans({ weight: ['400', '600', '700'], subsets: ['latin'], variable: '--font-dm-sans' });
 const jetbrains = JetBrains_Mono({ weight: ['400', '600'], subsets: ['latin'], variable: '--font-jetbrains' });
-const syne = Syne({ weight: ['500', '600', '700'], subsets: ['latin'], variable: '--font-syne' });
 const barlowCondensed = Barlow_Condensed({
   weight: ['500', '600', '700'],
   subsets: ['latin'],
@@ -24,16 +18,18 @@ const barlowCondensed = Barlow_Condensed({
 });
 const pixelify = Pixelify_Sans({ weight: '400', subsets: ['latin'], variable: '--font-pixel' });
 
+const isLocalDev = process.env.NODE_ENV === 'development';
+
 export const metadata: Metadata = {
   title: {
-    default: 'Flight Tracker — Denver',
-    template: '%s | Flight Tracker',
+    default: isLocalDev ? 'Local - Flight Tracker' : 'Flight Tracker — Denver',
+    template: isLocalDev ? '%s | Local - Flight Tracker' : '%s | Flight Tracker',
   },
   description: 'Personal flight display dashboard for aircraft near Denver, CO.',
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'Flight Tracker',
+    title: isLocalDev ? 'Local - Flight Tracker' : 'Flight Tracker',
   },
   formatDetection: {
     telephone: false,
@@ -53,7 +49,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${shareTechMono.variable} ${playfair.variable} ${ibmPlexMono.variable} ${dmSans.variable} ${jetbrains.variable} ${syne.variable} ${barlowCondensed.variable} ${pixelify.variable}`}
+      className={`${shareTechMono.variable} ${dmSans.variable} ${jetbrains.variable} ${barlowCondensed.variable} ${pixelify.variable}`}
     >
       <body suppressHydrationWarning>{children}</body>
     </html>

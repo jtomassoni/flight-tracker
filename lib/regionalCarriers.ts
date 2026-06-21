@@ -92,8 +92,8 @@ export function formatBrandedCallsign(callsign?: string): string {
   const regional = REGIONAL_OPERATORS[prefix];
   const mainline = resolveMainlineIcao(raw);
   const suffix = raw.slice(3);
-  if (regional) return `${mainline}(${regional.icao})${suffix}`;
-  return `${mainline}${suffix}`;
+  if (regional) return `${mainline}(${regional.icao}) ${suffix}`;
+  return `${mainline} ${suffix}`;
 }
 
 /** Carrier label for flight IDs — UAL(SKW) or UA */

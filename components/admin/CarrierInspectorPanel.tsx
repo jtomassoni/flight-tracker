@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useCallback, useEffect, useMemo, useState, Fragment, type CSSProperties } from 'react';
 import { useSearchParams } from 'next/navigation';
 import AirlineLedLogoTile from '@/components/admin/AirlineLedLogoTile';
 import AirlineLogoImage from '@/components/display/shared/AirlineLogoImage';
@@ -228,145 +228,54 @@ function GalleryCardPreview({
   return (
     <div className={`theme-tester__gallery-stage${compact ? ' theme-tester__gallery-stage--compact' : ''}`}>
       <article
-        className={`gallery-card theme-tester__gallery-card-full flex flex-col overflow-hidden rounded-xl${compact ? ' theme-tester__gallery-card--compact' : ''}`}
-        style={{
-          background: tile.cardBackground,
-          border: `2px solid ${tile.borderColor}`,
-          color: tile.textColor,
-          ['--tile-border' as string]: tile.borderColor,
-          ['--tile-glow' as string]: tile.borderColor,
-          ['--tile-badge' as string]: tile.badgeBackground,
-          ['--tile-stat-bg' as string]: tile.statBackground,
-          ['--tile-stat-alt-bg' as string]: tile.statAltBackground,
-        }}
+        className={`gallery-card theme-tester__gallery-card-full${compact ? ' theme-tester__gallery-card--compact' : ''}`}
+        style={{ ['--tile-accent' as string]: tile.borderColor }}
       >
-        <div
-          className="gallery-card__accent-bar h-2 shrink-0"
-          style={{ background: tile.accentBarColor }}
-          aria-hidden
-        />
-
-        <div
-          className={`gallery-card__header flex items-center gap-2 ${compact ? 'px-3 py-2' : 'gap-3 px-4 py-3 sm:gap-4 sm:px-5 sm:py-4'}`}
-          style={{ background: tile.headerBackground }}
-        >
-          <div
-            className={`gallery-card__logo relative shrink-0 overflow-hidden rounded-lg ${compact ? 'h-10 w-10' : 'h-14 w-14 sm:h-16 sm:w-16'}`}
-            style={{
-              backgroundColor: tile.logoBackground,
-              border: `1px solid ${tile.borderColor}44`,
-            }}
-          >
-            <AirlineLogoImage
-              brand={brand}
-              size={128}
-              background={tile.logoBackground}
-              alt={brand.name}
-              fill
-              className="object-contain p-2"
-              logoUrl={logoUrl}
-            />
+        <div className="gallery-card__stripe" aria-hidden />
+        <div className="gallery-card__body">
+          <div className={`gallery-card__top ${compact ? 'px-3 py-2' : ''}`}>
+            <div className={`gallery-card__logo relative ${compact ? 'h-9 w-9' : 'h-11 w-11 sm:h-12 sm:w-12'}`}>
+              <AirlineLogoImage
+                brand={brand}
+                size={128}
+                background="transparent"
+                alt={brand.name}
+                fill
+                className="object-contain p-1.5"
+                logoUrl={logoUrl}
+              />
+            </div>
+            <div className="gallery-card__identity">
+              <p className={`gallery-card__callsign truncate ${compact ? 'text-base' : ''}`}>{flightId}</p>
+              <p className="gallery-card__airline truncate">{brand.name}</p>
+              {!compact && (
+                <p className="gallery-card__codes font-mono">
+                  {brand.icao} · {brand.iata}
+                </p>
+              )}
+            </div>
           </div>
-          <div className="relative min-w-0">
-            <p
-              className={`truncate font-bold tracking-tight ${compact ? 'text-base' : 'text-xl sm:text-2xl'}`}
-              style={{ color: tile.headerTextColor }}
-            >
-              {flightId}
-            </p>
-            <p className={`font-semibold ${compact ? 'text-xs' : 'text-sm'}`} style={{ color: tile.headerTextColor }}>
-              {brand.name}
-            </p>
-            {!compact && (
-            <p
-              className="mt-0.5 font-mono text-[10px] uppercase tracking-widest"
-              style={{ color: tile.headerMutedColor }}
-            >
-              {brand.icao} · {brand.iata}
-            </p>
-            )}
+
+          <div className={`gallery-card__metrics ${compact ? 'mx-3' : ''}`}>
+            {SAMPLE_STATS.map(([label, main, unit], i) => (
+              <Fragment key={label}>
+                {i > 0 && <div className="gallery-metric-divider" aria-hidden />}
+                <div className={`gallery-metric ${compact ? 'py-2 px-1' : ''}`}>
+                  <span className="gallery-metric__label">{label}</span>
+                  <span className={`gallery-metric__value ${compact ? 'text-base' : ''}`}>
+                    {main}
+                    <span className="gallery-metric__unit">{unit}</span>
+                  </span>
+                </div>
+              </Fragment>
+            ))}
+          </div>
+
+          <div className={`gallery-card__footer ${compact ? 'px-3 py-2' : ''}`}>
+            <span className="gallery-badge">Climbing</span>
+            <span className="gallery-card__source">Sample flight</span>
           </div>
         </div>
-
-        {!compact && (
-        <div className="gallery-stats-grid grid flex-1 grid-cols-2 gap-1.5 p-3">
-          {SAMPLE_STATS.map(([label, main, unit], i) => (
-            <div
-              key={label}
-              className={`gallery-stat flex h-full flex-col justify-between rounded-lg px-4 py-3 ${i % 2 === 1 ? 'gallery-stat--alt' : ''}`}
-            >
-              <p
-                className="relative text-[11px] font-semibold uppercase tracking-wider"
-                style={{ color: tile.labelColor }}
-              >
-                {label}
-              </p>
-              <p className="gallery-stat__value relative mt-1 flex items-baseline gap-1 font-mono leading-none">
-                <span className="text-3xl font-bold sm:text-4xl">{main}</span>
-                <span
-                  className="text-sm font-semibold uppercase tracking-wide"
-                  style={{ color: tile.labelColor }}
-                >
-                  {unit}
-                </span>
-              </p>
-            </div>
-          ))}
-        </div>
-        )}
-
-        {compact && (
-        <div className="theme-tester__gallery-stats-mini grid grid-cols-2 gap-1 p-2">
-          {SAMPLE_STATS.map(([label, main, unit], i) => (
-            <div
-              key={label}
-              className={`gallery-stat flex flex-col rounded-md px-2 py-1.5 ${i % 2 === 1 ? 'gallery-stat--alt' : ''}`}
-            >
-              <p className="text-[9px] font-semibold uppercase tracking-wider" style={{ color: tile.labelColor }}>
-                {label}
-              </p>
-              <p className="mt-0.5 font-mono text-sm font-bold leading-none" style={{ color: tile.headerTextColor }}>
-                {main}
-                <span className="ml-0.5 text-[10px] font-semibold uppercase opacity-80">{unit}</span>
-              </p>
-            </div>
-          ))}
-        </div>
-        )}
-
-        {compact && (
-        <div
-          className="flex items-center justify-between px-3 py-2"
-          style={{ borderTop: `1px solid ${tile.borderColor}55` }}
-        >
-          <span
-            className="gallery-badge rounded-full px-2.5 py-0.5 text-[10px] font-semibold capitalize"
-            style={{ color: tile.badgeTextColor }}
-          >
-            Climbing
-          </span>
-          <span className="font-mono text-[9px]" style={{ color: tile.mutedTextColor }}>
-            Sample flight
-          </span>
-        </div>
-        )}
-
-        {!compact && (
-        <div
-          className="mt-auto flex items-center justify-between px-5 py-3"
-          style={{ borderTop: `1px solid ${tile.borderColor}55` }}
-        >
-          <span
-            className="gallery-badge rounded-full px-3 py-1 text-xs font-semibold capitalize"
-            style={{ color: tile.badgeTextColor }}
-          >
-            Climbing
-          </span>
-          <span className="font-mono text-[10px]" style={{ color: tile.mutedTextColor }}>
-            Sample flight
-          </span>
-        </div>
-        )}
       </article>
     </div>
   );

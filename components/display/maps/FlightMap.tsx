@@ -1,24 +1,18 @@
 'use client';
 
 import { useMemo } from 'react';
+import { useAnimatedAircraft } from '@/hooks/useAnimatedAircraft';
 import { useKioskViewport } from '@/hooks/useKioskViewport';
-import { displayIdentifier, getVerticalTrend } from '@/lib/aircraftUtils';
 import {
-  buildAircraftMarkerIcon,
   buildCenterMarkerIcon,
   SKY_MAP_STYLES,
 } from '@/lib/mapMarkers';
 import { skyMapZoomForViewport, skyMapZoomLimits, type SkyMapZoomMode } from '@/lib/skyMapZoom';
 import { Circle, GoogleMap, Marker, useJsApiLoader } from '@react-google-maps/api';
 import type { NormalizedAircraft } from '@/types/aircraft';
+import AircraftMapMarker from './AircraftMapMarker';
 
 const MAP_CONTAINER_STYLE = { width: '100%', height: '100%' };
-
-const TREND_COLOR: Record<string, string> = {
-  climbing: '#22d3ee',
-  descending: '#f97316',
-  level: '#a3e635',
-};
 
 type FlightMapProps = {
   centerLat: number;
@@ -27,6 +21,8 @@ type FlightMapProps = {
   aircraft: NormalizedAircraft[];
   locationLabel: string;
   skyMapZoom: SkyMapZoomMode;
+  dataUpdatedAt?: Date | null;
+  animateAircraft?: boolean;
 };
 
 function milesToMeters(mi: number): number {
@@ -39,11 +35,14 @@ export default function FlightMap({
   radiusMi,
   aircraft,
   skyMapZoom,
+  dataUpdatedAt = null,
+  animateAircraft = true,
 }: FlightMapProps) {
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '';
   const viewport = useKioskViewport();
   const mapZoom = skyMapZoomForViewport(skyMapZoom, viewport);
   const { minZoom, maxZoom } = skyMapZoomLimits();
+  const animatedAircraft = useAnimatedAircraft(aircraft, dataUpdatedAt, animateAircraft);
 
   const { isLoaded, loadError } = useJsApiLoader({
     id: 'flight-tracker-google-map',
@@ -114,6 +113,7 @@ export default function FlightMap({
 
   return (
     <GoogleMap
+      mapContainerClassName="flight-map pointer-events-none"
       mapContainerStyle={MAP_CONTAINER_STYLE}
       center={center}
       zoom={mapZoom}
@@ -133,26 +133,9 @@ export default function FlightMap({
         }}
       />
 
-      {aircraft.map((ac) => {
-        const trend = getVerticalTrend(ac.verticalRateFpm);
-        const color = TREND_COLOR[trend] ?? '#38bdf8';
-        const heading = ac.headingDeg ?? 0;
-        const label = displayIdentifier(ac);
-        const iconDef = buildAircraftMarkerIcon(label, heading, color, viewport);
-
-        return (
-          <Marker
-            key={ac.hex}
-            position={{ lat: ac.lat, lng: ac.lon }}
-            clickable={false}
-            icon={{
-              url: iconDef.url,
-              scaledSize: new google.maps.Size(iconDef.width, iconDef.height),
-              anchor: new google.maps.Point(iconDef.anchorX, iconDef.anchorY),
-            }}
-          />
-        );
-      })}
+      {animatedAircraft.map((ac) => (
+        <AircraftMapMarker key={ac.hex} aircraft={ac} viewport={viewport} />
+      ))}
     </GoogleMap>
   );
 }

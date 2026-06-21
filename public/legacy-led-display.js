@@ -130,6 +130,7 @@
         return;
       }
 
+      settings = shared.applyTrackWatchPoll(data.aircraft || [], settings);
       aircraftList = sortWithRoutesFirst(
         shared.applyDisplayedAircraft(data.aircraft || [], settings)
       );

@@ -902,18 +902,55 @@ var LegacyLedWall = (() => {
     const a = __pow(Math.sin(dLat / 2), 2) + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * __pow(Math.sin(dLon / 2), 2);
     return EARTH_RADIUS_MI * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
+  function bearingDeg(lat1, lon1, lat2, lon2) {
+    const toRad = (deg) => deg * Math.PI / 180;
+    const toDeg = (rad) => rad * 180 / Math.PI;
+    const dLon = toRad(lon2 - lon1);
+    const y = Math.sin(dLon) * Math.cos(toRad(lat2));
+    const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLon);
+    return (toDeg(Math.atan2(y, x)) + 360) % 360;
+  }
+  function crossTrackDistanceMi(lat, lon, lat1, lon1, lat2, lon2) {
+    const toRad = (deg) => deg * Math.PI / 180;
+    const angularDist = distanceMi(lat1, lon1, lat, lon) / EARTH_RADIUS_MI;
+    const bearingToPoint = toRad(bearingDeg(lat1, lon1, lat, lon));
+    const bearingOnLeg = toRad(bearingDeg(lat1, lon1, lat2, lon2));
+    const crossTrackRad = Math.asin(
+      Math.sin(angularDist) * Math.sin(bearingToPoint - bearingOnLeg)
+    );
+    return Math.abs(crossTrackRad) * EARTH_RADIUS_MI;
+  }
 
   // lib/routePlausibility.ts
-  function hasAirportCodes(route) {
-    var _a, _b, _c, _d;
-    return Boolean(
-      ((_a = route.originIata) == null ? void 0 : _a.trim()) || ((_b = route.originIcao) == null ? void 0 : _b.trim()) || ((_c = route.destIata) == null ? void 0 : _c.trim()) || ((_d = route.destIcao) == null ? void 0 : _d.trim())
-    );
+  var MAX_CROSS_TRACK_MI = 150;
+  var MAX_SEGMENT_RATIO = 1.35;
+  var NEAR_AIRPORT_MI = 45;
+  function hasRouteCoordinates(route) {
+    return route.originLat != null && route.originLon != null && route.destLat != null && route.destLon != null;
   }
-  function getFiledRoute(ac) {
+  function isPlausibleRoute(ac, route) {
+    if (!hasRouteCoordinates(route)) return false;
+    const oLat = route.originLat;
+    const oLon = route.originLon;
+    const dLat = route.destLat;
+    const dLon = route.destLon;
+    const legMi = distanceMi(oLat, oLon, dLat, dLon);
+    if (!(legMi > 1)) return false;
+    const toOrigin = distanceMi(oLat, oLon, ac.lat, ac.lon);
+    const toDest = distanceMi(dLat, dLon, ac.lat, ac.lon);
+    if (toOrigin <= NEAR_AIRPORT_MI || toDest <= NEAR_AIRPORT_MI) return true;
+    const crossTrack = crossTrackDistanceMi(ac.lat, ac.lon, oLat, oLon, dLat, dLon);
+    if (crossTrack > MAX_CROSS_TRACK_MI) return false;
+    if ((toOrigin + toDest) / legMi > MAX_SEGMENT_RATIO) return false;
+    return true;
+  }
+  function getValidatedRoute(ac) {
     const route = ac.route;
-    if (!route || !hasAirportCodes(route)) return void 0;
+    if (!route || !isPlausibleRoute(ac, route)) return void 0;
     return route;
+  }
+  function getDisplayRoute(ac) {
+    return getValidatedRoute(ac);
   }
 
   // lib/ledFlightWall.ts
@@ -921,7 +958,7 @@ var LegacyLedWall = (() => {
     return ((iata == null ? void 0 : iata.trim()) || (icao == null ? void 0 : icao.trim()) || "").toUpperCase();
   }
   function ledRouteLabel(ac) {
-    const route = getFiledRoute(ac);
+    const route = getDisplayRoute(ac);
     if (!route) return "";
     const origin = airportCode(route.originIata, route.originIcao);
     const dest = airportCode(route.destIata, route.destIcao);
@@ -938,7 +975,7 @@ var LegacyLedWall = (() => {
     return `${left}\u2192${right}`;
   }
   function computeFlightProgress(ac) {
-    const route = getFiledRoute(ac);
+    const route = getDisplayRoute(ac);
     if (!route || route.originLat == null || route.originLon == null || route.destLat == null || route.destLon == null) {
       return null;
     }
@@ -1183,7 +1220,7 @@ var LegacyLedWall = (() => {
     return { scaleX: 1, scaleY: 1 };
   }
   function pickWallFlightIdScale(text, bandW, bandH) {
-    for (const scale of [2, 1.5, 1]) {
+    for (const scale of [3, 2.5, 2, 1.5, 1]) {
       const { width, height } = ledScaledTextMetrics(text, scale, scale);
       if (width <= bandW && height + 2 <= bandH) {
         return { scaleX: scale, scaleY: scale };
@@ -1193,25 +1230,10 @@ var LegacyLedWall = (() => {
   }
   function pickTelemetryScale(text, bandW, bandH) {
     const cellH = ledCharCellH();
-    const scales = bandH >= cellH * 4 ? [2, 1.5, 1, 0.85, 0.75, 0.65] : bandH >= cellH * 2.5 ? [1.5, 1, 0.85, 0.75, 0.65] : [1, 0.85, 0.75, 0.65];
+    const scales = bandH >= cellH * 5 ? [3, 2.5, 2, 1.5, 1, 0.85, 0.75, 0.65] : bandH >= cellH * 4 ? [2.5, 2, 1.5, 1, 0.85, 0.75, 0.65] : bandH >= cellH * 2.5 ? [1.5, 1, 0.85, 0.75, 0.65] : [1, 0.85, 0.75, 0.65];
     for (const scale of scales) {
       const { width, height } = ledScaledTextMetrics(text, scale, scale);
       if (width <= bandW && height + 1 <= bandH) {
-        return { scaleX: scale, scaleY: scale };
-      }
-    }
-    return { scaleX: 0.65, scaleY: 0.65 };
-  }
-  function pickStatsPairScale(leftText, rightText, leftW, rightW, bandH) {
-    const cellH = ledCharCellH();
-    const scales = bandH >= cellH * 2.5 ? [1.5, 1.25, 1, 0.85, 0.75, 0.65] : [1.25, 1, 0.85, 0.75, 0.65];
-    for (const scale of scales) {
-      const left = truncateLedTextScaled(leftText, leftW, scale);
-      const right = truncateLedTextScaled(rightText, rightW, scale);
-      const leftMetrics = ledScaledTextMetrics(left, scale, scale);
-      const rightMetrics = ledScaledTextMetrics(right, scale, scale);
-      const rowH = Math.max(leftMetrics.height, rightMetrics.height);
-      if (leftMetrics.width <= leftW && rightMetrics.width <= rightW && rowH + 1 <= bandH) {
         return { scaleX: scale, scaleY: scale };
       }
     }
@@ -1902,7 +1924,7 @@ var LegacyLedWall = (() => {
     const statusFields = telemetry.filter((f) => f.emphasis === "status");
     const measureFields = telemetry.filter((f) => f.emphasis === "measure");
     if (!typeField || !speedField) return telemetry.filter(Boolean);
-    return [typeField, ...statusFields, ...measureFields, speedField];
+    return [typeField, ...statusFields, speedField, ...measureFields];
   }
   function rightLedTextXScaled(text, bandX, bandW, scaleX) {
     const display = truncateLedTextScaled(text, bandW, scaleX);
@@ -1945,115 +1967,116 @@ var LegacyLedWall = (() => {
     );
     ctx.restore();
   }
-  function allocateStatsDashboardHeights(statsZoneH, gap) {
-    const dataH = Math.max(ledCharCellH() + 1, Math.floor(statsZoneH * 0.38));
-    const heroH = Math.max(ledCharCellH() * 2, statsZoneH - dataH - gap);
-    const used = heroH + gap + dataH;
-    const inset = Math.max(0, Math.floor((statsZoneH - used) / 2));
-    return { heroH, dataH, inset };
+  function allocateStatsDashboardHeights(statsZoneH, gap, rowCount, options) {
+    const weights = rowCount === 4 ? [0.14, 0.36, 0.28, 0.22] : rowCount === 3 ? [0.2, 0.44, 0.36] : [0.32, 0.68];
+    const totalGap = gap * (rowCount - 1);
+    const usable = Math.max(rowCount, statsZoneH - totalGap);
+    const weightSum = weights.reduce((sum, w) => sum + w, 0);
+    const rowHeights = weights.map((w) => Math.max(1, Math.floor(usable * w / weightSum)));
+    const used = rowHeights.reduce((sum, h) => sum + h, 0);
+    rowHeights[rowCount - 1] = Math.max(1, rowHeights[rowCount - 1] + (usable - used));
+    const inset = (options == null ? void 0 : options.wall) ? 0 : Math.max(0, Math.floor((statsZoneH - used - totalGap) / 2));
+    return { rowHeights, inset };
   }
-  function drawStatsTypeBadge(ctx, text, textX, textW, bandY, color) {
-    drawLedTextCompact(ctx, text, textX, bandY, color, textW);
+  function drawStatsDashboard(ctx, textX, textW, statsZoneTop, statsZoneH, gap, wall, typeField, statusField, primaryField, measureField) {
+    const rowCount = 4;
+    const { rowHeights, inset } = allocateStatsDashboardHeights(statsZoneH, gap, rowCount, {
+      wall
+    });
+    let top = statsZoneTop + inset;
+    const phaseScale = wall ? pickWallFlightIdScale : pickFlightIdScale;
+    drawStatsTextInBand(
+      ctx,
+      typeField.value,
+      textX,
+      top,
+      textW,
+      rowHeights[0],
+      ledEmphasisColor(typeField.emphasis),
+      "center",
+      pickTelemetryScale
+    );
+    top += rowHeights[0] + gap;
+    drawStatsTextInBand(
+      ctx,
+      statusField.value,
+      textX,
+      top,
+      textW,
+      rowHeights[1],
+      ledEmphasisColor(statusField.emphasis),
+      "center",
+      phaseScale
+    );
+    top += rowHeights[1] + gap;
+    drawStatsTextInBand(
+      ctx,
+      primaryField.value,
+      textX,
+      top,
+      textW,
+      rowHeights[2],
+      ledEmphasisColor(primaryField.emphasis),
+      "center",
+      pickTelemetryScale
+    );
+    top += rowHeights[2] + gap;
+    drawStatsTextInBand(
+      ctx,
+      measureField.value,
+      textX,
+      top,
+      textW,
+      rowHeights[3],
+      ledEmphasisColor(measureField.emphasis),
+      "center",
+      pickTelemetryScale
+    );
   }
-  function drawStatsHeroRow(ctx, typeField, heroField, textX, textW, bandY, bandH) {
+  function drawStatsGroundLayout(ctx, textX, textW, statsZoneTop, statsZoneH, gap, wall, typeField, heroField, measureField) {
+    const rowCount = measureField ? 3 : 2;
+    const { rowHeights, inset } = allocateStatsDashboardHeights(statsZoneH, gap, rowCount, {
+      wall
+    });
+    let top = statsZoneTop + inset;
+    const heroScale = wall ? pickWallFlightIdScale : pickFlightIdScale;
+    drawStatsTextInBand(
+      ctx,
+      typeField.value,
+      textX,
+      top,
+      textW,
+      rowHeights[0],
+      ledEmphasisColor(typeField.emphasis),
+      "center",
+      pickTelemetryScale
+    );
+    top += rowHeights[0] + gap;
     drawStatsTextInBand(
       ctx,
       heroField.value,
       textX,
-      bandY,
+      top,
       textW,
-      bandH,
+      rowHeights[1],
       ledEmphasisColor(heroField.emphasis),
       "center",
-      pickFlightIdScale
+      heroScale
     );
-    drawStatsTypeBadge(
-      ctx,
-      typeField.value,
-      textX,
-      textW,
-      bandY,
-      ledEmphasisColor(typeField.emphasis)
-    );
-  }
-  function drawStatsPairRow(ctx, leftText, rightText, leftColor, rightColor, textX, textW, bandY, bandH) {
-    const gutter = 3;
-    const halfW = Math.floor((textW - gutter) / 2);
-    const rightX = textX + halfW + gutter;
-    const rightW = textW - halfW - gutter;
-    const scale = pickStatsPairScale(leftText, rightText, halfW, rightW, bandH);
-    const leftDisplay = truncateLedTextScaled(leftText, halfW, scale.scaleX);
-    const rightDisplay = truncateLedTextScaled(rightText, rightW, scale.scaleX);
-    const leftMetrics = ledScaledTextMetrics(leftDisplay, scale.scaleX, scale.scaleY);
-    const rightMetrics = ledScaledTextMetrics(rightDisplay, scale.scaleX, scale.scaleY);
-    const rowH = Math.max(leftMetrics.height, rightMetrics.height);
-    const y = bandY + Math.round((bandH - rowH) / 2);
-    const dotX = textX + halfW + Math.floor(gutter / 2);
-    ctx.save();
-    ctx.beginPath();
-    ctx.rect(textX, bandY, textW, bandH);
-    ctx.clip();
-    drawLedTextScaled(
-      ctx,
-      leftDisplay,
-      textX,
-      y,
-      leftColor,
-      halfW,
-      scale.scaleX,
-      scale.scaleY,
-      scale.scaleX === 1
-    );
-    drawLedTextScaled(
-      ctx,
-      rightDisplay,
-      rightLedTextXScaled(rightDisplay, rightX, rightW, scale.scaleX),
-      y,
-      rightColor,
-      rightW,
-      scale.scaleX,
-      scale.scaleY,
-      scale.scaleX === 1
-    );
-    if (bandH >= ledCharCellH()) {
-      ctx.fillStyle = LED_COLORS.dim;
-      ctx.fillRect(dotX, bandY + Math.floor(bandH / 2), 1, 1);
+    top += rowHeights[1] + gap;
+    if (measureField && rowCount >= 3) {
+      drawStatsTextInBand(
+        ctx,
+        measureField.value,
+        textX,
+        top,
+        textW,
+        rowHeights[2],
+        ledEmphasisColor(measureField.emphasis),
+        "center",
+        pickTelemetryScale
+      );
     }
-    ctx.restore();
-  }
-  function drawStatsDashboard(ctx, textX, textW, statsZoneTop, statsZoneH, gap, typeField, heroField, measureField, primaryField) {
-    const { heroH, dataH, inset } = allocateStatsDashboardHeights(statsZoneH, gap);
-    let top = statsZoneTop + inset;
-    drawStatsHeroRow(ctx, typeField, heroField, textX, textW, top, heroH);
-    top += heroH + gap;
-    drawStatsPairRow(
-      ctx,
-      measureField.value,
-      primaryField.value,
-      LED_COLORS.phosphor,
-      LED_COLORS.hero,
-      textX,
-      textW,
-      top,
-      dataH
-    );
-  }
-  function drawStatsGroundLayout(ctx, textX, textW, statsZoneTop, statsZoneH, gap, typeField, heroField, measureField) {
-    const { heroH, dataH, inset } = allocateStatsDashboardHeights(statsZoneH, gap);
-    let top = statsZoneTop + inset;
-    drawStatsHeroRow(ctx, typeField, heroField, textX, textW, top, heroH);
-    top += heroH + gap;
-    drawStatsTextInBand(
-      ctx,
-      measureField.value,
-      textX,
-      top,
-      textW,
-      dataH,
-      LED_COLORS.phosphor,
-      "left",
-      pickTelemetryScale
-    );
   }
   function drawStatsRow(ctx, layout, telemetry) {
     var _a;
@@ -2075,14 +2098,15 @@ var LegacyLedWall = (() => {
         statsZoneTop,
         statsZoneH,
         gap,
+        wall,
         typeField,
         statusField,
-        measureField,
-        primaryField
+        primaryField,
+        measureField
       );
       return;
     }
-    if (typeField && !statusField && measureField && primaryField) {
+    if (typeField && !statusField && primaryField) {
       drawStatsGroundLayout(
         ctx,
         textX,
@@ -2090,6 +2114,7 @@ var LegacyLedWall = (() => {
         statsZoneTop,
         statsZoneH,
         gap,
+        wall,
         typeField,
         primaryField,
         measureField

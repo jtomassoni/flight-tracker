@@ -7,6 +7,12 @@
   --den-row-border: rgba(255, 255, 255, 0.08);
   --den-white: #ffffff;
   --den-yellow: #f5e842;
+  --fids-logo-w: 5.25rem;
+  --fids-logo-h: 1.85rem;
+  --fids-grid-gap: 0.65rem;
+  --fids-grid-pad: 0.65rem;
+  --fids-grid-cols: minmax(0, 0.95fr) minmax(0, 0.95fr) var(--fids-logo-w) minmax(6.75rem, 1.15fr)
+    minmax(5.5rem, 0.8fr);
   font-family: var(--font-barlow-condensed), Arial, Helvetica, sans-serif;
   background: var(--den-bg);
   color: var(--den-white);
@@ -20,6 +26,7 @@
   position: relative;
   display: flex;
   flex-direction: column;
+  flex: 1 1 0%;
   min-width: 0;
   background: var(--den-bg);
   border-right: 1px solid var(--den-row-border);
@@ -93,12 +100,12 @@
 /* Column headers — white like the real boards */
 .den-fids__col-header {
   display: grid;
-  grid-template-columns: 1fr 1fr 0.8fr 0.7fr 0.75fr;
-  gap: 0.35rem;
+  grid-template-columns: var(--fids-grid-cols);
+  column-gap: var(--fids-grid-gap);
   align-items: end;
   background: var(--den-header);
-  padding: 0.4rem 0.55rem 0.35rem;
-  font-size: clamp(0.58rem, 1.1vw, 0.72rem);
+  padding: 0.45rem var(--fids-grid-pad) 0.4rem;
+  font-size: clamp(0.65rem, 1.25vw, 0.82rem);
   font-weight: 700;
   letter-spacing: 0.03em;
   text-transform: uppercase;
@@ -106,18 +113,26 @@
   border-bottom: 1px solid var(--den-row-border);
 }
 
+.den-fids__col-header span:nth-child(3) {
+  text-align: center;
+}
+
 /* Rows — uniform navy, thin separators */
 .den-fids__row {
   display: grid;
-  grid-template-columns: 1fr 1fr 0.8fr 0.7fr 0.75fr;
-  gap: 0.35rem;
+  grid-template-columns: var(--fids-grid-cols);
+  column-gap: var(--fids-grid-gap);
   align-items: center;
-  padding: 0.28rem 0.55rem;
-  font-size: clamp(0.72rem, 1.35vw, 0.9rem);
-  line-height: 1.25;
-  min-height: 2.35rem;
+  padding: 0.28rem var(--fids-grid-pad);
+  font-size: clamp(0.9rem, 1.65vw, 1.15rem);
+  line-height: 1.15;
+  min-height: 2.15rem;
   background: var(--den-row);
   border-bottom: 1px solid var(--den-row-border);
+}
+
+.den-fids__row > * {
+  min-width: 0;
 }
 
 .den-fids__dest {
@@ -128,22 +143,46 @@
   text-overflow: ellipsis;
 }
 
+.den-fids__dest--pending {
+  font-weight: 600;
+  font-style: italic;
+  letter-spacing: 0.04em;
+  color: rgba(255, 255, 255, 0.72);
+  animation: den-fids-route-pulse 2.4s ease-in-out infinite;
+}
+
+.den-fids__dest--na {
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.38);
+}
+
+@keyframes den-fids-route-pulse {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .den-fids__airline {
   display: flex;
   align-items: center;
+  justify-content: center;
   min-width: 0;
 }
 
 .den-fids__logo-wrap {
   flex-shrink: 0;
-  width: 4.5rem;
-  height: 1.65rem;
+  width: var(--fids-logo-w);
+  height: var(--fids-logo-h);
   background: #ffffff;
   border-radius: 1px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.15rem 0.35rem;
+  overflow: hidden;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
@@ -159,6 +198,8 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .den-fids__flight {
@@ -168,8 +209,11 @@
 .den-fids__status {
   font-weight: 700;
   text-transform: uppercase;
-  font-size: 0.92em;
+  font-size: 0.88em;
+  letter-spacing: 0.02em;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .den-fids__status--ontime {
@@ -229,23 +273,19 @@
 
 /* iPad / desk: drop the origin column to fit */
 @media (max-width: 1279px) {
+  .den-fids {
+    --fids-logo-w: 3.75rem;
+    --fids-logo-h: 1.45rem;
+    --fids-grid-cols: minmax(0, 1fr) var(--fids-logo-w) minmax(6.25rem, 1.2fr) minmax(5rem, 0.85fr);
+  }
+
   .den-fids__col-header span:nth-child(1),
   .den-fids__row > *:nth-child(1) {
     display: none;
   }
 
-  .den-fids__col-header,
-  .den-fids__row {
-    grid-template-columns: 1.1fr 0.85fr 0.7fr 0.75fr;
-  }
-
   .den-fids__tagline {
     display: none;
-  }
-
-  .den-fids__logo-wrap {
-    width: 3.75rem;
-    height: 1.45rem;
   }
 }
 
@@ -261,23 +301,18 @@
 
 /* Phone: drop origin + status, keep destination / airline / flight */
 @media (max-width: 639px) {
+  .den-fids {
+    --fids-logo-w: 3.25rem;
+    --fids-logo-h: 1.25rem;
+    --fids-grid-pad: 0.4rem;
+    --fids-grid-cols: minmax(0, 1fr) var(--fids-logo-w) minmax(5.75rem, 1.35fr);
+  }
+
   .den-fids__col-header span:nth-child(1),
   .den-fids__row > *:nth-child(1),
   .den-fids__col-header span:nth-child(5),
   .den-fids__row > *:nth-child(5) {
     display: none;
-  }
-
-  .den-fids__col-header,
-  .den-fids__row {
-    grid-template-columns: 1fr 0.85fr 0.7fr;
-    padding-left: 0.4rem;
-    padding-right: 0.4rem;
-  }
-
-  .den-fids__logo-wrap {
-    width: 3.25rem;
-    height: 1.25rem;
   }
 
   .den-fids__panel-header {
@@ -286,11 +321,6 @@
 }
 
 @media (min-width: 1280px) {
-  .den-fids__logo-wrap {
-    width: 5.25rem;
-    height: 1.85rem;
-  }
-
   .den-fids__airport-name {
     font-size: 0.55rem;
   }

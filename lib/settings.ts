@@ -4,6 +4,7 @@ import {
   DEFAULT_LOCATION_LABEL,
   DEFAULT_ZIP,
   SETTINGS_CHANGED_EVENT,
+  SETTINGS_SAVED_AT_KEY,
   SETTINGS_STORAGE_KEY,
 } from './constants';
 import {
@@ -27,8 +28,6 @@ export type DisplayMode =
 export type ThemeId =
   | 'airport-led'
   | 'british-bus'
-  | 'elegant-modern'
-  | 'midnight-luxe'
   | 'radar-ops'
   | 'sky-map'
   | 'flightwall';
@@ -112,14 +111,18 @@ export function clampRefreshInterval(value: number): RefreshInterval {
   return 90;
 }
 
+export function clampRadiusMi(value: number | undefined): RadiusMi {
+  if (value === 5 || value === 10 || value === 25 || value === 50) return value;
+  return DEFAULT_SETTINGS.radiusMi;
+}
+
 function normalizeThemeId(theme?: string): ThemeId {
   if (theme === 'aurora-flight') return 'sky-map';
   if (theme === 'flight-wall-mini') return 'flightwall';
+  if (theme === 'elegant-modern' || theme === 'midnight-luxe') return DEFAULT_SETTINGS.theme;
   const valid: ThemeId[] = [
     'airport-led',
     'british-bus',
-    'elegant-modern',
-    'midnight-luxe',
     'radar-ops',
     'sky-map',
     'flightwall',
@@ -142,6 +145,7 @@ export function normalizeSettings(parsed: Partial<DisplaySettings> | null | unde
     refreshIntervalSec: clampRefreshInterval(
       parsed.refreshIntervalSec ?? DEFAULT_SETTINGS.refreshIntervalSec
     ),
+    radiusMi: clampRadiusMi(parsed.radiusMi),
     cargoOnly: parsed.cargoOnly ?? DEFAULT_SETTINGS.cargoOnly,
     skyMapZoom: normalizeSkyMapZoom(parsed.skyMapZoom),
     keepAwake: parsed.keepAwake ?? DEFAULT_SETTINGS.keepAwake,
@@ -179,15 +183,61 @@ export function cacheSettingsLocal(settings: DisplaySettings): void {
   }
 }
 
-export function saveSettings(settings: DisplaySettings): void {
+export function getLocalSettingsSavedAt(): number {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const raw = localStorage.getItem(SETTINGS_SAVED_AT_KEY);
+    const parsed = raw ? Number(raw) : 0;
+    return Number.isFinite(parsed) ? parsed : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export type ServerSettingsPayload = {
+  settings: DisplaySettings;
+  savedAt: number;
+};
+
+/** Apply server settings only when they are at least as new as the local save. */
+export function shouldApplyServerSettings(serverSavedAt: number): boolean {
+  const localSavedAt = getLocalSettingsSavedAt();
+  if (localSavedAt === 0) return true;
+  if (!serverSavedAt) return false;
+  return serverSavedAt >= localSavedAt;
+}
+
+export type ServerSettingsReconcileAction = 'apply' | 'push-local' | 'skip';
+
+/** Decide whether to adopt server settings or re-push a newer local save. */
+export function reconcileServerSettings(
+  payload: ServerSettingsPayload
+): ServerSettingsReconcileAction {
+  const localSavedAt = getLocalSettingsSavedAt();
+  if (localSavedAt > payload.savedAt) return 'push-local';
+  if (shouldApplyServerSettings(payload.savedAt)) return 'apply';
+  return 'skip';
+}
+
+function markSettingsSaved(savedAt: number): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(SETTINGS_SAVED_AT_KEY, String(savedAt));
+  } catch {
+    /* storage full / disabled — ignore */
+  }
+}
+
+export function saveSettings(settings: DisplaySettings, savedAt: number = Date.now()): void {
   if (typeof window === 'undefined') return;
   cacheSettingsLocal(settings);
+  markSettingsSaved(savedAt);
   window.dispatchEvent(new Event(SETTINGS_CHANGED_EVENT));
   // Best-effort server sync so other devices load the same config.
   void fetch(SETTINGS_ENDPOINT, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(settings),
+    body: JSON.stringify({ settings, savedAt }),
     keepalive: true,
   }).catch(() => {
     /* offline or read-only host — local cache still applies */
@@ -197,14 +247,23 @@ export function saveSettings(settings: DisplaySettings): void {
 const SETTINGS_ENDPOINT = '/api/settings';
 
 /** Read the server-stored settings (source of truth across devices). Null if none/unavailable. */
-export async function fetchServerSettings(signal?: AbortSignal): Promise<DisplaySettings | null> {
+export async function fetchServerSettings(
+  signal?: AbortSignal
+): Promise<ServerSettingsPayload | null> {
   if (typeof window === 'undefined') return null;
   try {
     const res = await fetch(SETTINGS_ENDPOINT, { cache: 'no-store', signal });
     if (!res.ok) return null;
-    const data = (await res.json()) as { settings?: Partial<DisplaySettings> | null };
+    const data = (await res.json()) as {
+      settings?: Partial<DisplaySettings> | null;
+      savedAt?: number;
+    };
     if (!data?.settings) return null;
-    return normalizeSettings(data.settings);
+    return {
+      settings: normalizeSettings(data.settings),
+      savedAt:
+        typeof data.savedAt === 'number' && Number.isFinite(data.savedAt) ? data.savedAt : 0,
+    };
   } catch {
     return null;
   }

@@ -27,6 +27,12 @@ export default function WatchFlightPanel() {
   const selectFlight = (callsign: string) => {
     const fields = trackFieldsFromCallsign(callsign);
     if (!fields) return;
+    const next = {
+      ...settings,
+      trackAirline: fields.airline,
+      trackFlightNumber: fields.flightNumber,
+    };
+    saveSettings(next);
     update('trackAirline', fields.airline);
     update('trackFlightNumber', fields.flightNumber);
   };
@@ -116,7 +122,7 @@ export default function WatchFlightPanel() {
                 : `${flights.length} within ${settings.radiusMi} mi`}
           </span>
         </div>
-        <p className="admin-surface__hint">Tap a flight to fill the form above.</p>
+        <p className="admin-surface__hint">Tap a flight to start watching it.</p>
 
         {flights.length === 0 && status !== 'loading' && (
           <p className="admin-surface__hint">No identified flights nearby right now.</p>

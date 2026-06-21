@@ -23,7 +23,7 @@ export type AirlineBrand = {
   secondaryColor?: string;
 };
 
-/** Common carriers over Denver — used by the elegant-modern theme for livery accents */
+/** Common carriers over Denver — used for airline brand colors and admin previews */
 const AIRLINES: Record<string, AirlineBrand> = {
   UAL: {
     name: 'United',

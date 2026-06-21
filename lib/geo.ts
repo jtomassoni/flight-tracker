@@ -38,6 +38,36 @@ export function headingDelta(a: number, b: number): number {
   return diff > 180 ? 360 - diff : diff;
 }
 
+/** Great-circle destination from a start point, heading, and distance (statute miles). */
+export function destinationPointMi(
+  lat: number,
+  lon: number,
+  headingDeg: number,
+  distanceMi: number
+): { lat: number; lon: number } {
+  if (distanceMi <= 0) return { lat, lon };
+
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const toDeg = (rad: number) => (rad * 180) / Math.PI;
+  const angularDist = distanceMi / EARTH_RADIUS_MI;
+  const bearing = toRad(headingDeg);
+  const lat1 = toRad(lat);
+  const lon1 = toRad(lon);
+
+  const lat2 = Math.asin(
+    Math.sin(lat1) * Math.cos(angularDist) +
+      Math.cos(lat1) * Math.sin(angularDist) * Math.cos(bearing)
+  );
+  const lon2 =
+    lon1 +
+    Math.atan2(
+      Math.sin(bearing) * Math.sin(angularDist) * Math.cos(lat1),
+      Math.cos(angularDist) - Math.sin(lat1) * Math.sin(lat2)
+    );
+
+  return { lat: toDeg(lat2), lon: ((toDeg(lon2) + 540) % 360) - 180 };
+}
+
 /**
  * Cross-track distance in statute miles from point P to the great-circle path
  * from A to B. Used to reject filed routes that don't match live position.

@@ -14,9 +14,11 @@ import {
   DEFAULT_SETTINGS,
   fetchServerSettings,
   loadSettings,
+  reconcileServerSettings,
   saveSettings,
   type DisplaySettings,
 } from '@/lib/settings';
+import { SETTINGS_CHANGED_EVENT } from '@/lib/constants';
 
 type AdminSettingsContextValue = {
   settings: DisplaySettings;
@@ -42,20 +44,33 @@ export function AdminSettingsProvider({ children }: { children: ReactNode }) {
   const [zipLoading, setZipLoading] = useState(false);
 
   useEffect(() => {
-    const loaded = loadSettings();
-    setSettings(loaded);
-    setZipInput(loaded.zipCode);
+    const reloadSettings = () => {
+      const loaded = loadSettings();
+      setSettings(loaded);
+      setZipInput(loaded.zipCode);
+    };
+    reloadSettings();
 
-    // Prefer the server-stored config so edits start from the synced source.
     const controller = new AbortController();
-    void fetchServerSettings(controller.signal).then((serverSettings) => {
-      if (serverSettings) {
-        cacheSettingsLocal(serverSettings);
-        setSettings(serverSettings);
-        setZipInput(serverSettings.zipCode);
+    void fetchServerSettings(controller.signal).then((payload) => {
+      if (!payload) return;
+      const action = reconcileServerSettings(payload);
+      if (action === 'push-local') {
+        saveSettings(loadSettings());
+        return;
+      }
+      if (action === 'apply') {
+        cacheSettingsLocal(payload.settings);
+        setSettings(payload.settings);
+        setZipInput(payload.settings.zipCode);
       }
     });
-    return () => controller.abort();
+
+    window.addEventListener(SETTINGS_CHANGED_EVENT, reloadSettings);
+    return () => {
+      controller.abort();
+      window.removeEventListener(SETTINGS_CHANGED_EVENT, reloadSettings);
+    };
   }, []);
 
   const setZipInputValue = useCallback((value: string) => {

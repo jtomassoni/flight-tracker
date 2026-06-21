@@ -430,7 +430,7 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
                   { value: 60, label: '60s' },
                   { value: 90, label: '90s' },
                 ]}
-                onChange={(v) => update('refreshIntervalSec', v)}
+                onChange={(v) => updateAndSave('refreshIntervalSec', v)}
               />
               <SelectField
                 compact
@@ -442,7 +442,7 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
                   { value: 25, label: '25 mi' },
                   { value: 50, label: '50 mi' },
                 ]}
-                onChange={(v) => update('radiusMi', v)}
+                onChange={(v) => updateAndSave('radiusMi', v)}
               />
               <SelectField
                 compact
@@ -453,7 +453,7 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
                   { value: 12, label: '12 max' },
                   { value: 20, label: '20 max' },
                 ]}
-                onChange={(v) => update('maxAircraft', v)}
+                onChange={(v) => updateAndSave('maxAircraft', v)}
               />
               <SelectField
                 compact
@@ -465,14 +465,14 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
                   { value: '10k-25k', label: '10k–25k' },
                   { value: 'above25k', label: 'Above 25k' },
                 ]}
-                onChange={(v) => update('altitudeFilter', v)}
+                onChange={(v) => updateAndSave('altitudeFilter', v)}
               />
               <SelectField
                 compact
                 label="Traffic"
                 value={settings.mode}
                 options={MODE_OPTIONS}
-                onChange={(v) => update('mode', v)}
+                onChange={(v) => updateAndSave('mode', v)}
               />
               <SelectField
                 compact
@@ -482,7 +482,7 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
                   { value: 'normal', label: 'Normal' },
                   { value: 'close', label: 'Close' },
                 ]}
-                onChange={(v) => update('skyMapZoom', v)}
+                onChange={(v) => updateAndSave('skyMapZoom', v)}
               />
             </div>
 

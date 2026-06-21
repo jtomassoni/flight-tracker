@@ -12,6 +12,11 @@ export async function GET(request: NextRequest) {
   const lon = parseFloat(searchParams.get('lon') ?? String(DEFAULT_LON));
   const radiusMi = parseFloat(searchParams.get('radiusMi') ?? '10');
   const callsign = searchParams.get('callsign')?.trim().toUpperCase() || undefined;
+  const minFreshSecRaw = searchParams.get('minFreshSec');
+  const minFreshSec =
+    minFreshSecRaw != null && !Number.isNaN(parseFloat(minFreshSecRaw))
+      ? parseFloat(minFreshSecRaw)
+      : undefined;
 
   if (Number.isNaN(lat) || Number.isNaN(lon) || Number.isNaN(radiusMi)) {
     return NextResponse.json({ error: 'Invalid query parameters' }, { status: 400 });
@@ -19,7 +24,7 @@ export async function GET(request: NextRequest) {
 
   let result;
   try {
-    result = await fetchFlights({ lat, lon, radiusMi, callsign });
+    result = await fetchFlights({ lat, lon, radiusMi, callsign, minFreshSec });
   } catch (error) {
     // Only live data is ever served — if the upstream feed is unreachable we
     // report an error rather than fabricating aircraft.

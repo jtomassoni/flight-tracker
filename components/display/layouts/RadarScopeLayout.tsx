@@ -1,38 +1,35 @@
 'use client';
 
+import { useEffect } from 'react';
 import type { DisplayLayoutProps } from '@/types/display';
-import { toRadarBlips } from '@/lib/radarPosition';
-import {
-  displayIdentifier,
-  formatAltitude,
-  formatDistance,
-  formatHeading,
-  formatSpeed,
-  getVerticalTrend,
-} from '@/lib/aircraftUtils';
+import { RADAR_SWEEP_DURATION_SEC } from '@/lib/constants';
+import { RADAR_SWEEP_ARM_LENGTH, RADAR_SWEEP_START_BEARING } from '@/lib/radarPosition';
+import { useRadarSweepBlips } from '@/hooks/useRadarSweepBlips';
+import { displayIdentifier } from '@/lib/aircraftUtils';
 import { getDisplayEmptyState } from '@/lib/displayEmptyState';
-import { useLayoutDensity } from '@/hooks/useLayoutDensity';
-import KioskScrollRegion from '../shared/KioskScrollRegion';
 
-function TargetList({
+export default function RadarScopeLayout({
   displayedAircraft,
-  status,
   settings,
+  status,
+  lastUpdated,
   featured,
-  compact,
   errorMessage,
   trackLabel,
   trackStatus,
-}: {
-  displayedAircraft: DisplayLayoutProps['displayedAircraft'];
-  status: DisplayLayoutProps['status'];
-  settings: DisplayLayoutProps['settings'];
-  featured: DisplayLayoutProps['featured'];
-  compact: boolean;
-  errorMessage: DisplayLayoutProps['errorMessage'];
-  trackLabel: DisplayLayoutProps['trackLabel'];
-  trackStatus: DisplayLayoutProps['trackStatus'];
-}) {
+  onRefresh,
+}: DisplayLayoutProps) {
+  const blips = useRadarSweepBlips(
+    displayedAircraft,
+    settings.lat,
+    settings.lon,
+    settings.radiusMi
+  );
+
+  const sweepStartRad = ((RADAR_SWEEP_START_BEARING - 90) * Math.PI) / 180;
+  const sweepArmX = 50 + Math.cos(sweepStartRad) * RADAR_SWEEP_ARM_LENGTH;
+  const sweepArmY = 50 + Math.sin(sweepStartRad) * RADAR_SWEEP_ARM_LENGTH;
+
   const feedDown = status === 'error' || status === 'offline';
   const emptyState = getDisplayEmptyState({
     status,
@@ -44,20 +41,32 @@ function TargetList({
     radiusMi: settings.radiusMi,
   });
 
+  useEffect(() => {
+    const id = window.setInterval(() => void onRefresh(), RADAR_SWEEP_DURATION_SEC * 1000);
+    return () => window.clearInterval(id);
+  }, [onRefresh]);
+
   return (
-    <aside
-      className={`flex min-h-0 flex-col ${
-        compact
-          ? 'max-h-[42dvh] flex-1'
-          : 'min-w-0 flex-[3] border-r border-border'
-      }`}
-    >
-      <div className="shrink-0 border-b border-border px-4 py-2.5 text-sm font-semibold uppercase tracking-[0.25em] text-muted">
-        Targets · {displayedAircraft.length}
-      </div>
-      <KioskScrollRegion className="min-h-0 flex-1" durationSec={34}>
+    <div className="flex h-full flex-col bg-background font-mono text-foreground">
+      <section className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden p-1 md:p-2 safe-top">
+        <div className="pointer-events-none absolute inset-x-2 top-2 z-10 flex items-start justify-between gap-2 sm:inset-x-3 sm:top-3">
+          <div className="min-w-0">
+            <p className="truncate text-[10px] uppercase tracking-widest text-accent sm:text-xs">
+              ATC RADAR // {settings.locationLabel.toUpperCase()}
+            </p>
+            <p className="mt-0.5 text-[10px] uppercase tracking-widest text-muted sm:text-xs">
+              Targets · {displayedAircraft.length}
+            </p>
+          </div>
+          <div className="shrink-0 text-right text-[10px] text-muted">
+            <p>RNG {settings.radiusMi}MI</p>
+            <p>{lastUpdated?.toLocaleTimeString() ?? 'NO SYNC'}</p>
+            <p className="uppercase">{status}</p>
+          </div>
+        </div>
+
         {displayedAircraft.length === 0 && (
-          <div className="flex h-full flex-col items-center justify-center gap-2 px-4 py-10 text-center">
+          <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-2 px-6 text-center">
             <p
               className="text-lg font-bold uppercase tracking-[0.25em] text-accent"
               style={{ textShadow: 'var(--glow)' }}
@@ -70,90 +79,18 @@ function TargetList({
             </p>
           </div>
         )}
-        {displayedAircraft.map((ac) => {
-          const isFeatured = featured?.hex === ac.hex;
-          return (
-            <div
-              key={ac.hex}
-              className={`border-b border-border/40 px-4 py-3 ${isFeatured ? 'bg-accent/10' : ''}`}
-            >
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="truncate text-lg font-bold tracking-wide text-accent">
-                  {displayIdentifier(ac)}
-                </span>
-                <span className="shrink-0 text-base font-semibold text-foreground">
-                  {formatDistance(ac.distanceMi)}
-                </span>
-              </div>
-              <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-sm leading-snug text-muted">
-                <span>{formatAltitude(ac.altitudeFt)}</span>
-                <span>{formatSpeed(ac.groundSpeedKt)}</span>
-                <span>{formatHeading(ac.headingDeg)}</span>
-                <span className="capitalize text-accent/80">{getVerticalTrend(ac.verticalRateFpm)}</span>
-              </div>
-            </div>
-          );
-        })}
-      </KioskScrollRegion>
-      <div className="safe-bottom shrink-0 border-t border-border px-4 py-1.5 text-xs text-muted">
-        {status.toUpperCase()} · {settings.radiusMi}MI · ZIP {settings.zipCode}
-      </div>
-    </aside>
-  );
-}
-
-export default function RadarScopeLayout({
-  displayedAircraft,
-  settings,
-  status,
-  lastUpdated,
-  featured,
-  errorMessage,
-  trackLabel,
-  trackStatus,
-}: DisplayLayoutProps) {
-  const { viewport, isDeskPortrait } = useLayoutDensity();
-  const stacked = viewport === 'compact' || isDeskPortrait;
-  const blips = toRadarBlips(
-    displayedAircraft,
-    settings.lat,
-    settings.lon,
-    settings.radiusMi
-  );
-
-  const targetList = (
-    <TargetList
-      displayedAircraft={displayedAircraft}
-      status={status}
-      settings={settings}
-      featured={featured}
-      compact={stacked}
-      errorMessage={errorMessage}
-      trackLabel={trackLabel}
-      trackStatus={trackStatus}
-    />
-  );
-
-  return (
-    <div className={`flex h-full bg-background font-mono text-foreground ${stacked ? 'flex-col' : 'flex-row'}`}>
-      {!stacked && targetList}
-
-      <section
-        className={`relative flex min-h-0 min-w-0 items-center justify-center overflow-hidden p-1 md:p-2 ${
-          stacked ? 'flex-[1.2] border-b border-border safe-top' : 'flex-[2]'
-        }`}
-      >
-        <div className="pointer-events-none absolute inset-x-2 top-2 flex items-start justify-between gap-2 sm:inset-x-3 sm:top-3">
-          <p className="truncate text-[10px] uppercase tracking-widest text-accent sm:text-xs">
-            ATC RADAR // {settings.locationLabel.toUpperCase()}
-          </p>
-          <div className="shrink-0 text-right text-[10px] text-muted">
-            <p>RNG {settings.radiusMi}MI</p>
-            <p>{lastUpdated?.toLocaleTimeString() ?? 'NO SYNC'}</p>
-          </div>
-        </div>
 
         <div className="aspect-square h-full max-h-full w-full max-w-full">
+          <style>{`
+            @keyframes radar-sweep-rotate {
+              from { transform: rotate(0deg); }
+              to { transform: rotate(360deg); }
+            }
+            .radar-sweep-arm {
+              transform-origin: 50px 50px;
+              animation: radar-sweep-rotate ${RADAR_SWEEP_DURATION_SEC}s linear infinite;
+            }
+          `}</style>
           <svg viewBox="0 0 100 100" className="h-full w-full" preserveAspectRatio="xMidYMid meet">
             <defs>
               <radialGradient id="radarGlow">
@@ -167,16 +104,17 @@ export default function RadarScopeLayout({
             ))}
             <line x1="50" y1="2" x2="50" y2="98" stroke="var(--border)" strokeWidth="0.3" opacity="0.5" />
             <line x1="2" y1="50" x2="98" y2="50" stroke="var(--border)" strokeWidth="0.3" opacity="0.5" />
-            <line x1="50" y1="50" x2="92" y2="30" stroke="var(--accent)" strokeWidth="0.6" opacity="0.7">
-              <animateTransform
-                attributeName="transform"
-                type="rotate"
-                from="0 50 50"
-                to="360 50 50"
-                dur="6s"
-                repeatCount="indefinite"
+            <g className="radar-sweep-arm">
+              <line
+                x1="50"
+                y1="50"
+                x2={sweepArmX}
+                y2={sweepArmY}
+                stroke="var(--accent)"
+                strokeWidth="0.6"
+                opacity="0.7"
               />
-            </line>
+            </g>
             <circle cx="50" cy="50" r="1.5" fill="var(--accent)" />
             {blips.map(({ aircraft, x, y }) => {
               const isFeatured = featured?.hex === aircraft.hex;
@@ -205,8 +143,6 @@ export default function RadarScopeLayout({
           </svg>
         </div>
       </section>
-
-      {stacked && targetList}
     </div>
   );
 }

@@ -1,183 +1,487 @@
 .solari-board {
+  --solari-flap-h: 1.72em;
+  --solari-flap-w: 1.12em;
+  --solari-flap-gap: 4px;
+  --solari-flap-size: clamp(1.5rem, 3.1vw, 2.65rem);
+  --solari-flap-size-sm: clamp(1.2rem, 2.45vw, 2rem);
+  --solari-row-min: calc(var(--solari-flap-size) * 1.72 + 0.85rem);
+  --solari-flip-duration: 580ms;
+  --solari-flap-face: #1c1c1c;
+  --solari-flap-ink: #f0f0f0;
+  --solari-flap-edge: #333333;
+  --solari-module-bg: #070707;
   background: #0a0a0a;
   color: #f0f0f0;
   font-family: var(--font-barlow-condensed), 'Arial Narrow', Arial, sans-serif;
 }
 
+.solari-board__header {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 1.25rem 1.25rem 1rem;
+  background: #0a0a0a;
+}
+
+.solari-board__header-title {
+  margin: 0;
+  font-size: clamp(1.65rem, 3.8vw, 2.65rem);
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  line-height: 1.05;
+  text-transform: uppercase;
+  color: #f0f0f0;
+  text-align: center;
+}
+
+.solari-board__header-sub {
+  margin: 0;
+  font-size: clamp(0.62rem, 1.35vw, 0.82rem);
+  font-weight: 600;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #666666;
+  text-align: center;
+}
+
+/* Inset housing around the flap rows — dark metal cabinet */
+.solari-board__panel {
+  display: flex;
+  flex-direction: column;
+  margin: 0 clamp(0.65rem, 2vw, 1.25rem) clamp(0.5rem, 1.5vw, 0.85rem);
+  border: 4px solid #111111;
+  border-radius: 3px;
+  background: #030303;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.04),
+    inset 0 3px 18px rgba(0, 0, 0, 0.75),
+    0 8px 28px rgba(0, 0, 0, 0.55);
+}
+
+.solari-board__col-header,
 .solari-board__row {
   display: grid;
-  grid-template-columns: 3.25rem minmax(0, 1fr) 5.75rem;
+  grid-template-columns: max-content max-content max-content max-content max-content;
+  justify-content: space-between;
   align-items: center;
-  gap: 1.5rem;
-  padding: 0.35rem 1rem;
+  column-gap: clamp(0.55rem, 1.4vw, 1rem);
+  padding-left: clamp(0.65rem, 1.4vw, 1rem);
+  padding-right: clamp(0.65rem, 1.4vw, 1rem);
+}
+
+.solari-board__col-header {
+  flex-shrink: 0;
+  padding-top: 0.55rem;
+  padding-bottom: 0.45rem;
+  border-bottom: 1px solid #1a1a1a;
+  font-size: clamp(0.52rem, 1vw, 0.68rem);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #555555;
+}
+
+.solari-board__col-header span:nth-child(n + 4) {
+  justify-self: end;
+}
+
+.solari-board__rows {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.solari-board__row {
+  flex: 1 1 0;
+  min-height: var(--solari-row-min);
+  padding-top: 0.35rem;
+  padding-bottom: 0.35rem;
   border-bottom: 1px solid #000000;
   box-shadow: inset 0 -1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .solari-board__row:nth-child(even) {
-  background: #101010;
+  background: #0c0c0c;
 }
 
 .solari-board__row:nth-child(odd) {
-  background: #0a0a0a;
+  background: #060606;
 }
 
-.solari-board__col-id {
-  justify-self: start;
-  flex-shrink: 0;
-  overflow: hidden;
-  isolation: isolate;
+.solari-board__route-pending {
+  display: inline-block;
+  font-size: clamp(0.72rem, 1.45vw, 0.95rem);
+  font-weight: 600;
+  font-style: italic;
+  letter-spacing: 0.12em;
+  text-transform: none;
+  color: #8a8474;
+  white-space: nowrap;
+  animation: solari-route-pulse 2.4s ease-in-out infinite;
 }
 
-.solari-board__col-dest {
-  justify-self: start;
-  min-width: 0;
-  overflow: hidden;
-  isolation: isolate;
+.solari-board__route-na {
+  display: inline-block;
+  font-size: clamp(0.85rem, 1.6vw, 1.1rem);
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #4a4a4a;
 }
 
-.solari-board__col-time {
-  justify-self: end;
-  flex-shrink: 0;
-  overflow: hidden;
-  isolation: isolate;
+@keyframes solari-route-pulse {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
 }
 
+.solari-board__col-status--climbing .solari-flap {
+  --solari-flap-ink: #c9a227;
+}
+
+.solari-board__col-status--descending .solari-flap {
+  --solari-flap-ink: #d4844a;
+}
+
+.solari-board__col-status--level .solari-flap {
+  --solari-flap-ink: #b8b8b8;
+}
+
+/* ── Solari split-flap module (recessed well + dark flaps) ── */
 .solari-flap {
   position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 1.05em;
-  height: 1.55em;
+  display: inline-block;
+  width: calc(var(--solari-flap-w) + 5px);
+  height: calc(var(--solari-flap-h) + 5px);
   flex-shrink: 0;
-  background: linear-gradient(180deg, #1e1e1e 0%, #1e1e1e 49%, #141414 51%, #141414 100%);
-  border: 1px solid #000;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.06),
-    0 1px 2px rgba(0, 0, 0, 0.8);
+  color: var(--solari-flap-ink);
   font-weight: 700;
   font-size: inherit;
   line-height: 1;
-  color: #f2f2f2;
   text-transform: uppercase;
-  perspective: 120px;
 }
 
-.solari-flap::after {
-  content: '';
+.solari-flap__well {
+  position: absolute;
+  inset: 0;
+  padding: 2px;
+  border-radius: 3px;
+  background: var(--solari-module-bg);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.95),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.03),
+    0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.solari-flap__viewport {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: var(--solari-flap-h);
+  perspective: 420px;
+  perspective-origin: 50% 42%;
+  transform-style: preserve-3d;
+}
+
+.solari-flap__half-pane {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: linear-gradient(
+    180deg,
+    #262626 0%,
+    var(--solari-flap-face) 44%,
+    #161616 52%,
+    #111111 100%
+  );
+  border: 1px solid var(--solari-flap-edge);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.45);
+}
+
+.solari-flap__half-pane--top {
+  border-radius: 2px 2px 0 0;
+  border-bottom: none;
+}
+
+.solari-flap__half-pane--bottom {
+  border-radius: 0 0 2px 2px;
+  border-top: none;
+}
+
+.solari-flap__static {
   position: absolute;
   left: 0;
   right: 0;
-  top: 50%;
-  height: 2px;
-  margin-top: -1px;
-  background: #000;
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05);
+  height: 50%;
+  overflow: hidden;
+  z-index: 1;
+  transition: opacity 0.05s linear;
+}
+
+.solari-flap__static--bottom {
+  bottom: 0;
+  z-index: 1;
+}
+
+.solari-flap__static--top {
+  top: 0;
+  z-index: 1;
+}
+
+.solari-flap__motion {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50%;
+  overflow: hidden;
+  z-index: 3;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+  will-change: transform, filter;
+}
+
+.solari-flap__motion--fold-top {
+  top: 0;
+  transform-origin: bottom center;
+  animation: solariFoldTop var(--solari-flip-duration) cubic-bezier(0.52, 0.02, 0.72, 0.18) forwards;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35));
+  z-index: 4;
+}
+
+.solari-flap__motion--unfold-bottom {
+  bottom: 0;
+  transform-origin: top center;
+  transform: rotateX(180deg);
+  animation: solariUnfoldBottom var(--solari-flip-duration) cubic-bezier(0.28, 0.84, 0.42, 1) forwards;
+  z-index: 2;
+}
+
+.solari-flap__face {
+  position: absolute;
+  inset: 0;
+  backface-visibility: hidden;
+}
+
+.solari-flap__face--front {
+  transform: rotateX(0deg);
+}
+
+.solari-flap__face--back {
+  transform: rotateX(180deg);
+}
+
+.solari-flap__hinge {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  top: calc(2px + 50% - 1px);
+  height: 3px;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.65) 0%,
+    rgba(0, 0, 0, 0.95) 50%,
+    rgba(255, 255, 255, 0.1) 100%
+  );
+  z-index: 6;
   pointer-events: none;
 }
 
-.solari-flap--flip {
-  animation: solariFlip 0.32s ease-in-out;
+.solari-flap__glyph {
+  display: block;
+  width: 100%;
+  height: var(--solari-flap-h);
+  line-height: var(--solari-flap-h);
+  text-align: center;
+  color: var(--solari-flap-ink);
 }
 
-@keyframes solariFlip {
+.solari-flap__half-pane--bottom .solari-flap__glyph,
+.solari-flap__static--bottom .solari-flap__glyph,
+.solari-flap__motion--unfold-bottom .solari-flap__glyph {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+}
+
+.solari-flap__half-pane--top .solari-flap__glyph,
+.solari-flap__static--top .solari-flap__glyph,
+.solari-flap__motion--fold-top .solari-flap__glyph {
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+@keyframes solariFoldTop {
   0% {
     transform: rotateX(0deg);
+    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35)) brightness(1);
   }
   45% {
-    transform: rotateX(-88deg);
+    filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.55)) brightness(0.62);
   }
-  55% {
-    transform: rotateX(-88deg);
+  78% {
+    transform: rotateX(-174deg);
+    filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.4)) brightness(0.82);
+  }
+  100% {
+    transform: rotateX(-180deg);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.25)) brightness(0.95);
+  }
+}
+
+@keyframes solariUnfoldBottom {
+  0% {
+    transform: rotateX(180deg);
+    filter: brightness(0.55);
+  }
+  40% {
+    filter: brightness(0.68);
+  }
+  82% {
+    transform: rotateX(8deg);
+    filter: brightness(0.94);
   }
   100% {
     transform: rotateX(0deg);
+    filter: brightness(1);
   }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .solari-flap__motion--fold-top,
+  .solari-flap__motion--unfold-bottom {
+    animation-duration: 0.01ms;
+  }
+}
+
+.solari-board__col-airline,
+.solari-board__col-flight,
+.solari-board__col-city,
+.solari-board__col-status,
+.solari-board__col-time {
+  overflow: visible;
+}
+
+.solari-board__col-status,
+.solari-board__col-time {
+  justify-self: end;
 }
 
 .solari-flaps {
   display: inline-flex;
   flex-wrap: nowrap;
-  gap: 3px;
-  font-size: clamp(1.35rem, 2.8vw, 2.4rem);
+  gap: var(--solari-flap-gap);
+  font-size: var(--solari-flap-size);
   letter-spacing: 0.02em;
   max-width: 100%;
 }
 
 .solari-flaps--sm {
-  font-size: clamp(1rem, 2vw, 1.5rem);
+  font-size: var(--solari-flap-size-sm);
 }
 
 .solari-board__empty {
   display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.25rem;
-  min-height: 60%;
+  gap: 0.85rem;
   padding: 2rem 1rem;
   text-align: center;
 }
 
-.solari-board__empty-sub {
-  font-family: var(--font-barlow-condensed), 'Arial Narrow', Arial, sans-serif;
-  font-size: clamp(0.75rem, 2vw, 1rem);
+.solari-board__empty-title {
+  margin: 0;
+  font-size: clamp(1.1rem, 2.5vw, 1.65rem);
   font-weight: 700;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #6a6a6a;
+  color: #888888;
+}
+
+.solari-board__empty-sub {
+  margin: 0;
+  font-size: clamp(0.75rem, 1.6vw, 0.95rem);
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #555555;
 }
 
 .solari-board__footer {
-  padding-left: max(1rem, env(safe-area-inset-left));
-  padding-right: max(1rem, env(safe-area-inset-right));
+  padding: 0.65rem max(1.25rem, env(safe-area-inset-left)) max(0.75rem, env(safe-area-inset-bottom))
+    max(1.25rem, env(safe-area-inset-right));
+  border-top: 1px solid #1a1a1a;
+  background: #0a0a0a;
 }
 
 .solari-board__footer-grid {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  gap: 1rem 1.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1.5rem;
+}
+
+.solari-board__footer-location,
+.solari-board__footer-count {
+  font-size: clamp(0.68rem, 1.4vw, 0.82rem);
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #777777;
 }
 
 .solari-board__footer-location {
   min-width: 0;
 }
 
+.solari-board__footer-count {
+  flex-shrink: 0;
+  color: #666666;
+}
+
 .solari-board__footer-hint {
-  margin-top: 0.35rem;
-  font-family: var(--font-barlow-condensed), Arial, sans-serif;
+  margin: 0.35rem 0 0;
   font-size: 10px;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: #4a4a4a;
+  color: #444444;
 }
 
 @media (max-width: 639px) {
+  .solari-board {
+    --solari-flap-size: clamp(1.15rem, 4.2vw, 1.65rem);
+    --solari-flap-size-sm: clamp(1rem, 3.6vw, 1.35rem);
+  }
+
+  .solari-board__col-header,
   .solari-board__row {
-    grid-template-columns: 2.75rem minmax(0, 1fr) 5rem;
-    gap: 0.75rem;
-    padding: 0.3rem 0.65rem;
+    grid-template-columns: max-content max-content max-content max-content;
+    column-gap: 0.45rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 
-  .solari-flaps {
-    font-size: clamp(1rem, 4.5vw, 1.5rem);
-    gap: 2px;
-  }
-
-  .solari-flaps--sm {
-    font-size: clamp(0.85rem, 3.5vw, 1.1rem);
+  .solari-board__col-header span:nth-child(4),
+  .solari-board__col-status {
+    display: none;
   }
 }
 
 @media (min-width: 640px) and (max-width: 1023px) {
-  .solari-board__row {
-    gap: 1rem;
-    padding: 0.35rem 0.85rem;
-  }
-
-  .solari-flaps {
-    font-size: clamp(1.15rem, 2.5vw, 1.85rem);
+  .solari-board {
+    --solari-flap-size: clamp(1.35rem, 2.65vw, 2.15rem);
+    --solari-flap-size-sm: clamp(1.1rem, 2.1vw, 1.7rem);
   }
 }

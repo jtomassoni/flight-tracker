@@ -1,9 +1,9 @@
-import type { NormalizedAircraft } from '@/types/aircraft';
+import type { NormalizedAircraft, VerticalTrend } from '@/types/aircraft';
 import { displayIdentifier } from './aircraftUtils';
-import { getAirlineFromCallsign } from './airlines';
+import { getAircraftDisplayBrand, getAirlineFromCallsign } from './airlines';
+import { distanceMi } from './geo';
 import { formatBrandedCarrierLabel } from './regionalCarriers';
-import type { VerticalTrend } from '@/types/aircraft';
-import { getFiledRoute } from '@/lib/routePlausibility';
+import { getDisplayRoute, getValidatedRoute } from '@/lib/routePlausibility';
 
 /** Placeholder shown when a real value is unavailable — never fabricated data. */
 export const FIDS_UNKNOWN = '—';
@@ -24,7 +24,7 @@ function airportLabel(
 
 /** Real origin city/airport for the flight, or the unknown placeholder. */
 export function fidsOrigin(ac: NormalizedAircraft): string {
-  const route = getFiledRoute(ac);
+  const route = getDisplayRoute(ac);
   if (!route) return FIDS_UNKNOWN;
   return (
     airportLabel(
@@ -38,7 +38,7 @@ export function fidsOrigin(ac: NormalizedAircraft): string {
 
 /** Real destination city/airport for the flight, or the unknown placeholder. */
 export function fidsDestination(ac: NormalizedAircraft): string {
-  const route = getFiledRoute(ac);
+  const route = getDisplayRoute(ac);
   if (!route) return FIDS_UNKNOWN;
   return (
     airportLabel(
@@ -59,6 +59,85 @@ export function fidsFlightNumber(ac: NormalizedAircraft): string {
     return `${carrier} ${num}`.trim();
   }
   return displayIdentifier(ac);
+}
+
+/** Marketing airline IATA code (UA, WN, DL, …). */
+export function fidsAirlineCode(ac: NormalizedAircraft): string {
+  const brand = getAircraftDisplayBrand(ac);
+  return (brand.iata || brand.icao.slice(0, 2)).toUpperCase();
+}
+
+/** Numeric flight portion of the callsign, without the carrier prefix. */
+export function fidsFlightNumOnly(ac: NormalizedAircraft): string {
+  const callsign = ac.callsign?.trim().toUpperCase();
+  if (callsign && callsign.length > 3) {
+    const num = callsign.slice(3).replace(/\D/g, '').replace(/^0+/, '');
+    return num || callsign.slice(3);
+  }
+  if (ac.flightNumber?.trim()) return ac.flightNumber.trim().toUpperCase();
+  return ac.hex.slice(-4).toUpperCase();
+}
+
+/** Origin for arrivals, destination for departures / en-route. */
+export function fidsEndpoint(ac: NormalizedAircraft, trend: VerticalTrend): string {
+  if (trend === 'descending') return fidsOrigin(ac);
+  return fidsDestination(ac);
+}
+
+/** Uppercase status label sized for split-flap boards. */
+export function fidsBoardStatus(trend: VerticalTrend): string {
+  switch (trend) {
+    case 'climbing':
+      return 'DEPARTING';
+    case 'descending':
+      return 'ARRIVING';
+    default:
+      return 'EN ROUTE';
+  }
+}
+
+function formatBoardClock(d: Date): string {
+  let h = d.getHours();
+  const m = d.getMinutes();
+  const suffix = h >= 12 ? 'P' : 'A';
+  h = h % 12 || 12;
+  return `${h}:${m.toString().padStart(2, '0')}${suffix}`;
+}
+
+/**
+ * Estimated arrival/departure clock time from live position and speed.
+ * Not a published airline schedule — only what ADS-B can support.
+ */
+export function fidsEstimatedTime(
+  ac: NormalizedAircraft,
+  trend: VerticalTrend,
+  now: Date = new Date()
+): string {
+  const speedKt = ac.groundSpeedKt;
+  if (speedKt == null || speedKt < 30) return FIDS_UNKNOWN;
+
+  const speedMph = speedKt * 1.15078;
+
+  if (trend === 'descending') {
+    const minutes = (ac.distanceMi / speedMph) * 60;
+    if (!Number.isFinite(minutes) || minutes > 480) return FIDS_UNKNOWN;
+    return formatBoardClock(new Date(now.getTime() + minutes * 60_000));
+  }
+
+  if (trend === 'climbing') {
+    return formatBoardClock(now);
+  }
+
+  const route = getValidatedRoute(ac);
+  if (route?.destLat != null && route?.destLon != null) {
+    const dist = distanceMi(ac.lat, ac.lon, route.destLat, route.destLon);
+    const minutes = (dist / speedMph) * 60;
+    if (Number.isFinite(minutes) && minutes <= 480) {
+      return formatBoardClock(new Date(now.getTime() + minutes * 60_000));
+    }
+  }
+
+  return FIDS_UNKNOWN;
 }
 
 /**
