@@ -253,9 +253,9 @@ async function mapWithConcurrency<T, R>(
 }
 
 /**
- * Attach filed routes from callsign lookups. Client filters and boards validate
- * each route against live position — implausible pairings (e.g. DTW→ORD over
- * Denver) are dropped or shown without city labels.
+ * Attach filed routes from callsign lookups. Boards validate each route against
+ * live position before showing city labels — implausible pairings stay on screen
+ * without O/D text.
  */
 export async function enrichWithRoutes(
   aircraft: NormalizedAircraft[]

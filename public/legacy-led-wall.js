@@ -67,6 +67,30 @@ var LegacyLedWall = (() => {
     return void 0;
   }
 
+  // lib/ledLogoPalette.ts
+  var LED_PALETTES_STORAGE_KEY = "flight-tracker-led-palettes-v1";
+  function readStoredPalettes() {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = localStorage.getItem(LED_PALETTES_STORAGE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (e) {
+      return {};
+    }
+  }
+  function getStoredLedLogoPalette(icao) {
+    const key = icao.trim().toUpperCase();
+    const stored = readStoredPalettes()[key];
+    if (!(stored == null ? void 0 : stored.length)) return null;
+    return stored;
+  }
+  function resolveLedLogoPalette(icao, fallback) {
+    var _a;
+    return (_a = getStoredLedLogoPalette(icao)) != null ? _a : fallback;
+  }
+
   // lib/cargoAirlines.ts
   var CARGO_AIRLINES = {
     FDX: {
@@ -707,7 +731,7 @@ var LegacyLedWall = (() => {
     VIV: ["#FFFFFF", "#00A650", "#ED1C24"],
     VOI: ["#FFFFFF", "#A83090", "#78A8D8", "#78C048", "#303030"],
     WJA: ["#FFFFFF", "#0F1E60", "#00A0DF"],
-    SCX: ["#FFFFFF", "#003594"],
+    SCX: ["#FF6600", "#003594", "#FFFFFF"],
     SKW: ["#FFFFFF", "#C4D600"],
     SWA: ["#D5152E", "#FFBF27", "#304CB2", "#CCCCCC"],
     FDX: ["#FF6600", "#4D148C", "#FFFFFF"],
@@ -739,6 +763,7 @@ var LegacyLedWall = (() => {
   }
   var COLOR_LOGO_TILE = /* @__PURE__ */ new Set([
     "AAL",
+    "AAY",
     "FFT",
     "ASA",
     "EIN",
@@ -747,27 +772,31 @@ var LegacyLedWall = (() => {
     "UPS",
     "GTI",
     "ABX",
-    "DHK"
+    "DHK",
+    "SCX"
   ]);
   function getAirlineLedWallStyle(brand) {
     if (COLOR_LOGO_TILE.has(brand.icao)) {
       const logoBackground2 = "#ffffff";
+      const basePalette2 = airlineLedLogoPalette(brand, logoBackground2);
       return {
         logoBackground: logoBackground2,
         logoBorder: mixHex(brand.primaryColor, "#000000", 0.25),
         accentStripe: brand.accentColor,
-        logoPalette: airlineLedLogoPalette(brand, logoBackground2),
+        logoPalette: resolveLedLogoPalette(brand.icao, basePalette2),
         logoTileBorder: !LED_LOGO_NO_TILE_BORDER.has(brand.icao)
       };
     }
     const onBlackLogo = ["VOI"].includes(brand.icao);
     const onDarkLogo = ["UAL", "DAL", "JBU", "SWA", "PVT"].includes(brand.icao);
     const logoBackground = onBlackLogo ? "#070707" : onDarkLogo ? brand.primaryColor : "#e8edf2";
+    const basePalette = airlineLedLogoPalette(brand, logoBackground);
+    const logoPalette = resolveLedLogoPalette(brand.icao, basePalette);
     return {
       logoBackground,
       logoBorder: mixHex(brand.primaryColor, "#000000", 0.25),
       accentStripe: brand.accentColor,
-      logoPalette: airlineLedLogoPalette(brand, logoBackground),
+      logoPalette,
       logoTileBorder: !LED_LOGO_NO_TILE_BORDER.has(brand.icao)
     };
   }
@@ -1664,16 +1693,6 @@ var LegacyLedWall = (() => {
     const sample = { r, g, b };
     if (rgbDistance(sample, bg) < 42) {
       return bgHex;
-    }
-    if (palette && palette.length === 2) {
-      const a = parseHexColor(palette[0]);
-      const bColor = parseHexColor(palette[1]);
-      const lumA = colorLuminance(a);
-      const lumB = colorLuminance(bColor);
-      const lightHex = lumA >= lumB ? palette[0] : palette[1];
-      const darkHex = lumA >= lumB ? palette[1] : palette[0];
-      const mid = (lumA + lumB) / 2;
-      return colorLuminance(sample) >= mid ? lightHex : darkHex;
     }
     if (palette && palette.length > 0) {
       let best = palette[0];

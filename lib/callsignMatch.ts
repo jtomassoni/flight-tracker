@@ -1,5 +1,6 @@
 import type { NormalizedAircraft } from '@/types/aircraft';
 import { getAirlineByIcao, getAirlineByIata } from './airlines';
+import { CARGO_AIRLINES, getCargoAirlineByIcao } from './cargoAirlines';
 import { resolveMainlineIcao } from './regionalCarriers';
 
 export type TrackTarget = {
@@ -30,8 +31,12 @@ function resolveAirlineIcao(raw: string): string | null {
   const token = raw.trim().toUpperCase();
   if (!token) return null;
   if (token.length === 3 && getAirlineByIcao(token)) return token;
+  if (token.length === 3 && getCargoAirlineByIcao(token)) return token;
   const byIata = getAirlineByIata(token);
   if (byIata) return byIata.icao;
+  for (const brand of Object.values(CARGO_AIRLINES)) {
+    if (brand.iata === token) return brand.icao;
+  }
   return null;
 }
 
@@ -41,7 +46,7 @@ export function buildTrackTarget(airline: string, flightNumber: string): TrackTa
   const flightNum = normalizeFlightNumberInput(flightNumber);
   if (!airlineIcao || flightNum == null) return null;
 
-  const brand = getAirlineByIcao(airlineIcao);
+  const brand = getAirlineByIcao(airlineIcao) ?? getCargoAirlineByIcao(airlineIcao);
   const icaoCallsign = `${airlineIcao}${flightNum}`;
   const displayLabel = brand ? `${brand.iata} ${flightNum}` : icaoCallsign;
 
@@ -87,7 +92,7 @@ export function trackFieldsFromCallsign(callsign: string): { airline: string; fl
 
   const flightNumber = numMatch[1]!;
   const mainlineIcao = resolveMainlineIcao(trimmed);
-  const brand = getAirlineByIcao(mainlineIcao);
+  const brand = getAirlineByIcao(mainlineIcao) ?? getCargoAirlineByIcao(mainlineIcao);
   const airline = brand?.iata ?? mainlineIcao;
 
   if (!buildTrackTarget(airline, flightNumber)) return null;

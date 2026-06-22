@@ -396,17 +396,6 @@ function snapLogoColor(
     return bgHex;
   }
 
-  if (palette && palette.length === 2) {
-    const a = parseHexColor(palette[0]!);
-    const bColor = parseHexColor(palette[1]!);
-    const lumA = colorLuminance(a);
-    const lumB = colorLuminance(bColor);
-    const lightHex = lumA >= lumB ? palette[0]! : palette[1]!;
-    const darkHex = lumA >= lumB ? palette[1]! : palette[0]!;
-    const mid = (lumA + lumB) / 2;
-    return colorLuminance(sample) >= mid ? lightHex : darkHex;
-  }
-
   if (palette && palette.length > 0) {
     let best = palette[0]!;
     let bestDist = Infinity;

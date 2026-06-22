@@ -14,19 +14,35 @@ import {
   type AirlineBrand,
 } from '@/lib/airlines';
 import { buildAirlineLedPreview } from '@/lib/airlineThemePreview';
+import {
+  analyzeLedLogoPalette,
+  clearStoredLedLogoPalette,
+  storeLedLogoPalette,
+} from '@/lib/ledLogoPalette';
 import { hasLedAirlineMark } from '@/lib/ledAirlineMarks';
 import { useLogoCatalog, type LogoCatalogEntry } from '@/components/admin/LogoCatalogContext';
 import LogoPasteZone from '@/components/admin/LogoPasteZone';
+import { useWorkbenchPreviewScale } from '@/hooks/useMediaQuery';
 import '@/components/display/layouts/airline-gallery.css';
 
 function normalizeIcao(raw: string): string {
   return raw.trim().toUpperCase().slice(0, 3);
 }
 
+function palettesEqual(a: readonly string[], b: readonly string[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every((color, index) => color.toLowerCase() === b[index]?.toLowerCase())
+  );
+}
+
 const SAMPLE_STATS = [
   ['Distance', '12.4', 'mi'],
   ['Altitude', '28,500', 'ft'],
 ] as const;
+
+const LED_PREVIEW_BASE = 152;
+const SOURCE_LOGO_BASE = 80;
 
 function brandHeroStyle(brand: AirlineBrand): CSSProperties {
   return {
@@ -104,6 +120,7 @@ function SourceAssetsPanel({
   onDelete,
   onRemove,
   pasteBusy,
+  sourceLogoPx,
 }: {
   brand: AirlineBrand;
   logoUrl?: string;
@@ -114,6 +131,7 @@ function SourceAssetsPanel({
   onDelete: (file: string) => void;
   onRemove: () => void;
   pasteBusy: boolean;
+  sourceLogoPx: number;
 }) {
   const useNative = hasLedAirlineMark(brand.icao);
   const hasApproved = Boolean(catalogEntry?.approved);
@@ -132,8 +150,8 @@ function SourceAssetsPanel({
                 size={128}
                 background="#ffffff"
                 alt={`${brand.name} approved logo`}
-                width={80}
-                height={80}
+                width={sourceLogoPx}
+                height={sourceLogoPx}
                 fillMark={useNative}
                 logoUrl={logoUrl}
               />
@@ -234,7 +252,7 @@ function GalleryCardPreview({
         <div className="gallery-card__stripe" aria-hidden />
         <div className="gallery-card__body">
           <div className={`gallery-card__top ${compact ? 'px-3 py-2' : ''}`}>
-            <div className={`gallery-card__logo relative ${compact ? 'h-9 w-9' : 'h-11 w-11 sm:h-12 sm:w-12'}`}>
+            <div className="gallery-card__logo relative">
               <AirlineLogoImage
                 brand={brand}
                 size={128}
@@ -304,11 +322,56 @@ function AirlinePreviewPanel({
   pasteBusy: boolean;
   pasteError: string | null;
 }) {
+  const previewScale = useWorkbenchPreviewScale();
+  const ledPreviewPx = Math.round(LED_PREVIEW_BASE * previewScale);
+  const sourceLogoPx = Math.round(SOURCE_LOGO_BASE * previewScale);
   const brand = getLogoBrandByIcao(icao);
-  const ledContent = useMemo(
-    () => buildAirlineLedPreview(icao, { logoUrl }),
-    [icao, logoUrl]
-  );
+  const [paletteRevision, setPaletteRevision] = useState(0);
+  const [draftPalette, setDraftPalette] = useState<string[] | null>(null);
+  const [analyzingPalette, setAnalyzingPalette] = useState(false);
+
+  useEffect(() => {
+    setDraftPalette(null);
+  }, [icao, logoUrl]);
+
+  const ledContent = useMemo(() => {
+    return buildAirlineLedPreview(icao, { logoUrl });
+  }, [icao, logoUrl, paletteRevision]);
+
+  const appliedPalette = ledContent?.logoPalette ?? [];
+
+  const reanalyzePalette = useCallback(async () => {
+    if (!logoUrl || !ledContent) return;
+    setAnalyzingPalette(true);
+    try {
+      const detected = await analyzeLedLogoPalette(logoUrl, ledContent.logoBackground);
+      setDraftPalette(detected.length > 0 ? detected : null);
+    } finally {
+      setAnalyzingPalette(false);
+    }
+  }, [logoUrl, ledContent]);
+
+  const rescanLedWall = useCallback(async () => {
+    if (!logoUrl || !ledContent) return;
+    setAnalyzingPalette(true);
+    try {
+      const detected = await analyzeLedLogoPalette(logoUrl, ledContent.logoBackground);
+      if (detected.length > 0) {
+        storeLedLogoPalette(icao, detected);
+      }
+      setDraftPalette(null);
+      setPaletteRevision((n) => n + 1);
+    } finally {
+      setAnalyzingPalette(false);
+    }
+  }, [icao, logoUrl, ledContent]);
+
+  const applyDraftPalette = useCallback(() => {
+    if (!draftPalette?.length) return;
+    storeLedLogoPalette(icao, draftPalette);
+    setDraftPalette(null);
+    setPaletteRevision((n) => n + 1);
+  }, [draftPalette, icao]);
 
   if (!brand || !ledContent) {
     return (
@@ -324,7 +387,10 @@ function AirlinePreviewPanel({
 
   const wallStyle = ledContent;
 
-  const palette = wallStyle.logoPalette ?? [];
+  const hasApprovedLogo = Boolean(logoUrl);
+  const hasDraft = draftPalette != null && draftPalette.length > 0;
+  const draftDiffersFromApplied =
+    hasDraft && !palettesEqual(draftPalette, appliedPalette);
 
   return (
     <div className="theme-tester__workbench">
@@ -343,6 +409,7 @@ function AirlinePreviewPanel({
           onDelete={onDelete}
           onRemove={onRemove}
           pasteBusy={pasteBusy}
+          sourceLogoPx={sourceLogoPx}
         />
         {pasteError && <p className="theme-tester__paste-error">{pasteError}</p>}
       </div>
@@ -350,13 +417,44 @@ function AirlinePreviewPanel({
       <div className="theme-tester__workbench-col theme-tester__workbench-col--led">
         <header className="theme-tester__workbench-head">
           <h3 className="theme-tester__workbench-title">FlightWall LED</h3>
-          <span className="theme-tester__workbench-meta admin-mono">48×48 @ 8×</span>
+          <div className="theme-tester__workbench-head-actions">
+            {hasApprovedLogo && (
+              <>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn--ghost admin-btn--compact"
+                  disabled={analyzingPalette}
+                  onClick={() => void reanalyzePalette()}
+                >
+                  {analyzingPalette ? 'Analyzing…' : 'Preview colors'}
+                </button>
+                <button
+                  type="button"
+                  className="admin-btn admin-btn--primary admin-btn--compact"
+                  disabled={analyzingPalette}
+                  onClick={() => void rescanLedWall()}
+                >
+                  {analyzingPalette ? 'Analyzing…' : 'Rescan LED wall'}
+                </button>
+                {draftDiffersFromApplied && (
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn--ghost admin-btn--compact"
+                    onClick={applyDraftPalette}
+                  >
+                    Apply preview
+                  </button>
+                )}
+              </>
+            )}
+            <span className="theme-tester__workbench-meta admin-mono">48×48 @ 8×</span>
+          </div>
         </header>
         <div className="theme-tester__led-stage theme-tester__led-stage--compact">
           <div className="theme-tester__led-bezel">
             <AirlineLedLogoTile
               content={wallStyle}
-              displaySize={152}
+              displaySize={ledPreviewPx}
               label={`${brand.name} LED tile`}
               className="theme-tester__led-canvas"
             />
@@ -371,10 +469,16 @@ function AirlinePreviewPanel({
               />
               <span className="admin-mono theme-tester__meta-hex">{wallStyle.logoBackground}</span>
             </div>
-            {palette.length > 0 && (
+            {appliedPalette.length > 0 && (
               <div className="theme-tester__meta-chip">
-                <span className="theme-tester__meta-label">Palette</span>
-                <PaletteRow colors={palette} horizontal />
+                <span className="theme-tester__meta-label">On LED</span>
+                <PaletteRow colors={appliedPalette} horizontal />
+              </div>
+            )}
+            {draftDiffersFromApplied && (
+              <div className="theme-tester__meta-chip theme-tester__meta-chip--draft">
+                <span className="theme-tester__meta-label">Detected</span>
+                <PaletteRow colors={draftPalette!} horizontal />
               </div>
             )}
           </div>
@@ -458,6 +562,7 @@ export default function CarrierInspectorPanel() {
       setPasteBusy(true);
       setPasteError(null);
       try {
+        clearStoredLedLogoPalette(activeIcao);
         await uploadPaste(activeIcao, dataUrl);
       } catch (err) {
         setPasteError(err instanceof Error ? err.message : 'Paste failed');
@@ -473,6 +578,7 @@ export default function CarrierInspectorPanel() {
     setActionError(null);
     setPasteError(null);
     try {
+      clearStoredLedLogoPalette(activeIcao);
       await removeLogo(activeIcao);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Remove failed');

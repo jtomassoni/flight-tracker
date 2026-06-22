@@ -2,7 +2,6 @@ import type { NormalizedAircraft } from '@/types/aircraft';
 import { isAirborne } from './aircraftUtils';
 import { isDisplayEligibleAircraft } from './displayEligibility';
 import { bearingDeg, headingDelta } from './geo';
-import { hasContradictoryRoute } from './routePlausibility';
 import { isCargoCallsign } from './cargoCarriers';
 import type { AltitudeFilter, DisplayMode, DisplaySettings } from './settings';
 
@@ -76,7 +75,6 @@ export function applyClientFilters(
     if (settings.cargoOnly && !isCargoCallsign(ac.callsign)) return false;
     if (!passesAltitudeFilter(ac, settings.altitudeFilter)) return false;
     if (!passesModeFilter(ac, settings.mode, settings.lat, settings.lon)) return false;
-    if (hasContradictoryRoute(ac)) return false;
     return true;
   });
 }

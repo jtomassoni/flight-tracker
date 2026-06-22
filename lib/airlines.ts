@@ -1,4 +1,5 @@
 import type { NormalizedAircraft } from '@/types/aircraft';
+import { resolveLedLogoPalette } from '@/lib/ledLogoPalette';
 import { approvedLogoUrl } from './approvedLogos';
 import { CATEGORY_BRANDS, getNonAirlineDisplayBrand, isFamousTail, isNNumberAircraft, isNNumberTail } from './aircraftCategories';
 import { CARGO_AIRLINE_ICAO_LIST, getCargoAirlineByIcao, getCargoAirlineFromCallsign } from './cargoAirlines';
@@ -364,7 +365,7 @@ const LED_LOGO_PALETTE: Partial<Record<string, readonly string[]>> = {
   VIV: ['#FFFFFF', '#00A650', '#ED1C24'],
   VOI: ['#FFFFFF', '#A83090', '#78A8D8', '#78C048', '#303030'],
   WJA: ['#FFFFFF', '#0F1E60', '#00A0DF'],
-  SCX: ['#FFFFFF', '#003594'],
+  SCX: ['#FF6600', '#003594', '#FFFFFF'],
   SKW: ['#FFFFFF', '#C4D600'],
   SWA: ['#D5152E', '#FFBF27', '#304CB2', '#CCCCCC'],
   FDX: ['#FF6600', '#4D148C', '#FFFFFF'],
@@ -404,6 +405,7 @@ function airlineLedLogoPalette(
 /** Carriers whose Kiwi logos are full-color marks on a white tile. */
 const COLOR_LOGO_TILE = new Set([
   'AAL',
+  'AAY',
   'FFT',
   'ASA',
   'EIN',
@@ -413,17 +415,19 @@ const COLOR_LOGO_TILE = new Set([
   'GTI',
   'ABX',
   'DHK',
+  'SCX',
 ]);
 
 /** Logo tile styling for the FlightWall LED theme */
 export function getAirlineLedWallStyle(brand: AirlineBrand): AirlineLedWallStyle {
   if (COLOR_LOGO_TILE.has(brand.icao)) {
     const logoBackground = '#ffffff';
+    const basePalette = airlineLedLogoPalette(brand, logoBackground);
     return {
       logoBackground,
       logoBorder: mixHex(brand.primaryColor, '#000000', 0.25),
       accentStripe: brand.accentColor,
-      logoPalette: airlineLedLogoPalette(brand, logoBackground),
+      logoPalette: resolveLedLogoPalette(brand.icao, basePalette),
       logoTileBorder: !LED_LOGO_NO_TILE_BORDER.has(brand.icao),
     };
   }
@@ -437,11 +441,13 @@ export function getAirlineLedWallStyle(brand: AirlineBrand): AirlineLedWallStyle
     : onDarkLogo
       ? brand.primaryColor
       : '#e8edf2';
+  const basePalette = airlineLedLogoPalette(brand, logoBackground);
+  const logoPalette = resolveLedLogoPalette(brand.icao, basePalette);
   return {
     logoBackground,
     logoBorder: mixHex(brand.primaryColor, '#000000', 0.25),
     accentStripe: brand.accentColor,
-    logoPalette: airlineLedLogoPalette(brand, logoBackground),
+    logoPalette,
     logoTileBorder: !LED_LOGO_NO_TILE_BORDER.has(brand.icao),
   };
 }
