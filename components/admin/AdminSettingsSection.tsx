@@ -492,14 +492,6 @@ export default function AdminSettingsSection({ section }: { section: AdminSettin
               onChange={(v) => updateAndSave('hideNoCallsign', v)}
               label="Hide unidentified aircraft"
             />
-
-            <Toggle
-              compact
-              checked={settings.cargoOnly}
-              onChange={(v) => updateAndSave('cargoOnly', v)}
-              label="Cargo flights only"
-              hint="FedEx, UPS, Atlas, DHL and other freight operators"
-            />
             </SettingsGroup>
 
             <SettingsGroup title="Screen">

@@ -326,7 +326,7 @@
   };
 
   var CARGO_CALLSIGN_PREFIXES = {
-    FDX: 1, UPS: 1, GTI: 1, GSS: 1, ABX: 1, ATN: 1,
+    FDX: 1, UPS: 1, GTI: 1, GSS: 1,
     DHL: 1, DHX: 1, DAE: 1, AHK: 1, BCS: 1
   };
 
@@ -373,15 +373,11 @@
     return false;
   }
 
-  /** Strict allowlist — airlines, cargo, military, and famous tails only. */
+  /** Passenger airline board only — curated national/mainline carriers. */
   function isDisplayEligibleAircraft(ac) {
-    if (isFamousTail(ac)) return true;
     var cs = trim(ac.callsign).toUpperCase();
     if (!cs || cs.length < 3 || isNNumberTail(cs)) return false;
-    if (hasKnownAirlineCallsign(cs)) return true;
-    if (isCargoCallsign(cs)) return true;
-    if (isMilitaryCallsign(cs)) return true;
-    return false;
+    return hasKnownAirlineCallsign(cs);
   }
 
   var heldDisplay = [];

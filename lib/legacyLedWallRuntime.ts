@@ -44,6 +44,8 @@ export function aircraftToLedContent(ac: NormalizedAircraft): LedFlightContent {
     accentStripe: wallStyle.accentStripe,
     logoPalette: wallStyle.logoPalette,
     logoTileBorder: wallStyle.logoTileBorder,
+    logoScaleMode: wallStyle.logoScaleMode,
+    logoDotOverrides: wallStyle.logoDotOverrides,
   };
 }
 

@@ -3,23 +3,27 @@
 import { useEffect, useState } from 'react';
 
 export function useMediaQuery(query: string): boolean {
-  const [matches, setMatches] = useState(false);
+  const [matches, setMatches] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.matchMedia(query).matches;
+  });
 
   useEffect(() => {
     const mq = window.matchMedia(query);
     setMatches(mq.matches);
 
-    const handler = (e: MediaQueryListEvent | MediaQueryList) => {
-      setMatches('matches' in e && typeof e.matches === 'boolean' ? e.matches : mq.matches);
+    const handler = (e: MediaQueryListEvent) => {
+      setMatches(e.matches);
     };
 
     if (typeof mq.addEventListener === 'function') {
-      mq.addEventListener('change', handler as (e: MediaQueryListEvent) => void);
-      return () => mq.removeEventListener('change', handler as (e: MediaQueryListEvent) => void);
+      mq.addEventListener('change', handler);
+      return () => mq.removeEventListener('change', handler);
     }
 
-    mq.addListener(handler);
-    return () => mq.removeListener(handler);
+    const legacyHandler = () => setMatches(mq.matches);
+    mq.addListener(legacyHandler);
+    return () => mq.removeListener(legacyHandler);
   }, [query]);
 
   return matches;
@@ -35,8 +39,8 @@ export function useWorkbenchPreviewScale(): number {
   const narrow = useMediaQuery('(max-width: 560px)');
   const halfScreen = useMediaQuery('(max-width: 1100px)');
   const medium = useMediaQuery('(max-width: 1400px)');
-  if (narrow) return 0.92;
-  if (halfScreen) return 1;
-  if (medium) return 1.15;
-  return 1.5;
+  if (narrow) return 0.85;
+  if (halfScreen) return 0.95;
+  if (medium) return 1;
+  return 1.1;
 }

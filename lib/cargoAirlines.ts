@@ -26,14 +26,6 @@ export const CARGO_AIRLINES: Record<string, AirlineBrand> = {
     accentColor: '#FFFFFF',
     secondaryColor: '#C8102E',
   },
-  ABX: {
-    name: 'Amazon Air',
-    icao: 'ABX',
-    iata: 'GB',
-    primaryColor: '#232F3E',
-    accentColor: '#FF9900',
-    secondaryColor: '#FFFFFF',
-  },
   DHK: {
     name: 'DHL Aviation',
     icao: 'DHK',
@@ -50,8 +42,6 @@ const CARGO_CALLSIGN_TO_ICAO: Record<string, string> = {
   UPS: 'UPS',
   GTI: 'GTI',
   GSS: 'GTI',
-  ABX: 'ABX',
-  ATN: 'ABX',
   DHL: 'DHK',
   DHX: 'DHK',
   DAE: 'DHK',

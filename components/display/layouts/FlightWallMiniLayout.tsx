@@ -53,14 +53,14 @@ export default function FlightWallMiniLayout({
     return withRoute.length > 0 ? [...withRoute, ...withoutRoute] : displayedAircraft;
   }, [displayedAircraft]);
 
-  useEffect(() => {
-    setIndex(0);
-  }, [carouselAircraft.length, carouselAircraft[0]?.hex]);
+  const carouselLength = carouselAircraft.length;
 
-  const carouselLength = useMemo(() => {
-    const withRoute = displayedAircraft.filter((ac) => ledRouteLabel(ac));
-    return withRoute.length > 0 ? withRoute.length : displayedAircraft.length;
-  }, [displayedAircraft]);
+  useEffect(() => {
+    setIndex((prev) => {
+      if (carouselLength === 0) return 0;
+      return prev >= carouselLength ? 0 : prev;
+    });
+  }, [carouselLength, carouselAircraft[0]?.hex]);
 
   useEffect(() => {
     if (carouselLength <= 1) return undefined;
@@ -93,6 +93,8 @@ export default function FlightWallMiniLayout({
       accentStripe: wallStyle.accentStripe,
       logoPalette: wallStyle.logoPalette,
       logoTileBorder: wallStyle.logoTileBorder,
+      logoScaleMode: wallStyle.logoScaleMode,
+      logoDotOverrides: wallStyle.logoDotOverrides,
     };
   }, [aircraft, displayedAircraft.length, index, logoManifestRevision]);
 

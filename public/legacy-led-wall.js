@@ -91,6 +91,30 @@ var LegacyLedWall = (() => {
     return (_a = getStoredLedLogoPalette(icao)) != null ? _a : fallback;
   }
 
+  // lib/ledLogoDotEdits.ts
+  var LED_DOT_EDITS_STORAGE_KEY = "flight-tracker-led-dot-edits-v1";
+  function readStoredDotEdits() {
+    if (typeof window === "undefined") return {};
+    try {
+      const raw = localStorage.getItem(LED_DOT_EDITS_STORAGE_KEY);
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === "object" ? parsed : {};
+    } catch (e) {
+      return {};
+    }
+  }
+  function getStoredLedLogoDotOverrides(icao) {
+    const key = icao.trim().toUpperCase();
+    const stored = readStoredDotEdits()[key];
+    if (!stored || typeof stored !== "object") return null;
+    return stored;
+  }
+  function resolveLedLogoDotOverrides(icao) {
+    var _a;
+    return (_a = getStoredLedLogoDotOverrides(icao)) != null ? _a : void 0;
+  }
+
   // lib/cargoAirlines.ts
   var CARGO_AIRLINES = {
     FDX: {
@@ -117,14 +141,6 @@ var LegacyLedWall = (() => {
       accentColor: "#FFFFFF",
       secondaryColor: "#C8102E"
     },
-    ABX: {
-      name: "Amazon Air",
-      icao: "ABX",
-      iata: "GB",
-      primaryColor: "#232F3E",
-      accentColor: "#FF9900",
-      secondaryColor: "#FFFFFF"
-    },
     DHK: {
       name: "DHL Aviation",
       icao: "DHK",
@@ -139,8 +155,6 @@ var LegacyLedWall = (() => {
     UPS: "UPS",
     GTI: "GTI",
     GSS: "GTI",
-    ABX: "ABX",
-    ATN: "ABX",
     DHL: "DHK",
     DHX: "DHK",
     DAE: "DHK",
@@ -316,9 +330,6 @@ var LegacyLedWall = (() => {
     var _a;
     return (_a = normalizeTail(ac.registration)) != null ? _a : normalizeTail(ac.callsign);
   }
-  function isNNumberAircraft(ac) {
-    return isNNumberTail(ac.registration) || isNNumberTail(ac.callsign);
-  }
   function isFamousTail(ac) {
     return lookupFamousTail(ac) != null;
   }
@@ -346,7 +357,6 @@ var LegacyLedWall = (() => {
   function isBizjet(ac) {
     if (matchesPrefix(ac.aircraftType, BIZJET_TYPE_PREFIXES)) return true;
     if (ac.aircraftType === "PC12") return true;
-    if (isNNumberAircraft(ac) && ac.category === "A3") return true;
     return false;
   }
   var UNKNOWN_NON_AIRLINE_BRAND = {
@@ -677,13 +687,15 @@ var LegacyLedWall = (() => {
     return (_a = AIRLINES[resolved]) != null ? _a : null;
   }
   function getAircraftDisplayBrand(ac) {
+    var _a;
     if (isFamousTail(ac)) {
       return getNonAirlineDisplayBrand(ac);
     }
     const cargo = getCargoAirlineFromCallsign(ac.callsign);
     if (cargo) return cargo;
-    if (!isNNumberAircraft(ac)) {
-      const airline = getAirlineFromCallsign(ac.callsign);
+    const callsign = (_a = ac.callsign) == null ? void 0 : _a.trim();
+    if (callsign && !isNNumberTail(callsign)) {
+      const airline = getAirlineFromCallsign(callsign);
       if (airline) return airline;
     }
     return getNonAirlineDisplayBrand(ac);
@@ -738,11 +750,10 @@ var LegacyLedWall = (() => {
     UPS: ["#FFB500", "#351C15", "#FFFFFF"],
     GTI: ["#FFFFFF", "#003366", "#C8102E"],
     DHK: ["#FFCC00", "#D40511", "#FFFFFF"],
-    ABX: ["#FF9900", "#232F3E", "#FFFFFF"],
     MIL: ["#FFFFFF", "#C5A572", "#3D4F2F", "#2C1810"],
     PVT: ["#FFFFFF", "#D4AF37", "#64748B", "#1E293B"]
   };
-  var LED_LOGO_NO_TILE_BORDER = /* @__PURE__ */ new Set(["JBU", "SWA", "MIL", "PVT", "GA", "FDX", "UPS", "GTI", "ABX", "DHK"]);
+  var LED_LOGO_NO_TILE_BORDER = /* @__PURE__ */ new Set(["JBU", "SWA", "MIL", "PVT", "GA", "FDX", "UPS", "GTI", "DHK"]);
   function airlineLedLogoPalette(brand, logoBackground) {
     const override = LED_LOGO_PALETTE[brand.icao];
     if (override) return override;
@@ -771,7 +782,6 @@ var LegacyLedWall = (() => {
     "FDX",
     "UPS",
     "GTI",
-    "ABX",
     "DHK",
     "SCX"
   ]);
@@ -784,7 +794,8 @@ var LegacyLedWall = (() => {
         logoBorder: mixHex(brand.primaryColor, "#000000", 0.25),
         accentStripe: brand.accentColor,
         logoPalette: resolveLedLogoPalette(brand.icao, basePalette2),
-        logoTileBorder: !LED_LOGO_NO_TILE_BORDER.has(brand.icao)
+        logoTileBorder: !LED_LOGO_NO_TILE_BORDER.has(brand.icao),
+        logoDotOverrides: resolveLedLogoDotOverrides(brand.icao)
       };
     }
     const onBlackLogo = ["VOI"].includes(brand.icao);
@@ -797,7 +808,8 @@ var LegacyLedWall = (() => {
       logoBorder: mixHex(brand.primaryColor, "#000000", 0.25),
       accentStripe: brand.accentColor,
       logoPalette,
-      logoTileBorder: !LED_LOGO_NO_TILE_BORDER.has(brand.icao)
+      logoTileBorder: !LED_LOGO_NO_TILE_BORDER.has(brand.icao),
+      logoDotOverrides: resolveLedLogoDotOverrides(brand.icao)
     };
   }
   function airlineLogoCanvasUrl(brand) {
@@ -1519,8 +1531,10 @@ var LegacyLedWall = (() => {
     }
   }
   var LOGO_MARK_ALPHA = 140;
+  var LOGO_FAINT_ALPHA = 40;
+  var LOGO_CELL_SAMPLES = 3;
   var LOGO_QUANT_STEP = 51;
-  var LOGO_SRC_INSET = 0.07;
+  var LOGO_SRC_INSET = 0.05;
   function ledGridForOrientation(orientation) {
     return LED_GRID[orientation];
   }
@@ -1689,12 +1703,60 @@ var LegacyLedWall = (() => {
   function colorLuminance(c) {
     return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
   }
+  function colorSaturation(c) {
+    const max = Math.max(c.r, c.g, c.b);
+    const min = Math.min(c.r, c.g, c.b);
+    if (max === 0) return 0;
+    return (max - min) / max;
+  }
+  function lightestPaletteColor(palette) {
+    let best = null;
+    let bestLum = -1;
+    for (const hex of palette) {
+      const lum = colorLuminance(parseHexColor(hex));
+      if (lum > bestLum) {
+        bestLum = lum;
+        best = hex;
+      }
+    }
+    return best;
+  }
+  function foregroundPaletteColors(palette, bgHex) {
+    if (!(palette == null ? void 0 : palette.length)) return [];
+    const bg = parseHexColor(bgHex);
+    return palette.filter((hex) => rgbDistance(parseHexColor(hex), bg) >= 42);
+  }
+  function isBinaryLogoPalette(palette, bgHex) {
+    return foregroundPaletteColors(palette, bgHex).length === 1;
+  }
+  function snapBinaryLogoColor(r, g, b, bg, bgHex, fgHex) {
+    const sample = { r, g, b };
+    if (rgbDistance(sample, bg) < 28) return bgHex;
+    const bgLum = colorLuminance(bg);
+    const fgLum = colorLuminance(parseHexColor(fgHex));
+    const mid = bgLum + (fgLum - bgLum) * 0.44;
+    return colorLuminance(sample) >= mid ? fgHex : bgHex;
+  }
   function snapLogoColor(r, g, b, bg, bgHex, palette) {
     const sample = { r, g, b };
     if (rgbDistance(sample, bg) < 42) {
       return bgHex;
     }
     if (palette && palette.length > 0) {
+      const foreground = foregroundPaletteColors(palette, bgHex);
+      if (foreground.length === 1) {
+        return snapBinaryLogoColor(r, g, b, bg, bgHex, foreground[0]);
+      }
+      const sampleLum = colorLuminance(sample);
+      const bgLum = colorLuminance(bg);
+      const highlight = lightestPaletteColor(palette);
+      const sampleSat = colorSaturation(sample);
+      if (highlight && sampleSat < 0.2 && sampleLum > bgLum + 48) {
+        const highlightLum = colorLuminance(parseHexColor(highlight));
+        if (sampleLum >= highlightLum - 72) {
+          return highlight;
+        }
+      }
       let best = palette[0];
       let bestDist = Infinity;
       for (const hex of palette) {
@@ -1732,55 +1794,206 @@ var LegacyLedWall = (() => {
     srcCtx.drawImage(logo, 0, 0);
     return srcCtx.getImageData(0, 0, canvas.width, canvas.height);
   }
-  function rasterizeLogoToTile(ctx, logo, x, y, w, h, background, palette, tileBorder = true) {
+  function readLogoSourcePixel(src, srcW, srcH, su, sv) {
     var _a, _b, _c, _d;
+    const sx = Math.min(srcW - 1, Math.max(0, Math.floor(su * srcW)));
+    const sy = Math.min(srcH - 1, Math.max(0, Math.floor(sv * srcH)));
+    const si = (sy * srcW + sx) * 4;
+    return {
+      r: (_a = src.data[si]) != null ? _a : 0,
+      g: (_b = src.data[si + 1]) != null ? _b : 0,
+      b: (_c = src.data[si + 2]) != null ? _c : 0,
+      a: (_d = src.data[si + 3]) != null ? _d : 0
+    };
+  }
+  function sampleLogoLedCell(src, srcW, srcH, u0, v0, u1, v1, bg, bgHex, palette, srcInset = LOGO_SRC_INSET) {
+    var _a;
+    const foreground = foregroundPaletteColors(palette, bgHex);
+    if (foreground.length === 1) {
+      return sampleBinaryLogoLedCell(
+        src,
+        srcW,
+        srcH,
+        u0,
+        v0,
+        u1,
+        v1,
+        bg,
+        bgHex,
+        foreground[0],
+        srcInset
+      );
+    }
+    const bgLum = colorLuminance(bg);
+    const samples = [];
+    for (let sy = 0; sy < LOGO_CELL_SAMPLES; sy += 1) {
+      for (let sx = 0; sx < LOGO_CELL_SAMPLES; sx += 1) {
+        const fu = (sx + 0.5) / LOGO_CELL_SAMPLES;
+        const fv = (sy + 0.5) / LOGO_CELL_SAMPLES;
+        const su = srcInset + (u0 + fu * (u1 - u0)) * (1 - 2 * srcInset);
+        const sv = srcInset + (v0 + fv * (v1 - v0)) * (1 - 2 * srcInset);
+        const { r, g, b, a } = readLogoSourcePixel(src, srcW, srcH, su, sv);
+        if (a < LOGO_FAINT_ALPHA) continue;
+        const blended = blendOnBackground(r, g, b, a, bg);
+        const contrast = colorLuminance(blended) - bgLum;
+        if (a < LOGO_MARK_ALPHA && contrast < 36) continue;
+        const color = snapLogoColor(blended.r, blended.g, blended.b, bg, bgHex, palette);
+        if (color === bgHex && a < LOGO_MARK_ALPHA) continue;
+        samples.push({ color, alpha: a, contrast });
+      }
+    }
+    if (samples.length === 0) return bgHex;
+    const votes = /* @__PURE__ */ new Map();
+    for (const sample of samples) {
+      const weight = sample.alpha + Math.max(0, sample.contrast) * 1.4;
+      votes.set(sample.color, ((_a = votes.get(sample.color)) != null ? _a : 0) + weight);
+    }
+    let bestColor = bgHex;
+    let bestWeight = -1;
+    for (const [color, weight] of votes) {
+      if (color === bgHex) continue;
+      if (weight > bestWeight) {
+        bestWeight = weight;
+        bestColor = color;
+      }
+    }
+    return bestWeight > 0 ? bestColor : bgHex;
+  }
+  function sampleBinaryLogoLedCell(src, srcW, srcH, u0, v0, u1, v1, bg, bgHex, fgHex, srcInset) {
+    var _a, _b, _c, _d;
+    const bgLum = colorLuminance(bg);
+    const fgLum = colorLuminance(parseHexColor(fgHex));
+    const threshold = bgLum + (fgLum - bgLum) * 0.36;
+    const su0 = srcInset + u0 * (1 - 2 * srcInset);
+    const su1 = srcInset + u1 * (1 - 2 * srcInset);
+    const sv0 = srcInset + v0 * (1 - 2 * srcInset);
+    const sv1 = srcInset + v1 * (1 - 2 * srcInset);
+    const x0 = Math.max(0, Math.floor(su0 * srcW));
+    const x1 = Math.min(srcW, Math.max(x0 + 1, Math.ceil(su1 * srcW)));
+    const y0 = Math.max(0, Math.floor(sv0 * srcH));
+    const y1 = Math.min(srcH, Math.max(y0 + 1, Math.ceil(sv1 * srcH)));
+    let fgWeight = 0;
+    let totalWeight = 0;
+    let peakLum = 0;
+    for (let sy = y0; sy < y1; sy += 1) {
+      for (let sx = x0; sx < x1; sx += 1) {
+        const si = (sy * srcW + sx) * 4;
+        const r = (_a = src.data[si]) != null ? _a : 0;
+        const g = (_b = src.data[si + 1]) != null ? _b : 0;
+        const b = (_c = src.data[si + 2]) != null ? _c : 0;
+        const a = (_d = src.data[si + 3]) != null ? _d : 0;
+        if (a < 24) continue;
+        const blended = blendOnBackground(r, g, b, a, bg);
+        const lum = colorLuminance(blended);
+        const weight = a / 255;
+        totalWeight += weight;
+        peakLum = Math.max(peakLum, lum);
+        if (lum >= threshold) {
+          fgWeight += weight;
+        }
+      }
+    }
+    if (totalWeight === 0) return bgHex;
+    const fgFrac = fgWeight / totalWeight;
+    if (fgFrac >= 0.24 || peakLum >= threshold + 14) return fgHex;
+    if (fgFrac >= 0.14 && peakLum >= threshold + 4) return fgHex;
+    return bgHex;
+  }
+  function isHighlightPaletteColor(hex, palette) {
+    const light = lightestPaletteColor(palette);
+    if (!light) return false;
+    return hex.toLowerCase() === light.toLowerCase();
+  }
+  function repairBinaryLogoTilePerimeter(grid, w, h, bgHex, fgHex) {
+    const isBg = (hex) => hex.toLowerCase() === bgHex.toLowerCase();
+    const isFg = (hex) => hex.toLowerCase() === fgHex.toLowerCase();
+    const onPerimeter = (lx, ly) => lx === 0 || lx === w - 1 || ly === 0 || ly === h - 1;
+    const snapshot = grid.map((row) => [...row]);
+    for (let ly = 0; ly < h; ly += 1) {
+      for (let lx = 0; lx < w; lx += 1) {
+        if (!onPerimeter(lx, ly) || !isBg(snapshot[ly][lx])) continue;
+        if (lx > 0 && lx < w - 1 && isFg(snapshot[ly][lx - 1]) && isFg(snapshot[ly][lx + 1])) {
+          grid[ly][lx] = fgHex;
+          continue;
+        }
+        if (ly > 0 && ly < h - 1 && isFg(snapshot[ly - 1][lx]) && isFg(snapshot[ly + 1][lx])) {
+          grid[ly][lx] = fgHex;
+        }
+      }
+    }
+  }
+  function repairLogoTileThinStrokes(grid, w, h, bgHex, palette) {
+    if (!(palette == null ? void 0 : palette.length)) return;
+    const highlight = lightestPaletteColor(palette);
+    if (!highlight) return;
+    const isBg = (hex) => hex.toLowerCase() === bgHex.toLowerCase();
+    const isStroke = (hex) => isHighlightPaletteColor(hex, palette) || hex.toLowerCase() === highlight.toLowerCase();
+    const snapshot = grid.map((row) => [...row]);
+    for (let ly = 0; ly < h; ly += 1) {
+      for (let lx = 0; lx < w; lx += 1) {
+        if (!isBg(snapshot[ly][lx])) continue;
+        if (lx > 0 && lx < w - 1 && isStroke(snapshot[ly][lx - 1]) && isStroke(snapshot[ly][lx + 1])) {
+          grid[ly][lx] = snapshot[ly][lx - 1];
+          continue;
+        }
+        if (ly > 0 && ly < h - 1 && isStroke(snapshot[ly - 1][lx]) && isStroke(snapshot[ly + 1][lx])) {
+          grid[ly][lx] = snapshot[ly - 1][lx];
+        }
+      }
+    }
+  }
+  function rasterizeLogoToTile(ctx, logo, x, y, w, h, background, palette, tileBorder = true, scaleMode) {
     const bg = parseHexColor(background);
     const bgHex = rgbToHex(bg.r, bg.g, bg.b);
     const src = readLogoSource(logo);
     const srcW = src.width;
     const srcH = src.height;
-    const scale = Math.min(w / srcW, h / srcH);
+    const binaryPalette = isBinaryLogoPalette(palette, bgHex);
+    const binaryFg = binaryPalette ? foregroundPaletteColors(palette, bgHex)[0] : void 0;
+    const useCover = scaleMode === "cover" || scaleMode !== "contain" && binaryPalette && !tileBorder;
+    const scale = useCover ? Math.max(w / srcW, h / srcH) : Math.min(w / srcW, h / srcH);
     const drawW = Math.max(1, Math.floor(srcW * scale));
     const drawH = Math.max(1, Math.floor(srcH * scale));
     const ox = x + Math.floor((w - drawW) / 2);
     const oy = y + Math.floor((h - drawH) / 2);
+    const grid = Array.from({ length: h }, () => Array.from({ length: w }, () => bgHex));
+    const srcInset = tileBorder ? LOGO_SRC_INSET : 0;
     for (let ly = 0; ly < h; ly += 1) {
       for (let lx = 0; lx < w; lx += 1) {
-        const px = x + lx;
-        const py = y + ly;
         const onTileEdge = tileBorder && (lx === 0 || lx === w - 1 || ly === 0 || ly === h - 1);
-        const inMark = px >= ox && px < ox + drawW && py >= oy && py < oy + drawH;
+        const inMark = lx >= ox - x && lx < ox - x + drawW && ly >= oy - y && ly < oy - y + drawH;
         if (onTileEdge || !inMark) {
-          ctx.fillStyle = bgHex;
-          ctx.fillRect(px, py, 1, 1);
+          grid[ly][lx] = bgHex;
           continue;
         }
-        const u = (px - ox + 0.5) / drawW;
-        const v = (py - oy + 0.5) / drawH;
-        const su = LOGO_SRC_INSET + u * (1 - 2 * LOGO_SRC_INSET);
-        const sv = LOGO_SRC_INSET + v * (1 - 2 * LOGO_SRC_INSET);
-        const sx = Math.min(srcW - 1, Math.max(0, Math.floor(su * srcW)));
-        const sy = Math.min(srcH - 1, Math.max(0, Math.floor(sv * srcH)));
-        const si = (sy * srcW + sx) * 4;
-        const sr = (_a = src.data[si]) != null ? _a : 0;
-        const sg = (_b = src.data[si + 1]) != null ? _b : 0;
-        const sb = (_c = src.data[si + 2]) != null ? _c : 0;
-        const sa = (_d = src.data[si + 3]) != null ? _d : 0;
-        if (sa < LOGO_MARK_ALPHA) {
-          ctx.fillStyle = bgHex;
-          ctx.fillRect(px, py, 1, 1);
-          continue;
-        }
-        const blended = blendOnBackground(sr, sg, sb, sa, bg);
-        ctx.fillStyle = snapLogoColor(
-          blended.r,
-          blended.g,
-          blended.b,
+        const u0 = (lx - (ox - x)) / drawW;
+        const v0 = (ly - (oy - y)) / drawH;
+        const u1 = u0 + 1 / drawW;
+        const v1 = v0 + 1 / drawH;
+        grid[ly][lx] = sampleLogoLedCell(
+          src,
+          srcW,
+          srcH,
+          u0,
+          v0,
+          u1,
+          v1,
           bg,
           bgHex,
-          palette
+          palette,
+          srcInset
         );
-        ctx.fillRect(px, py, 1, 1);
+      }
+    }
+    if (binaryPalette && binaryFg) {
+      repairBinaryLogoTilePerimeter(grid, w, h, bgHex, binaryFg);
+    } else {
+      repairLogoTileThinStrokes(grid, w, h, bgHex, palette);
+    }
+    for (let ly = 0; ly < h; ly += 1) {
+      for (let lx = 0; lx < w; lx += 1) {
+        ctx.fillStyle = grid[ly][lx];
+        ctx.fillRect(x + lx, y + ly, 1, 1);
       }
     }
   }
@@ -1805,7 +2018,8 @@ var LegacyLedWall = (() => {
         logoH,
         content.logoBackground,
         content.logoPalette,
-        content.logoTileBorder !== false
+        content.logoTileBorder !== false,
+        content.logoScaleMode
       );
     } else {
       drawLogoFallback(ctx, content.logoFallback, layout, content.logoBackground);
@@ -2508,7 +2722,9 @@ var LegacyLedWall = (() => {
       logoBorder: wallStyle.logoBorder,
       accentStripe: wallStyle.accentStripe,
       logoPalette: wallStyle.logoPalette,
-      logoTileBorder: wallStyle.logoTileBorder
+      logoTileBorder: wallStyle.logoTileBorder,
+      logoScaleMode: wallStyle.logoScaleMode,
+      logoDotOverrides: wallStyle.logoDotOverrides
     };
   }
   function detectOrientation() {

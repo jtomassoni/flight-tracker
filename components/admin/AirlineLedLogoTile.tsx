@@ -14,7 +14,31 @@ type AirlineLedLogoTileProps = {
   /** CSS display size — render resolution stays at `zoom`. */
   displaySize?: number;
   className?: string;
+  onGridRendered?: (grid: string[][]) => void;
 };
+
+function rgbToHex(r: number, g: number, b: number): string {
+  return `#${[r, g, b].map((v) => v.toString(16).padStart(2, '0')).join('')}`;
+}
+
+function imageDataToGrid(imageData: ImageData): string[][] {
+  const grid: string[][] = [];
+  for (let y = 0; y < imageData.height; y += 1) {
+    const row: string[] = [];
+    for (let x = 0; x < imageData.width; x += 1) {
+      const i = (y * imageData.width + x) * 4;
+      row.push(
+        rgbToHex(
+          imageData.data[i] ?? 0,
+          imageData.data[i + 1] ?? 0,
+          imageData.data[i + 2] ?? 0
+        )
+      );
+    }
+    grid.push(row);
+  }
+  return grid;
+}
 
 export default function AirlineLedLogoTile({
   content,
@@ -22,6 +46,7 @@ export default function AirlineLedLogoTile({
   zoom = DEFAULT_ZOOM,
   displaySize,
   className,
+  onGridRendered,
 }: AirlineLedLogoTileProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const bufferRef = useRef<HTMLCanvasElement | null>(null);
@@ -57,6 +82,7 @@ export default function AirlineLedLogoTile({
       canvasRef.current.height = height;
 
       const imageData = bufferCtx.getImageData(0, 0, TILE_SIZE, TILE_SIZE);
+      onGridRendered?.(imageDataToGrid(imageData));
       paintLedDots(displayCtx, imageData, width, height, logoRect, {
         fitFrame: true,
         logoBackground: content.logoBackground,
@@ -69,7 +95,7 @@ export default function AirlineLedLogoTile({
     return () => {
       cancelled = true;
     };
-  }, [content, zoom]);
+  }, [content, onGridRendered, zoom]);
 
   return (
     <canvas

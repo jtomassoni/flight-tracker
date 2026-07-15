@@ -71,10 +71,14 @@ function ledEmphasisColor(emphasis?: LedTelemetryEmphasis): string {
 
 /** Logo mark pixels below this alpha are treated as tile background. */
 const LOGO_MARK_ALPHA = 140;
+/** Faint edge pixels (thin strokes) still count when luminance pops off the tile fill. */
+const LOGO_FAINT_ALPHA = 40;
+/** Subsamples per LED axis — catches 1px strokes that miss the cell center. */
+const LOGO_CELL_SAMPLES = 3;
 /** Quantize logo RGB to discrete LED phosphor steps — kills anti-alias fringe. */
 const LOGO_QUANT_STEP = 51;
 /** Inset Kiwi PNG sampling to skip opaque white padding at asset edges. */
-const LOGO_SRC_INSET = 0.07;
+const LOGO_SRC_INSET = 0.05;
 
 export type LedFlightContent = {
   airlineName: string;
@@ -93,6 +97,10 @@ export type LedFlightContent = {
   accentStripe: string;
   logoPalette?: readonly string[];
   logoTileBorder?: boolean;
+  /** Raster scale — cover fills the tile (wordmarks); contain letterboxes. */
+  logoScaleMode?: 'contain' | 'cover';
+  /** Sparse per-cell LED overrides keyed by "x,y". */
+  logoDotOverrides?: Record<string, string>;
 };
 
 const LED_TELEMETRY_COUNT = 2;
@@ -382,6 +390,59 @@ function colorLuminance(c: { r: number; g: number; b: number }): number {
   return 0.299 * c.r + 0.587 * c.g + 0.114 * c.b;
 }
 
+function colorSaturation(c: { r: number; g: number; b: number }): number {
+  const max = Math.max(c.r, c.g, c.b);
+  const min = Math.min(c.r, c.g, c.b);
+  if (max === 0) return 0;
+  return (max - min) / max;
+}
+
+function lightestPaletteColor(palette: readonly string[]): string | null {
+  let best: string | null = null;
+  let bestLum = -1;
+  for (const hex of palette) {
+    const lum = colorLuminance(parseHexColor(hex));
+    if (lum > bestLum) {
+      bestLum = lum;
+      best = hex;
+    }
+  }
+  return best;
+}
+
+function foregroundPaletteColors(
+  palette: readonly string[] | undefined,
+  bgHex: string
+): string[] {
+  if (!palette?.length) return [];
+  const bg = parseHexColor(bgHex);
+  return palette.filter((hex) => rgbDistance(parseHexColor(hex), bg) >= 42);
+}
+
+function isBinaryLogoPalette(
+  palette: readonly string[] | undefined,
+  bgHex: string
+): boolean {
+  return foregroundPaletteColors(palette, bgHex).length === 1;
+}
+
+function snapBinaryLogoColor(
+  r: number,
+  g: number,
+  b: number,
+  bg: { r: number; g: number; b: number },
+  bgHex: string,
+  fgHex: string
+): string {
+  const sample = { r, g, b };
+  if (rgbDistance(sample, bg) < 28) return bgHex;
+
+  const bgLum = colorLuminance(bg);
+  const fgLum = colorLuminance(parseHexColor(fgHex));
+  const mid = bgLum + (fgLum - bgLum) * 0.44;
+  return colorLuminance(sample) >= mid ? fgHex : bgHex;
+}
+
 /** Snap a logo pixel to the nearest brand fill — kills CDN gradient fringe. */
 function snapLogoColor(
   r: number,
@@ -397,6 +458,23 @@ function snapLogoColor(
   }
 
   if (palette && palette.length > 0) {
+    const foreground = foregroundPaletteColors(palette, bgHex);
+    if (foreground.length === 1) {
+      return snapBinaryLogoColor(r, g, b, bg, bgHex, foreground[0]!);
+    }
+
+    const sampleLum = colorLuminance(sample);
+    const bgLum = colorLuminance(bg);
+    const highlight = lightestPaletteColor(palette);
+    const sampleSat = colorSaturation(sample);
+    // Only snap bright *neutral* pixels (white borders) — not yellow/red brand fills.
+    if (highlight && sampleSat < 0.2 && sampleLum > bgLum + 48) {
+      const highlightLum = colorLuminance(parseHexColor(highlight));
+      if (sampleLum >= highlightLum - 72) {
+        return highlight;
+      }
+    }
+
     let best = palette[0]!;
     let bestDist = Infinity;
     for (const hex of palette) {
@@ -448,7 +526,233 @@ function readLogoSource(logo: HTMLImageElement): ImageData {
   return srcCtx.getImageData(0, 0, canvas.width, canvas.height);
 }
 
-/** One buffer cell = one LED; nearest-neighbor sample + hard quantize (no PNG fringe). */
+function readLogoSourcePixel(
+  src: ImageData,
+  srcW: number,
+  srcH: number,
+  su: number,
+  sv: number
+): { r: number; g: number; b: number; a: number } {
+  const sx = Math.min(srcW - 1, Math.max(0, Math.floor(su * srcW)));
+  const sy = Math.min(srcH - 1, Math.max(0, Math.floor(sv * srcH)));
+  const si = (sy * srcW + sx) * 4;
+  return {
+    r: src.data[si] ?? 0,
+    g: src.data[si + 1] ?? 0,
+    b: src.data[si + 2] ?? 0,
+    a: src.data[si + 3] ?? 0,
+  };
+}
+
+type LogoCellSample = {
+  color: string;
+  alpha: number;
+  contrast: number;
+};
+
+/** Multi-sample one LED cell — prefers strong edges and faint thin strokes. */
+function sampleLogoLedCell(
+  src: ImageData,
+  srcW: number,
+  srcH: number,
+  u0: number,
+  v0: number,
+  u1: number,
+  v1: number,
+  bg: { r: number; g: number; b: number },
+  bgHex: string,
+  palette?: readonly string[],
+  srcInset = LOGO_SRC_INSET
+): string {
+  const foreground = foregroundPaletteColors(palette, bgHex);
+  if (foreground.length === 1) {
+    return sampleBinaryLogoLedCell(
+      src,
+      srcW,
+      srcH,
+      u0,
+      v0,
+      u1,
+      v1,
+      bg,
+      bgHex,
+      foreground[0]!,
+      srcInset
+    );
+  }
+
+  const bgLum = colorLuminance(bg);
+  const samples: LogoCellSample[] = [];
+
+  for (let sy = 0; sy < LOGO_CELL_SAMPLES; sy += 1) {
+    for (let sx = 0; sx < LOGO_CELL_SAMPLES; sx += 1) {
+      const fu = (sx + 0.5) / LOGO_CELL_SAMPLES;
+      const fv = (sy + 0.5) / LOGO_CELL_SAMPLES;
+      const su = srcInset + (u0 + fu * (u1 - u0)) * (1 - 2 * srcInset);
+      const sv = srcInset + (v0 + fv * (v1 - v0)) * (1 - 2 * srcInset);
+      const { r, g, b, a } = readLogoSourcePixel(src, srcW, srcH, su, sv);
+      if (a < LOGO_FAINT_ALPHA) continue;
+
+      const blended = blendOnBackground(r, g, b, a, bg);
+      const contrast = colorLuminance(blended) - bgLum;
+      if (a < LOGO_MARK_ALPHA && contrast < 36) continue;
+
+      const color = snapLogoColor(blended.r, blended.g, blended.b, bg, bgHex, palette);
+      if (color === bgHex && a < LOGO_MARK_ALPHA) continue;
+
+      samples.push({ color, alpha: a, contrast });
+    }
+  }
+
+  if (samples.length === 0) return bgHex;
+
+  const votes = new Map<string, number>();
+  for (const sample of samples) {
+    const weight = sample.alpha + Math.max(0, sample.contrast) * 1.4;
+    votes.set(sample.color, (votes.get(sample.color) ?? 0) + weight);
+  }
+
+  let bestColor = bgHex;
+  let bestWeight = -1;
+  for (const [color, weight] of votes) {
+    if (color === bgHex) continue;
+    if (weight > bestWeight) {
+      bestWeight = weight;
+      bestColor = color;
+    }
+  }
+
+  return bestWeight > 0 ? bestColor : bgHex;
+}
+
+/** Two-color wordmarks (JetBlue, etc.) — integrate source bbox per LED cell. */
+function sampleBinaryLogoLedCell(
+  src: ImageData,
+  srcW: number,
+  srcH: number,
+  u0: number,
+  v0: number,
+  u1: number,
+  v1: number,
+  bg: { r: number; g: number; b: number },
+  bgHex: string,
+  fgHex: string,
+  srcInset: number
+): string {
+  const bgLum = colorLuminance(bg);
+  const fgLum = colorLuminance(parseHexColor(fgHex));
+  const threshold = bgLum + (fgLum - bgLum) * 0.36;
+
+  const su0 = srcInset + u0 * (1 - 2 * srcInset);
+  const su1 = srcInset + u1 * (1 - 2 * srcInset);
+  const sv0 = srcInset + v0 * (1 - 2 * srcInset);
+  const sv1 = srcInset + v1 * (1 - 2 * srcInset);
+
+  const x0 = Math.max(0, Math.floor(su0 * srcW));
+  const x1 = Math.min(srcW, Math.max(x0 + 1, Math.ceil(su1 * srcW)));
+  const y0 = Math.max(0, Math.floor(sv0 * srcH));
+  const y1 = Math.min(srcH, Math.max(y0 + 1, Math.ceil(sv1 * srcH)));
+
+  let fgWeight = 0;
+  let totalWeight = 0;
+  let peakLum = 0;
+
+  for (let sy = y0; sy < y1; sy += 1) {
+    for (let sx = x0; sx < x1; sx += 1) {
+      const si = (sy * srcW + sx) * 4;
+      const r = src.data[si] ?? 0;
+      const g = src.data[si + 1] ?? 0;
+      const b = src.data[si + 2] ?? 0;
+      const a = src.data[si + 3] ?? 0;
+      if (a < 24) continue;
+
+      const blended = blendOnBackground(r, g, b, a, bg);
+      const lum = colorLuminance(blended);
+      const weight = a / 255;
+      totalWeight += weight;
+      peakLum = Math.max(peakLum, lum);
+      if (lum >= threshold) {
+        fgWeight += weight;
+      }
+    }
+  }
+
+  if (totalWeight === 0) return bgHex;
+  const fgFrac = fgWeight / totalWeight;
+  if (fgFrac >= 0.24 || peakLum >= threshold + 14) return fgHex;
+  if (fgFrac >= 0.14 && peakLum >= threshold + 4) return fgHex;
+  return bgHex;
+}
+
+function isHighlightPaletteColor(hex: string, palette: readonly string[]): boolean {
+  const light = lightestPaletteColor(palette);
+  if (!light) return false;
+  return hex.toLowerCase() === light.toLowerCase();
+}
+
+/** Bridge 1px holes in binary wordmark borders without touching letter counters. */
+function repairBinaryLogoTilePerimeter(
+  grid: string[][],
+  w: number,
+  h: number,
+  bgHex: string,
+  fgHex: string
+): void {
+  const isBg = (hex: string) => hex.toLowerCase() === bgHex.toLowerCase();
+  const isFg = (hex: string) => hex.toLowerCase() === fgHex.toLowerCase();
+  const onPerimeter = (lx: number, ly: number) =>
+    lx === 0 || lx === w - 1 || ly === 0 || ly === h - 1;
+  const snapshot = grid.map((row) => [...row]);
+
+  for (let ly = 0; ly < h; ly += 1) {
+    for (let lx = 0; lx < w; lx += 1) {
+      if (!onPerimeter(lx, ly) || !isBg(snapshot[ly]![lx]!)) continue;
+
+      if (lx > 0 && lx < w - 1 && isFg(snapshot[ly]![lx - 1]!) && isFg(snapshot[ly]![lx + 1]!)) {
+        grid[ly]![lx] = fgHex;
+        continue;
+      }
+      if (ly > 0 && ly < h - 1 && isFg(snapshot[ly - 1]![lx]!) && isFg(snapshot[ly + 1]![lx]!)) {
+        grid[ly]![lx] = fgHex;
+      }
+    }
+  }
+}
+
+/** Bridge 1px holes in thin highlight strokes (e.g. white heart borders). */
+function repairLogoTileThinStrokes(
+  grid: string[][],
+  w: number,
+  h: number,
+  bgHex: string,
+  palette?: readonly string[]
+): void {
+  if (!palette?.length) return;
+  const highlight = lightestPaletteColor(palette);
+  if (!highlight) return;
+
+  const isBg = (hex: string) => hex.toLowerCase() === bgHex.toLowerCase();
+  const isStroke = (hex: string) =>
+    isHighlightPaletteColor(hex, palette) || hex.toLowerCase() === highlight.toLowerCase();
+
+  const snapshot = grid.map((row) => [...row]);
+
+  for (let ly = 0; ly < h; ly += 1) {
+    for (let lx = 0; lx < w; lx += 1) {
+      if (!isBg(snapshot[ly]![lx]!)) continue;
+
+      if (lx > 0 && lx < w - 1 && isStroke(snapshot[ly]![lx - 1]!) && isStroke(snapshot[ly]![lx + 1]!)) {
+        grid[ly]![lx] = snapshot[ly]![lx - 1]!;
+        continue;
+      }
+      if (ly > 0 && ly < h - 1 && isStroke(snapshot[ly - 1]![lx]!) && isStroke(snapshot[ly + 1]![lx]!)) {
+        grid[ly]![lx] = snapshot[ly - 1]![lx]!;
+      }
+    }
+  }
+}
+
+/** One buffer cell = one LED; multi-sample + thin-stroke repair. */
 function rasterizeLogoToTile(
   ctx: CanvasRenderingContext2D,
   logo: HTMLImageElement,
@@ -458,7 +762,8 @@ function rasterizeLogoToTile(
   h: number,
   background: string,
   palette?: readonly string[],
-  tileBorder = true
+  tileBorder = true,
+  scaleMode?: 'contain' | 'cover'
 ): void {
   const bg = parseHexColor(background);
   const bgHex = rgbToHex(bg.r, bg.g, bg.b);
@@ -466,56 +771,67 @@ function rasterizeLogoToTile(
   const srcW = src.width;
   const srcH = src.height;
 
-  const scale = Math.min(w / srcW, h / srcH);
+  const binaryPalette = isBinaryLogoPalette(palette, bgHex);
+  const binaryFg = binaryPalette ? foregroundPaletteColors(palette, bgHex)[0] : undefined;
+  const useCover =
+    scaleMode === 'cover' ||
+    (scaleMode !== 'contain' && binaryPalette && !tileBorder);
+  const scale = useCover ? Math.max(w / srcW, h / srcH) : Math.min(w / srcW, h / srcH);
   const drawW = Math.max(1, Math.floor(srcW * scale));
   const drawH = Math.max(1, Math.floor(srcH * scale));
   const ox = x + Math.floor((w - drawW) / 2);
   const oy = y + Math.floor((h - drawH) / 2);
 
+  const grid: string[][] = Array.from({ length: h }, () => Array.from({ length: w }, () => bgHex));
+  const srcInset = tileBorder ? LOGO_SRC_INSET : 0;
+
   for (let ly = 0; ly < h; ly += 1) {
     for (let lx = 0; lx < w; lx += 1) {
-      const px = x + lx;
-      const py = y + ly;
       const onTileEdge =
         tileBorder &&
         (lx === 0 || lx === w - 1 || ly === 0 || ly === h - 1);
       const inMark =
-        px >= ox && px < ox + drawW && py >= oy && py < oy + drawH;
+        lx >= ox - x &&
+        lx < ox - x + drawW &&
+        ly >= oy - y &&
+        ly < oy - y + drawH;
 
       if (onTileEdge || !inMark) {
-        ctx.fillStyle = bgHex;
-        ctx.fillRect(px, py, 1, 1);
+        grid[ly]![lx] = bgHex;
         continue;
       }
 
-      const u = (px - ox + 0.5) / drawW;
-      const v = (py - oy + 0.5) / drawH;
-      const su = LOGO_SRC_INSET + u * (1 - 2 * LOGO_SRC_INSET);
-      const sv = LOGO_SRC_INSET + v * (1 - 2 * LOGO_SRC_INSET);
-      const sx = Math.min(srcW - 1, Math.max(0, Math.floor(su * srcW)));
-      const sy = Math.min(srcH - 1, Math.max(0, Math.floor(sv * srcH)));
-      const si = (sy * srcW + sx) * 4;
-      const sr = src.data[si] ?? 0;
-      const sg = src.data[si + 1] ?? 0;
-      const sb = src.data[si + 2] ?? 0;
-      const sa = src.data[si + 3] ?? 0;
+      const u0 = (lx - (ox - x)) / drawW;
+      const v0 = (ly - (oy - y)) / drawH;
+      const u1 = u0 + 1 / drawW;
+      const v1 = v0 + 1 / drawH;
 
-      if (sa < LOGO_MARK_ALPHA) {
-        ctx.fillStyle = bgHex;
-        ctx.fillRect(px, py, 1, 1);
-        continue;
-      }
-
-      const blended = blendOnBackground(sr, sg, sb, sa, bg);
-      ctx.fillStyle = snapLogoColor(
-        blended.r,
-        blended.g,
-        blended.b,
+      grid[ly]![lx] = sampleLogoLedCell(
+        src,
+        srcW,
+        srcH,
+        u0,
+        v0,
+        u1,
+        v1,
         bg,
         bgHex,
-        palette
+        palette,
+        srcInset
       );
-      ctx.fillRect(px, py, 1, 1);
+    }
+  }
+
+  if (binaryPalette && binaryFg) {
+    repairBinaryLogoTilePerimeter(grid, w, h, bgHex, binaryFg);
+  } else {
+    repairLogoTileThinStrokes(grid, w, h, bgHex, palette);
+  }
+
+  for (let ly = 0; ly < h; ly += 1) {
+    for (let lx = 0; lx < w; lx += 1) {
+      ctx.fillStyle = grid[ly]![lx]!;
+      ctx.fillRect(x + lx, y + ly, 1, 1);
     }
   }
 }
@@ -533,6 +849,7 @@ function renderLogoMark(
     | 'accentStripe'
     | 'logoPalette'
     | 'logoTileBorder'
+    | 'logoScaleMode'
   >
 ): { x: number; y: number; w: number; h: number } | null {
   if (!logo && !content.logoFallback) return null;
@@ -559,7 +876,8 @@ function renderLogoMark(
       logoH,
       content.logoBackground,
       content.logoPalette,
-      content.logoTileBorder !== false
+      content.logoTileBorder !== false,
+      content.logoScaleMode
     );
   } else {
     drawLogoFallback(ctx, content.logoFallback, layout, content.logoBackground);
@@ -1530,7 +1848,29 @@ export type LedLogoTileContent = Pick<
   | 'accentStripe'
   | 'logoPalette'
   | 'logoTileBorder'
+  | 'logoScaleMode'
+  | 'logoDotOverrides'
 >;
+
+function applyLogoDotOverridesToBuffer(
+  imageData: ImageData,
+  overrides: Record<string, string> | undefined
+): void {
+  if (!overrides) return;
+  for (const [key, color] of Object.entries(overrides)) {
+    const [xRaw, yRaw] = key.split(',');
+    const x = Number.parseInt(xRaw ?? '', 10);
+    const y = Number.parseInt(yRaw ?? '', 10);
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
+    if (x < 0 || y < 0 || x >= imageData.width || y >= imageData.height) continue;
+    const rgb = parseRgbColor(color);
+    const i = (y * imageData.width + x) * 4;
+    imageData.data[i] = rgb.r;
+    imageData.data[i + 1] = rgb.g;
+    imageData.data[i + 2] = rgb.b;
+    imageData.data[i + 3] = 255;
+  }
+}
 
 /** Isolated logo tile for theme-tester previews (same pipeline as FlightWall). */
 export async function drawLedLogoTile(
@@ -1540,7 +1880,13 @@ export async function drawLedLogoTile(
 ): Promise<{ x: number; y: number; w: number; h: number } | null> {
   const layout = { logoX: 0, logoY: 0, logoW: size, logoH: size };
   const logo = content.logoUrl ? await loadLedLogo(content.logoUrl) : null;
-  return renderLogoMark(ctx, layout, logo, content);
+  const logoRect = renderLogoMark(ctx, layout, logo, content);
+  if (content.logoDotOverrides) {
+    const imageData = ctx.getImageData(0, 0, size, size);
+    applyLogoDotOverridesToBuffer(imageData, content.logoDotOverrides);
+    ctx.putImageData(imageData, 0, 0);
+  }
+  return logoRect;
 }
 
 export function loadLedLogo(url: string): Promise<HTMLImageElement | null> {

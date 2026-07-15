@@ -14,7 +14,7 @@ const logosDir = join(root, 'data/airline-logos');
 const candidatesDir = join(logosDir, '_candidates');
 const size = 1254;
 
-const DEFAULT_ICAOS = ['FDX', 'UPS', 'GTI', 'ABX', 'DHK'];
+const DEFAULT_ICAOS = ['FDX', 'UPS', 'GTI', 'DHK'];
 const icaos = process.argv.slice(2).length ? process.argv.slice(2) : DEFAULT_ICAOS;
 
 mkdirSync(candidatesDir, { recursive: true });

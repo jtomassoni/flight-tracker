@@ -151,8 +151,6 @@ const CARGO_CALLSIGN_PREFIXES = [
   'UPS', // UPS Airlines
   'GTI', // Atlas Air
   'GSS', // Atlas Air (Global Supply Systems)
-  'ABX', // Amazon Air (ABX Air)
-  'ATN', // Amazon Air (Air Transport International)
   'DHL', // DHL Air
   'DHX', // DHL Aero Expreso
   'DAE', // DHL International Aviation ME
@@ -239,7 +237,6 @@ function isCargo(ac: NormalizedAircraft): boolean {
 export function isBizjet(ac: NormalizedAircraft): boolean {
   if (matchesPrefix(ac.aircraftType, BIZJET_TYPE_PREFIXES)) return true;
   if (ac.aircraftType === 'PC12') return true;
-  if (isNNumberAircraft(ac) && ac.category === 'A3') return true;
   return false;
 }
 

@@ -39,5 +39,7 @@ export function buildAirlineLedPreview(
     accentStripe: wallStyle.accentStripe,
     logoPalette: wallStyle.logoPalette,
     logoTileBorder: wallStyle.logoTileBorder,
+    logoScaleMode: wallStyle.logoScaleMode,
+    logoDotOverrides: wallStyle.logoDotOverrides,
   };
 }

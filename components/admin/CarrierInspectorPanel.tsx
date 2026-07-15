@@ -19,6 +19,12 @@ import {
   clearStoredLedLogoPalette,
   storeLedLogoPalette,
 } from '@/lib/ledLogoPalette';
+import {
+  clearStoredLedLogoDotOverrides,
+  getStoredLedLogoDotOverrides,
+  storeLedLogoDotOverrides,
+  type LedLogoDotOverrides,
+} from '@/lib/ledLogoDotEdits';
 import { hasLedAirlineMark } from '@/lib/ledAirlineMarks';
 import { useLogoCatalog, type LogoCatalogEntry } from '@/components/admin/LogoCatalogContext';
 import LogoPasteZone from '@/components/admin/LogoPasteZone';
@@ -29,20 +35,13 @@ function normalizeIcao(raw: string): string {
   return raw.trim().toUpperCase().slice(0, 3);
 }
 
-function palettesEqual(a: readonly string[], b: readonly string[]): boolean {
-  return (
-    a.length === b.length &&
-    a.every((color, index) => color.toLowerCase() === b[index]?.toLowerCase())
-  );
-}
-
 const SAMPLE_STATS = [
   ['Distance', '12.4', 'mi'],
   ['Altitude', '28,500', 'ft'],
 ] as const;
 
-const LED_PREVIEW_BASE = 152;
-const SOURCE_LOGO_BASE = 80;
+const LED_PREVIEW_BASE = 72;
+const SOURCE_LOGO_BASE = 64;
 
 function brandHeroStyle(brand: AirlineBrand): CSSProperties {
   return {
@@ -327,29 +326,28 @@ function AirlinePreviewPanel({
   const sourceLogoPx = Math.round(SOURCE_LOGO_BASE * previewScale);
   const brand = getLogoBrandByIcao(icao);
   const [paletteRevision, setPaletteRevision] = useState(0);
-  const [draftPalette, setDraftPalette] = useState<string[] | null>(null);
   const [analyzingPalette, setAnalyzingPalette] = useState(false);
-
-  useEffect(() => {
-    setDraftPalette(null);
-  }, [icao, logoUrl]);
+  const [draftDotOverrides, setDraftDotOverrides] = useState<LedLogoDotOverrides>({});
+  const [baseGrid, setBaseGrid] = useState<string[][]>([]);
+  const [editorGrid, setEditorGrid] = useState<string[][]>([]);
 
   const ledContent = useMemo(() => {
     return buildAirlineLedPreview(icao, { logoUrl });
   }, [icao, logoUrl, paletteRevision]);
 
-  const appliedPalette = ledContent?.logoPalette ?? [];
+  useEffect(() => {
+    setDraftDotOverrides(getStoredLedLogoDotOverrides(icao) ?? {});
+    setBaseGrid([]);
+    setEditorGrid([]);
+  }, [icao, logoUrl]);
 
-  const reanalyzePalette = useCallback(async () => {
-    if (!logoUrl || !ledContent) return;
-    setAnalyzingPalette(true);
-    try {
-      const detected = await analyzeLedLogoPalette(logoUrl, ledContent.logoBackground);
-      setDraftPalette(detected.length > 0 ? detected : null);
-    } finally {
-      setAnalyzingPalette(false);
-    }
-  }, [logoUrl, ledContent]);
+  const previewContent = useMemo(() => {
+    if (!ledContent) return null;
+    return {
+      ...ledContent,
+      logoDotOverrides: draftDotOverrides,
+    };
+  }, [draftDotOverrides, ledContent]);
 
   const rescanLedWall = useCallback(async () => {
     if (!logoUrl || !ledContent) return;
@@ -359,21 +357,26 @@ function AirlinePreviewPanel({
       if (detected.length > 0) {
         storeLedLogoPalette(icao, detected);
       }
-      setDraftPalette(null);
+      clearStoredLedLogoDotOverrides(icao);
+      setDraftDotOverrides({});
       setPaletteRevision((n) => n + 1);
     } finally {
       setAnalyzingPalette(false);
     }
   }, [icao, logoUrl, ledContent]);
 
-  const applyDraftPalette = useCallback(() => {
-    if (!draftPalette?.length) return;
-    storeLedLogoPalette(icao, draftPalette);
-    setDraftPalette(null);
+  const applyDotEdits = useCallback(() => {
+    storeLedLogoDotOverrides(icao, draftDotOverrides);
     setPaletteRevision((n) => n + 1);
-  }, [draftPalette, icao]);
+  }, [draftDotOverrides, icao]);
 
-  if (!brand || !ledContent) {
+  const resetDotEdits = useCallback(() => {
+    clearStoredLedLogoDotOverrides(icao);
+    setDraftDotOverrides({});
+    setPaletteRevision((n) => n + 1);
+  }, [icao]);
+
+  if (!brand || !ledContent || !previewContent) {
     return (
       <div className="theme-tester__empty">
         <p>Unknown brand code: <span className="admin-mono">{icao}</span></p>
@@ -385,12 +388,28 @@ function AirlinePreviewPanel({
     );
   }
 
-  const wallStyle = ledContent;
-
   const hasApprovedLogo = Boolean(logoUrl);
-  const hasDraft = draftPalette != null && draftPalette.length > 0;
-  const draftDiffersFromApplied =
-    hasDraft && !palettesEqual(draftPalette, appliedPalette);
+  const appliedDotOverrides = ledContent.logoDotOverrides ?? {};
+  const dotEditsDirty =
+    JSON.stringify(draftDotOverrides) !== JSON.stringify(appliedDotOverrides);
+  const cycleColors = [previewContent.logoBackground, ...(previewContent.logoPalette ?? [])];
+
+  const cycleDot = (x: number, y: number) => {
+    const current = editorGrid[y]?.[x] ?? previewContent.logoBackground;
+    const currentIndex = cycleColors.findIndex((color) => color.toLowerCase() === current.toLowerCase());
+    const nextColor = cycleColors[(currentIndex + 1 + cycleColors.length) % cycleColors.length]!;
+    setDraftDotOverrides((prev) => {
+      const next = { ...prev };
+      const key = `${x},${y}`;
+      const baseColor = baseGrid[y]?.[x] ?? previewContent.logoBackground;
+      if (nextColor.toLowerCase() === baseColor.toLowerCase()) {
+        delete next[key];
+      } else {
+        next[key] = nextColor;
+      }
+      return next;
+    });
+  };
 
   return (
     <div className="theme-tester__workbench">
@@ -419,69 +438,113 @@ function AirlinePreviewPanel({
           <h3 className="theme-tester__workbench-title">FlightWall LED</h3>
           <div className="theme-tester__workbench-head-actions">
             {hasApprovedLogo && (
-              <>
-                <button
-                  type="button"
-                  className="admin-btn admin-btn--ghost admin-btn--compact"
-                  disabled={analyzingPalette}
-                  onClick={() => void reanalyzePalette()}
-                >
-                  {analyzingPalette ? 'Analyzing…' : 'Preview colors'}
-                </button>
-                <button
-                  type="button"
-                  className="admin-btn admin-btn--primary admin-btn--compact"
-                  disabled={analyzingPalette}
-                  onClick={() => void rescanLedWall()}
-                >
-                  {analyzingPalette ? 'Analyzing…' : 'Rescan LED wall'}
-                </button>
-                {draftDiffersFromApplied && (
-                  <button
-                    type="button"
-                    className="admin-btn admin-btn--ghost admin-btn--compact"
-                    onClick={applyDraftPalette}
-                  >
-                    Apply preview
-                  </button>
-                )}
-              </>
+              <button
+                type="button"
+                className="admin-btn admin-btn--primary admin-btn--compact"
+                disabled={analyzingPalette}
+                onClick={() => void rescanLedWall()}
+              >
+                {analyzingPalette ? 'Analyzing…' : 'Rescan LED wall'}
+              </button>
             )}
             <span className="theme-tester__workbench-meta admin-mono">48×48 @ 8×</span>
           </div>
         </header>
         <div className="theme-tester__led-stage theme-tester__led-stage--compact">
-          <div className="theme-tester__led-bezel">
-            <AirlineLedLogoTile
-              content={wallStyle}
-              displaySize={ledPreviewPx}
-              label={`${brand.name} LED tile`}
-              className="theme-tester__led-canvas"
-            />
-          </div>
-          <div className="theme-tester__led-meta theme-tester__led-meta--compact">
-            <div className="theme-tester__meta-chip">
-              <span className="theme-tester__meta-label">Tile</span>
-              <span
-                className="theme-tester__swatch"
-                style={{ background: wallStyle.logoBackground }}
-                title={wallStyle.logoBackground}
+          <AirlineLedLogoTile
+            content={ledContent}
+            displaySize={1}
+            className="hidden"
+            onGridRendered={setBaseGrid}
+          />
+          <div className="theme-tester__led-toolbar">
+            <div className="theme-tester__led-bezel">
+              <AirlineLedLogoTile
+                content={previewContent}
+                displaySize={ledPreviewPx}
+                label={`${brand.name} LED tile`}
+                className="theme-tester__led-canvas"
+                onGridRendered={setEditorGrid}
               />
-              <span className="admin-mono theme-tester__meta-hex">{wallStyle.logoBackground}</span>
             </div>
-            {appliedPalette.length > 0 && (
+            <div className="theme-tester__led-meta theme-tester__led-meta--compact">
               <div className="theme-tester__meta-chip">
-                <span className="theme-tester__meta-label">On LED</span>
-                <PaletteRow colors={appliedPalette} horizontal />
+                <span className="theme-tester__meta-label">Tile</span>
+                <span
+                  className="theme-tester__swatch"
+                  style={{ background: previewContent.logoBackground }}
+                  title={previewContent.logoBackground}
+                />
+                <span className="admin-mono theme-tester__meta-hex">{previewContent.logoBackground}</span>
               </div>
-            )}
-            {draftDiffersFromApplied && (
-              <div className="theme-tester__meta-chip theme-tester__meta-chip--draft">
-                <span className="theme-tester__meta-label">Detected</span>
-                <PaletteRow colors={draftPalette!} horizontal />
-              </div>
-            )}
+              {(previewContent.logoPalette?.length ?? 0) > 0 && (
+                <div className="theme-tester__meta-chip">
+                  <span className="theme-tester__meta-label">On LED</span>
+                  <PaletteRow colors={previewContent.logoPalette ?? []} horizontal />
+                </div>
+              )}
+              {dotEditsDirty && (
+                <div className="theme-tester__meta-chip theme-tester__meta-chip--draft">
+                  <span className="theme-tester__meta-label">Unsaved</span>
+                </div>
+              )}
+            </div>
           </div>
+          {hasApprovedLogo ? (
+            <div className="theme-tester__dot-editor">
+              <div className="theme-tester__dot-editor-head">
+                <p className="theme-tester__dot-editor-title">Dot editor</p>
+                <div className="theme-tester__dot-editor-actions">
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn--primary admin-btn--compact"
+                    disabled={!dotEditsDirty}
+                    onClick={applyDotEdits}
+                  >
+                    Save
+                  </button>
+                  <button
+                    type="button"
+                    className="admin-btn admin-btn--ghost admin-btn--compact"
+                    disabled={!dotEditsDirty && Object.keys(appliedDotOverrides).length === 0}
+                    onClick={resetDotEdits}
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+              <div
+                className="theme-tester__dot-grid-frame"
+                title="Click any LED to cycle between the tile fill and logo colors"
+              >
+                <div
+                  className="theme-tester__dot-grid"
+                  style={{
+                    gridTemplateColumns: `repeat(${editorGrid[0]?.length || 48}, minmax(0, 1fr))`,
+                    gridTemplateRows: `repeat(${editorGrid.length || 48}, minmax(0, 1fr))`,
+                  }}
+                >
+                  {editorGrid.flatMap((row, y) =>
+                    row.map((color, x) => (
+                      <button
+                        key={`${x}-${y}`}
+                        type="button"
+                        className="theme-tester__dot-cell"
+                        style={{ background: color }}
+                        title={`${x},${y} ${color}`}
+                        aria-label={`LED ${x},${y} ${color}`}
+                        onClick={() => cycleDot(x, y)}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="theme-tester__variant-empty">
+              Approve a source logo, then rescan or tweak individual LEDs manually.
+            </p>
+          )}
         </div>
       </div>
 
@@ -563,6 +626,7 @@ export default function CarrierInspectorPanel() {
       setPasteError(null);
       try {
         clearStoredLedLogoPalette(activeIcao);
+        clearStoredLedLogoDotOverrides(activeIcao);
         await uploadPaste(activeIcao, dataUrl);
       } catch (err) {
         setPasteError(err instanceof Error ? err.message : 'Paste failed');
@@ -579,6 +643,7 @@ export default function CarrierInspectorPanel() {
     setPasteError(null);
     try {
       clearStoredLedLogoPalette(activeIcao);
+      clearStoredLedLogoDotOverrides(activeIcao);
       await removeLogo(activeIcao);
     } catch (err) {
       setActionError(err instanceof Error ? err.message : 'Remove failed');

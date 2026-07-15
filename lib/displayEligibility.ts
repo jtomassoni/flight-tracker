@@ -1,28 +1,14 @@
 import type { NormalizedAircraft } from '@/types/aircraft';
-import {
-  isBizjet,
-  isFamousTail,
-  isMilitaryAircraft,
-  isNNumberTail,
-} from '@/lib/aircraftCategories';
+import { isNNumberTail } from '@/lib/aircraftCategories';
 import { getAirlineFromCallsign } from '@/lib/airlines';
-import { getCargoAirlineFromCallsign } from '@/lib/cargoAirlines';
 
 /**
- * Strict board allowlist — curated airlines, freight, military, and
- * famous / corporate tails only. Random PJs, GA, and hex-only stay off.
+ * Passenger airline board only — curated national / mainline carriers
+ * (regionals that fly as UAL/DAL/AAL/ASA still qualify via callsign mapping).
+ * Cargo, military, famous tails, PJs, and GA stay off until we opt them back in.
  */
 export function isDisplayEligibleAircraft(ac: NormalizedAircraft): boolean {
-  if (isFamousTail(ac)) return true;
-
   const cs = ac.callsign?.trim().toUpperCase() ?? '';
   if (!cs || cs.length < 3 || isNNumberTail(cs)) return false;
-
-  if (getAirlineFromCallsign(cs)) return true;
-  if (getCargoAirlineFromCallsign(cs)) return true;
-  if (isMilitaryAircraft(ac)) return true;
-
-  if (isBizjet(ac)) return false;
-
-  return false;
+  return Boolean(getAirlineFromCallsign(cs));
 }

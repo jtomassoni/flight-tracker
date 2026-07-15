@@ -6,8 +6,6 @@ const CARGO_OPERATORS = new Set<string>([
   'UPS', // UPS Airlines
   'GTI', // Atlas Air
   'GSS', // Atlas Air (Global Supply Systems)
-  'ABX', // Amazon Air (ABX Air)
-  'ATN', // Amazon Air (Air Transport International)
   'DHL', // DHL Air
   'DHX', // DHL Aero Expreso
   'DAE', // DHL International Aviation ME

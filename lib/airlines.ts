@@ -1,5 +1,6 @@
 import type { NormalizedAircraft } from '@/types/aircraft';
 import { resolveLedLogoPalette } from '@/lib/ledLogoPalette';
+import { resolveLedLogoDotOverrides } from '@/lib/ledLogoDotEdits';
 import { approvedLogoUrl } from './approvedLogos';
 import { CATEGORY_BRANDS, getNonAirlineDisplayBrand, isFamousTail, isNNumberAircraft, isNNumberTail } from './aircraftCategories';
 import { CARGO_AIRLINE_ICAO_LIST, getCargoAirlineByIcao, getCargoAirlineFromCallsign } from './cargoAirlines';
@@ -278,8 +279,9 @@ export function getAircraftDisplayBrand(ac: NormalizedAircraft): AirlineBrand {
   const cargo = getCargoAirlineFromCallsign(ac.callsign);
   if (cargo) return cargo;
 
-  if (!isNNumberAircraft(ac)) {
-    const airline = getAirlineFromCallsign(ac.callsign);
+  const callsign = ac.callsign?.trim();
+  if (callsign && !isNNumberTail(callsign)) {
+    const airline = getAirlineFromCallsign(callsign);
     if (airline) return airline;
   }
 
@@ -340,6 +342,8 @@ export type AirlineLedWallStyle = {
   logoPalette: readonly string[];
   /** 1px tile-edge ring around rasterized logos — off for edge-to-edge marks. */
   logoTileBorder: boolean;
+  logoScaleMode?: 'contain' | 'cover';
+  logoDotOverrides?: Record<string, string>;
 };
 
 /** Flat two-color LED marks — accent livery colors cause CDN fringe to read as gradients. */
@@ -372,12 +376,11 @@ const LED_LOGO_PALETTE: Partial<Record<string, readonly string[]>> = {
   UPS: ['#FFB500', '#351C15', '#FFFFFF'],
   GTI: ['#FFFFFF', '#003366', '#C8102E'],
   DHK: ['#FFCC00', '#D40511', '#FFFFFF'],
-  ABX: ['#FF9900', '#232F3E', '#FFFFFF'],
   MIL: ['#FFFFFF', '#C5A572', '#3D4F2F', '#2C1810'],
   PVT: ['#FFFFFF', '#D4AF37', '#64748B', '#1E293B'],
 };
 
-const LED_LOGO_NO_TILE_BORDER = new Set(['JBU', 'SWA', 'MIL', 'PVT', 'GA', 'FDX', 'UPS', 'GTI', 'ABX', 'DHK']);
+const LED_LOGO_NO_TILE_BORDER = new Set(['JBU', 'SWA', 'MIL', 'PVT', 'GA', 'FDX', 'UPS', 'GTI', 'DHK']);
 
 function airlineLedLogoPalette(
   brand: AirlineBrand,
@@ -413,7 +416,6 @@ const COLOR_LOGO_TILE = new Set([
   'FDX',
   'UPS',
   'GTI',
-  'ABX',
   'DHK',
   'SCX',
 ]);
@@ -429,6 +431,7 @@ export function getAirlineLedWallStyle(brand: AirlineBrand): AirlineLedWallStyle
       accentStripe: brand.accentColor,
       logoPalette: resolveLedLogoPalette(brand.icao, basePalette),
       logoTileBorder: !LED_LOGO_NO_TILE_BORDER.has(brand.icao),
+      logoDotOverrides: resolveLedLogoDotOverrides(brand.icao),
     };
   }
 
@@ -449,6 +452,7 @@ export function getAirlineLedWallStyle(brand: AirlineBrand): AirlineLedWallStyle
     accentStripe: brand.accentColor,
     logoPalette,
     logoTileBorder: !LED_LOGO_NO_TILE_BORDER.has(brand.icao),
+    logoDotOverrides: resolveLedLogoDotOverrides(brand.icao),
   };
 }
 
@@ -706,24 +710,6 @@ const GALLERY_LIVERY: Record<string, AirlineTileStyle> = {
       'linear-gradient(145deg, rgba(0, 0, 0, 0.32) 0%, rgba(0, 51, 102, 0.18) 100%)',
     badgeBackground: '#C8102E',
     badgeTextColor: '#ffffff',
-  },
-  ABX: {
-    cardBackground: 'linear-gradient(165deg, #232F3E 0%, #161f29 55%, #0a0e12 100%)',
-    headerBackground: 'linear-gradient(180deg, #FF9900 0%, #ffb033 100%)',
-    headerTextColor: '#232F3E',
-    headerMutedColor: 'rgba(35, 47, 62, 0.72)',
-    accentBarColor: 'linear-gradient(90deg, #232F3E 0%, #FF9900 100%)',
-    logoBackground: '#ffffff',
-    borderColor: '#FF9900',
-    textColor: '#f8fafc',
-    mutedTextColor: 'rgba(248, 250, 252, 0.72)',
-    labelColor: '#FF9900',
-    statBackground:
-      'linear-gradient(145deg, rgba(255, 153, 0, 0.18) 0%, rgba(255, 255, 255, 0.06) 100%)',
-    statAltBackground:
-      'linear-gradient(145deg, rgba(0, 0, 0, 0.34) 0%, rgba(35, 47, 62, 0.22) 100%)',
-    badgeBackground: '#FF9900',
-    badgeTextColor: '#232F3E',
   },
   DHK: {
     cardBackground: 'linear-gradient(165deg, #D40511 0%, #a0040d 55%, #600208 100%)',
